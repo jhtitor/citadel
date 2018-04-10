@@ -1,0 +1,90 @@
+#!/usr/bin/env python3 
+#--qt "-platform windows:dpiawareness=0"
+# -*- mode: python -*-
+import sys
+from PyQt4 import QtCore, QtGui
+
+from pprint import pprint
+from traceback import print_exc
+
+from bitsharesqt.isolator import BitsharesIsolator
+from bitsharesextra.storage import DataDir
+
+import uidef.res_rc
+from bitsharesqt.mainwindow import MainWindow
+
+from bitsharesqt.work import Request
+from bitsharesqt.utils import *
+
+
+# force import - see if we miss anything important
+#import scrypt
+import secp256k1prp
+
+class BitsharesQT(QtGui.QApplication):
+	
+	abort_everything = QtCore.pyqtSignal()
+	
+	def __init__(self, argv):
+		super(BitsharesQT, self).__init__(argv)
+		
+		self.install_sigint()
+		
+		BitsharesIsolator.enable() # Protect
+		self.mainwin = mainwin = MainWindow()
+		
+		mainwin.show()
+		
+	def reopen(self, newpath):
+		self.mainwin.close_wallet()
+		self.mainwin.abort_everything()
+		self.mainwin.hide()
+		del self.mainwin
+		self.mainwin = mainwin = MainWindow()
+		mainwin.show()
+		mainwin.open_wallet(newpath)
+	
+	def install_sigint(app):
+		def sigint_handler(*args):
+			print("Received SIGINT, quitting...")
+			QtGui.QApplication.quit()
+		import signal
+		signal.signal(signal.SIGINT, sigint_handler)
+		# Let the interpreter run each 500 ms.
+		app.sleep_timer = QtCore.QTimer()
+		app.sleep_timer.start(500)
+		app.sleep_timer.timeout.connect(lambda: None)
+	
+	def run_forever(self):
+		#sys.exit(
+		app.exec_()
+		#Request.shutdown()
+		#app.deleteLater()
+		#)
+	
+if  __name__ == "__main__":
+	DataDir.appname = "bitshares"
+	DataDir.appauthor = "Citadel"
+	DataDir.storageDatabaseDefault = "default.bts"
+	
+	app = BitsharesQT(sys.argv)
+	ignore_hidpi_settings()
+	
+	opened = app.mainwin.auto_open_wallet()
+	
+	if not(opened):
+		opened = app.mainwin.new_wallet()
+#	if not(opened):
+#		opened = app.mainwin.open_wallet()
+	if not(opened):
+		showerror("No wallet file opened")
+		app.quit()
+		sys.exit(1)
+	
+	#try:
+	app.run_forever()
+	#except:
+	#	TODO: log error to file, if in bundled/debug mode
+	
+	Request.shutdown()
+	Request.wait_join(10)
