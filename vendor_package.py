@@ -21,7 +21,7 @@ packages = [
 		"name": "python-bitshares",
 		"repo": (
 			"jhtitor/python-bitshares",
-			"0dd1a95d272f331d6fe36a382667a994ce0f62d0"
+			"b99d3b4b83053c4ea3603b364e21382e6f9bf9c4"
 			),
 		"copy": [ "bitsharesbase", "bitsharesapi", "bitshares" ],
 	},
