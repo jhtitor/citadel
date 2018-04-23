@@ -250,7 +250,7 @@ class BitsharesIsolator(object):
 		
 		account = Account.__new__(Account)
 		account.identifier = account_id
-		account.bitshares = self.bts
+		account.blockchain = self.bts
 		account.account_id = account_id
 		account.cached = True
 		account.full = True
@@ -354,7 +354,7 @@ class BitsharesIsolator(object):
 			stored_asset["options"]["max_supply"] = int(stored_asset["options"]["max_supply"])
 			forged_asset = Asset.__new__(Asset)
 			forged_asset.identifier = stored_asset["id"]
-			forged_asset.bitshares = self.bts
+			forged_asset.blockchain = self.bts
 			forged_asset.cached = True
 			forged_asset.lazy = True
 			forged_asset.full = False
