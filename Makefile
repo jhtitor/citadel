@@ -21,7 +21,7 @@ ui:
 	pyuic4 $(UISRC)/exchange.ui -o uidef/exchange.py --from-imports
 	pyuic4 $(UISRC)/market.ui -o uidef/market.py --from-imports
 	pyuic4 $(UISRC)/createasset.ui -o uidef/createasset.py --from-imports
-	pyrcc4 -py3 res.qrc -o uidef/res_rc.py
+	pyrcc4 -py3 $(UISRC)/res.qrc -o uidef/res_rc.py
 
 App: $(ICNS_FILE)
 	python3 setup.py py2app --iconfile $(ICNS_FILE)

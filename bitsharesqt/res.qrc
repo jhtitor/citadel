@@ -1,0 +1,44 @@
+<RCC>
+  <qresource prefix="images">
+    <file>../images/logo.png</file>
+    <file>../images/bitshares_logo.png</file>
+    <file>../images/old/padlock.png</file>
+    <file>../images/old/images.png</file>
+  </qresource>
+  <qresource prefix="op">
+    <file>../images/op/blind_transfer.png</file>
+    <file>../images/op/transfer_from_blind.png</file>
+    <file>../images/op/transfer_to_blind.png</file>
+    <file>../images/op/fill_order.png</file>
+    <file>../images/op/limit_order_cancel.png</file>
+    <file>../images/op/limit_order_create.png</file>
+    <file>../images/op/account_create.png</file>
+    <file>../images/op/account_upgrade.png</file>
+    <file>../images/op/transfer_from.png</file>
+    <file>../images/op/transfer_to.png</file>
+    <file>../images/op/transfer.png</file>
+  </qresource>
+  <qresource prefix="icons">
+    <file>../images/unsigned.png</file>
+    <file>../images/signed.png</file>
+    <file>../images/memo.png</file>
+    <file>../images/token.png</file>
+    <file>../images/swap.png</file>
+    <file>../images/limit_order.png</file>
+    <file>../images/old/yellow.png</file>
+    <file>../images/tick.png</file>
+    <file>../images/wait.png</file>
+    <file>../images/crossout.png</file>
+    <file>../images/coin.png</file>
+    <file>../images/market.png</file>
+    <file>../images/old/wallet_empty.png</file>
+    <file>../images/old/wallet.png</file>
+    <file>../images/unlock.png</file>
+    <file>../images/lock.png</file>
+    <file>../images/old/proxy32.png</file>
+    <file>../images/red.png</file>
+    <file>../images/green.png</file>
+    <file>../images/onion.png</file>
+    <file>../images/old/onion.png</file>
+  </qresource>
+</RCC>
