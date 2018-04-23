@@ -6,8 +6,8 @@
 		from isolator import BitsharesIsolator
 		BitsharesIsolator.enable()
 	
-	This will set a shared_bitshares_instance to broken, unusable
-	object, so all `get_shared_bitshares_instance` consumers will
+	This will set a shared_blockchain_instance to broken, unusable
+	object, so all `get_shared_blockchain_instance` consumers will
 	fail with an Exception upon creation.
 	
 	This should ensure no rogue instances of BitShares are created
@@ -15,7 +15,7 @@
 	
 		asset = Asset("BTS") # <- no bitshare_instance= provided(!)
 	
-	UNLESS your application calls `set_shared_bitshares_instance`
+	UNLESS your application calls `set_shared_blockchain_instance`
 	later!
 	
 	Then, to create/get a singleton instance, use
@@ -53,9 +53,9 @@ class BitsharesIsolator(object):
 	@classmethod
 	def enable(self):
 		if not self.enabled:
-			from bitshares.instance import set_shared_bitshares_instance
+			from bitshares.instance import set_shared_blockchain_instance
 			broken = BrokenBitsharesInstance()
-			set_shared_bitshares_instance(broken)
+			set_shared_blockchain_instance(broken)
 			self.enabled = True
 	
 	def __init__(self, *args, **kwargs):
@@ -254,7 +254,7 @@ class BitsharesIsolator(object):
 		account.account_id = account_id
 		account.cached = True
 		account.full = True
-		#	bitshares_instance=self.bts, 
+		#	blockchain_instance=self.bts,
 		#account = Account(accountInfo)
 		for key, val in accountInfo.items():
 			if key == "balances":
@@ -327,7 +327,7 @@ class BitsharesIsolator(object):
 					import traceback
 					traceback.print_exc()
 					pass
-			account = Account(account_id, bitshares_instance=self.bts)
+			account = Account(account_id, blockchain_instance=self.bts)
 			
 			if cache:
 				self.storeAccount(account)
@@ -368,7 +368,7 @@ class BitsharesIsolator(object):
 		
 		from bitshares.exceptions import AssetDoesNotExistsException
 		try:
-			remote_asset = Asset(asset_id, full=True, lazy=False, bitshares_instance=self.bts)
+			remote_asset = Asset(asset_id, full=True, lazy=False, blockchain_instance=self.bts)
 		except AssetDoesNotExistsException:
 			raise
 		except:
@@ -420,7 +420,7 @@ class BitsharesIsolator(object):
 			asset_amount = int(asset_amount) / 10 ** asset["precision"]
 		
 		from bitshares.amount import Amount
-		return Amount(asset_amount, asset, bitshares_instance=self.bts)
+		return Amount(asset_amount, asset, blockchain_instance=self.bts)
 	
 	def getAmountOP(self, op_amount):
 		#from pprint import pprint
@@ -441,7 +441,7 @@ class BitsharesIsolator(object):
 					b.symbol = sym
 					b.amount = val
 				self.fave_coinnames.add(sym)
-				balances.append( b ) #Amount(val, sym, bitshares_instance=self.iso.bts) )
+				balances.append( b ) #Amount(val, sym, blockchain_instance=self.iso.bts) )
 			return balances
 		
 		if force_local:
@@ -504,7 +504,7 @@ class BitsharesIsolator(object):
 		memoObj = Memo(
 			from_account=None,#from_account,
 			to_account=None,#to_account,
-			bitshares_instance=self.bts
+			blockchain_instance=self.bts
 		)
 		memoObj.chain_prefix = self.chain_prefix()
 		memoObj.from_account = from_account
@@ -545,7 +545,7 @@ class BitsharesIsolator(object):
 	def downloadOrders(self, account):
 		return account.openorders()
 		#from .price import Order
-		#return [Order(o, bitshares_instance=self.bitshares) for o in self["limit_orders"]]
+		#return [Order(o, blockchain_instance=self.bitshares) for o in self["limit_orders"]]
 	
 	
 	def softAccountName(self, account_id, remote=True):

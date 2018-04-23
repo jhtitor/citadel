@@ -30,7 +30,7 @@ class WindowWithTrxBuffer(QtCore.QObject):
 	def open_transactionbuffer(self):
 		if not(self.ui.txFrame.isVisible()):
 			showmessage("Collect several transactions into one. Press Apply when ready.")
-			self.trxbuffer = TransactionBuilder(bitshares_instance=self.iso.bts)
+			self.trxbuffer = TransactionBuilder(blockchain_instance=self.iso.bts)
 		
 		self._txRedraw()
 		self.ui.txFrame.setVisible(True)

@@ -268,7 +268,7 @@ class MarketTab(QtGui.QWidget):
 			self.subscribed = True
 		
 		from bitshares.market import Market
-		self.market = Market(tag, bitshares_instance=iso.bts)
+		self.market = Market(tag, blockchain_instance=iso.bts)
 		
 		orders = self.market.orderbook()
 		trades = self.market.trades(limit=100, raw=True)

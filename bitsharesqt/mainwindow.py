@@ -460,7 +460,7 @@ class MainWindow(QtGui.QMainWindow,
 				b = lambda: None
 				b.symbol = sym
 				b.amount = val
-				balances.append( b ) #Amount(val, sym, bitshares_instance=self.iso.bts) )
+				balances.append( b ) #Amount(val, sym, blockchain_instance=self.iso.bts) )
 		
 		if not(self.iso.offline):
 			balances = self.iso.getBalances(account["id"])#.balances
@@ -565,7 +565,7 @@ class MainWindow(QtGui.QMainWindow,
 		mtype = sell_asset + ":" + buy_asset
 		from bitshares.market import Market
 		
-		market = Market(mtype, bitshares_instance=self.iso.bts)
+		market = Market(mtype, blockchain_instance=self.iso.bts)
 		tick = market.ticker()
 		
 		highestBid = float(tick['highestBid']) #        return self["price"]
@@ -1434,7 +1434,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.iso = BitsharesIsolator(storage=store)
 		self.iso.ping_callback = self.refreshUi_ping
 		wallet = Wallet(
-			bitshares_instance=self.iso.bts,
+			blockchain_instance=self.iso.bts,
 			rpc=self.iso.bts.rpc,
 			storage=store)
 		

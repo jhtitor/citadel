@@ -354,7 +354,7 @@ class HistoryTab(QtGui.QWidget):
 		
 		# recreate account object
 		#from bitshares.account import Account
-		#account = Account(account.name, bitshares_instance=iso.bts)
+		#account = Account(account.name, blockchain_instance=iso.bts)
 		
 		# load from the net
 		history = list(account.history())
