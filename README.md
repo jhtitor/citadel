@@ -32,7 +32,7 @@ secp256k1prp-py
 https://github.com/jhtitor/secp256k1prp-py/releases/download/0.13.2.5prp/secp256k1prp-0.13.2-cp34-cp34m-win32.whl
 
 ```
-pip install scrypt
+python -m pip install scrypt
 ```
 
 OpenSSL .dlls (for scrypt), unpack into source folder
@@ -40,8 +40,8 @@ https://indy.fulgan.com/SSL/openssl-1.0.2n-i386-win32.zip
 
 Prepare everything else:
 ```
-python -m pip install six, ecdsa, appdirs, qrcode, requests, pycrypto, pyqtgraph
-python3 vendor_package.py
+python -m pip install six ecdsa appdirs qrcode requests pycrypto pyqtgraph
+python vendor_package.py
 ```
 
 You can now run
@@ -64,7 +64,7 @@ sudo port install py35-pyqt4
 
 
 ```
-pip-3.5 install six, ecdsa, appdirs, qrcode, requests, pycrypto, pyqtgraph
+pip-3.5 install six ecdsa appdirs qrcode requests pycrypto pyqtgraph
 python3 vendor_package.py
 ```
 
