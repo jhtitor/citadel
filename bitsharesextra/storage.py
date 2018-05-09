@@ -131,7 +131,7 @@ class Accounts(DataDir):
         """
         query = ("DELETE FROM %s " % (self.__tablename__) +
                  "WHERE account=?",
-                 (account_name))
+                 (account_name,))
         self.sql_execute(query)
 
     def wipe(self):
