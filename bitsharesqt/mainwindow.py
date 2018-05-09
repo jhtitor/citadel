@@ -906,17 +906,24 @@ class MainWindow(QtGui.QMainWindow,
 		if askyesno("Are you sure you want to remove this account from this wallet?"):
 			showmessage("Account removed")
 	
-	def perhaps_autoconnect(self):
-		config =  self.iso.bts.config
+	def need_autoconnect(self, ignore_state=False):
+		config = self.iso.bts.config
 		nodeUrl = config.get('node', None)
 		ac = config.get('autoconnect', True)
-		print("AUTOCONN?", nodeUrl, ac)
+		#print("AUTOCONN?", nodeUrl, ac)
 		if not ac or not nodeUrl:
 			return False
-		connected = not(self.iso.offline)
-		if connected:
+		if ignore_state:
+			return True
+		if self.iso.is_connected():
 			return False
-		#self._connect()
+		if self.iso.is_connecting():
+			return False
+		return True
+
+	def perhaps_autoconnect(self, ignore_state=False):
+		if not(self.need_autoconnect(ignore_state)):
+			return False
 		self.connect_to_node()
 		return True
 	
@@ -938,8 +945,8 @@ class MainWindow(QtGui.QMainWindow,
 		#print("node url:", nodeUrl)
 		self.iso.connect(nodeUrl, proxy=proxyUrl, num_retries=3, ping_callback=self._connect_event)
 	
-	def _connect_event(self, ws, desc, error=None):
-		self.background_update.emit(0, desc, (ws, error))
+	def _connect_event(self, rpc, desc, error=None):
+		self.background_update.emit(0, desc, (rpc, error))
 	
 	def on_connector_update(self, id, tag, data_error):
 		if id != 0:
@@ -978,6 +985,7 @@ class MainWindow(QtGui.QMainWindow,
 		self._connecting = False
 		print("* Connection established")
 		
+		self.iso.offline = False
 		self.iso.subscribed_accounts = set()
 		self.iso.subscribed_markets = set()
 		self.massDesync()
@@ -997,8 +1005,8 @@ class MainWindow(QtGui.QMainWindow,
 		print("* Connection failed")
 		self.iso.offline = True
 		self.refreshUi_wallet()
-		self.abort_everything(disconnect=False)
-		if not(self.perhaps_autoconnect()):
+		self.abort_everything(disconnect=False, wait=True)
+		if not(self.perhaps_autoconnect(ignore_state=True)):
 			showerror("Connection failed", additional=error)
 	
 	def connection_lost(self, uid):
@@ -1006,8 +1014,8 @@ class MainWindow(QtGui.QMainWindow,
 		print("* Connection lost")
 		self.iso.offline = True
 		self.refreshUi_wallet()
-		#Request.shutdown(timeout=10)
-		self.abort_everything(disconnect=False)
+		##Request.shutdown(timeout=10)
+		self.abort_everything(disconnect=True, wait=True)
 	
 	def disconnect_from_node(self):
 		print("* Disconnecting...")
@@ -1017,17 +1025,18 @@ class MainWindow(QtGui.QMainWindow,
 		self.abort_everything(disconnect=False)
 		self.refreshUi_wallet()
 	
-	def abort_everything(self, disconnect=True):
+	def abort_everything(self, disconnect=True, wait=True):
 		app = QtGui.QApplication.instance()
 		print("1. Emit abort everything")
 		app.abort_everything.emit()
 		#
-		print("2. disconnect")
 		if self.iso and disconnect:
+			print("2. disconnect")
 			self.iso.disconnect()
 		#
-		print("3. shutdown threads")
-		Request.shutdown(timeout=10)
+		if wait:
+			print("3. shutdown threads")
+			Request.shutdown(timeout=10)
 	
 	
 	def buffering(self):
