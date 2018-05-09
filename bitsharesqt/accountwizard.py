@@ -29,10 +29,22 @@ class AccountWizard(QtGui.QWizard):
 	def __init__(self, *args, **kwargs):
 		self.iso = kwargs.pop('isolator', None)
 		self.account_names = kwargs.pop('registrars', [ ])
-		self.activeAccounts = kwargs.pop('active', None)
+		self.activeAccount = kwargs.pop('active', None)
+		self.sweepMode = kwargs.pop('sweepMode', False)
 		super(AccountWizard, self).__init__(*args, **kwargs)
 		self.ui = ui = Ui_accountWizard()
 		ui.setupUi(self)
+
+		self.ui.introStack.setCurrentIndex(0 if not self.sweepMode else 1)
+		if self.sweepMode:
+			self.ui.accountEdit.setEnabled(False)
+			self.ui.accountName.setEnabled(False)
+			self.ui.oldAccount.setEnabled(False)
+			self.ui.inventAccount.setEnabled(False)
+			self.ui.accountEdit.setText(self.activeAccount["name"])
+			self.ui.accountName.setText(self.activeAccount["name"])
+			self.ui.oldAccount.setText(self.activeAccount["name"])
+			self.ui.inventAccount.setText(self.activeAccount["name"])
 
 		#self._curid = -1
 		#self.currentIdChanged.connect(self._cur_id)
@@ -76,7 +88,7 @@ class AccountWizard(QtGui.QWizard):
 		if (c == AccountWizard.PAGE_INTRO):
 			self.ui.passwordConfirm.setText("")
 			
-			if self.ui.rNewBrain.isChecked():
+			if self.ui.rNewBrain.isChecked() or self.ui.rRepBrain.isChecked():
 				generated = self.ui.brainkeyView.toPlainText()
 				if not generated:
 					bk = BrainKey() # this will generate a new one
@@ -125,10 +137,12 @@ class AccountWizard(QtGui.QWizard):
 			
 			print("Private keys (a,o,m)" + privs)
 			
-			#pubs = ""
-			#pubs += str(active_key.pubkey) + "\n"
-			#pubs += str(owner_key.pubkey) + "\n"
-			#pubs += str(memo_key.pubkey) + "\n"
+			pubs = ""
+			pubs += str(active_key.pubkey) + "\n"
+			pubs += str(owner_key.pubkey) + "\n"
+			pubs += str(memo_key.pubkey) + "\n"
+			
+			print("Public keys (a,o,m)" + pubs)
 			
 			self.ui.pubkeyOwner.setText( str(owner_key.pubkey) )
 			self.ui.pubkeyActive.setText( str(active_key.pubkey) )
@@ -177,10 +191,11 @@ class AccountWizard(QtGui.QWizard):
 			
 			print("Private keys (a,o,m)\n" + privs)
 			
-			#pubs = ""
-			#pubs += str(active_key.get_public()) + "\n"
-			#pubs += str(owner_key.get_public()) + "\n"
-			#pubs += str(memo_key.get_public()) + "\n"
+			pubs = ""
+			pubs += str(active_key.get_public()) + "\n"
+			pubs += str(owner_key.get_public()) + "\n"
+			pubs += str(memo_key.get_public()) + "\n"
+			print("Public keys (a, o, m)\n" + pubs)
 			
 			self.ui.pubkeyOwner.setText( str(owner_key.get_public()) )
 			self.ui.pubkeyActive.setText( str(active_key.get_public()) )
@@ -273,9 +288,80 @@ class AccountWizard(QtGui.QWizard):
 			self.ui.privkeysStatus.setText("Your account has been registered.")
 			#self.button(QtGui.QWizard.NextButton).clicked.emit(True)
 		
+		if (c == AccountWizard.PAGE_KEYS) and self.sweepMode:
+			account_name = self.ui.accountEdit.text()
+			account = self.iso.getAccount(account_name)
+			pks = self.collect_pks()
+			new_owner_key = str(pks[0].pubkey)
+			new_active_key = str(pks[1].pubkey)
+			new_memo_key = str(pks[2].pubkey)
+			#print("New public keys (a,o,m)", new_active_key, new_owner_key, new_memo_key)
+			try:
+				trx = QTransactionBuilder.QUpdateAccount(
+					account_name,
+					new_owner_key,
+					new_active_key,
+					new_memo_key,
+					account["options"]["voting_account"],
+					account["options"]["num_witness"],
+					account["options"]["num_committee"],
+					None if new_memo_key == account["options"]["memo_key"] else account["options"]["votes"], #! <- don't actually changes votes?
+					isolator=self.iso)
+				if not trx:
+					return False
+			except BaseException as error:
+				showexc(error)
+				return False
+			
 		return True
 	
+	def collect_pks(self, quiet=False):
+		pks = [ ]
+		pk_lines = self.ui.privateKeys.toPlainText().split("\n")
+		
+		for line in pk_lines:
+			line = line.strip()
+			if line:
+				try:
+					pk = PrivateKey(line)
+				except Exception as e:
+					if not quiet:
+						showexc(e)
+						showerror("Corrupt private key", line)
+					continue
+				
+				pks.append(pk)
+		
+		return pks
+
+	def _nextId_sweepMode(self):
+		c = self.currentId()
+		
+		if (c == AccountWizard.PAGE_INTRO):
+			if self.ui.rRepBrain.isChecked():
+				return AccountWizard.PAGE_NEW_BRAIN
+			if self.ui.rRepPass.isChecked():
+				return AccountWizard.PAGE_NEW_PASS
+			if self.ui.rRepKeys.isChecked():
+				return AccountWizard.PAGE_KEYS
+		
+		if (c == AccountWizard.PAGE_OLD_BRAIN):
+			if self.ui.rOldBrain.isChecked():
+				return AccountWizard.PAGE_KEYS
+			return AccountWizard.PAGE_KEYS
+		
+		if (c == AccountWizard.PAGE_OLD_PASS):
+			if self.ui.rOldPass.isChecked():
+				return AccountWizard.PAGE_KEYS
+			return AccountWizard.PAGE_KEYS
+		
+		if (c == AccountWizard.PAGE_KEYS):
+			return -1
+		
+		return c + 1
+
 	def nextId(self):
+		if self.sweepMode: return self._nextId_sweepMode()
 		c = self.currentId()
 		
 		if (c == AccountWizard.PAGE_INTRO):

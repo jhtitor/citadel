@@ -833,6 +833,7 @@ class MainWindow(QtGui.QMainWindow,
 		qaction(self, menu, "Remove Account...", self._remove_account)
 		#qaction(self, menu, "Export Private Keys...", self._export_account_keys)
 		qaction(self, menu, "Show Private Keys", self._show_account_keys)
+		qaction(self, menu, "Sweep Private Keys...", self._sweep_account_keys)
 		qmenu_exec(self.sender(), menu, position)
 	
 	def activate_account(self):
@@ -900,11 +901,54 @@ class MainWindow(QtGui.QMainWindow,
 			additional=account_name,
 			details=priv_txt, min_width=240)
 	
+	
+	def add_account(self):
+		try:
+			with self.iso.unlockedWallet() as w:
+				self._add_account()
+		except WalletLocked:
+			showerror("Can't add account to a locked wallet")
+		except Exception as error:
+			showexc(error)
+	
+	def _sweep_account_keys(self):
+		box = self.ui.accountsList
+		if not box.currentIndex().isValid():
+			return
+		account_name = box.currentItem().text()
+		
+		try:
+			with self.iso.unlockedWallet() as w:
+				n = self._sweep_keys(account_name)
+		except WalletLocked:
+			showerror("Can't add account to a locked wallet")
+			return
+		except Exception as error:
+			showexc(error)
+			return
+		
+		if n == 1:
+			showmsg("Key has been replaced")
+		else:
+			showmsg("%d keys have been replaced" % n)
+	
 	def _remove_account(self):
-		pass
+		box = self.ui.accountsList
+		if not box.currentIndex().isValid():
+			return
+		account_name = box.currentItem().text()
 		showerror(str(self.ui.accountsList.currentIndex()))
-		if askyesno("Are you sure you want to remove this account from this wallet?"):
+		if not(askyesno("If you don't have some means to restore this account, you will permamentely lost access to this account.\n\nAre you sure you want to remove account %s from this wallet?" % account_name)):
+			return
+		try:
+			self.iso.bts.wallet.removeAccount(account_name)
+			self.iso.store.accountStorage.delete(account_name)
+			#self.iso.store.accountStorage.update(account_name, "keys", 0)
+			self.remove_account_name(account_name)
+			
 			showmessage("Account removed")
+		except Exception as exc:
+			showexc(exc)
 	
 	def need_autoconnect(self, ignore_state=False):
 		config = self.iso.bts.config
@@ -1683,6 +1727,16 @@ class MainWindow(QtGui.QMainWindow,
 			box.addItem(name)
 		self.account_names.add(name)
 	
+	def remove_account_name(self, name):
+		for box in self.account_boxes:
+			if isinstance(box, QtGui.QComboBox):
+				item = box.findText(name, QtCore.Qt.MatchExactly)
+				box.removeItem(item)
+			else:
+				item = box.findItems(name, QtCore.Qt.MatchExactly)[0]
+				box.takeItem(box.row(item))
+		self.account_names.remove(name)
+	
 	def late_inject_account_box(self, box):
 		box.clear()
 		for name in self.account_names:
@@ -1717,8 +1771,8 @@ class MainWindow(QtGui.QMainWindow,
 			showerror("Must be online")
 			return
 		return self.mergeAccounts(wipe=True)
-
-	def mergeAccounts(self, wipe=False):
+	
+	def mergeAccounts(self, wipe=False, remove_unused=False):
 		accountStore = self.iso.accountStorage
 		if wipe:
 			accountStore.wipe()
@@ -1732,6 +1786,10 @@ class MainWindow(QtGui.QMainWindow,
 		#pprint(cached)
 		#print("REMOTE:")
 		#pprint(remote)
+		if remove_unused:
+			for name in cached: # account exists locally
+				if not(name in remote): # but not on blockchain
+					self.iso.removeCachedAccount(name)
 		
 		for name in remote:
 			if not(name in cached):
@@ -1761,20 +1819,8 @@ class MainWindow(QtGui.QMainWindow,
 		#pprint(r)
 		#print(win.ui.privkeysEdit.toPlainText())
 		
-		pks = [ ]
-		pk_lines = win.ui.privateKeys.toPlainText().split("\n")
-		
-		for line in pk_lines:
-			line = line.strip()
-			if line:
-				try:
-					pk = PrivateKey(line)
-				except Exception as e:
-					showexc(e)
-					showerror("Corrupt private key", line)
-					return
-				
-				pks.append(pk)
+
+		pks = win.collect_pks(quiet=False)
 		
 		for pk in pks:
 			try:
@@ -1785,6 +1831,42 @@ class MainWindow(QtGui.QMainWindow,
 		self.mergeAccounts()
 		
 		
+	def _sweep_keys(self, account_name):
+		wallet = self.iso.bts.wallet
+		account = self.iso.getAccount(account_name)
+		win = AccountWizard(
+			isolator=self.iso,
+			active=account,
+			sweepMode=True
+		)
+		
+		if not win.exec_():
+			return 0
+		
+		#pprint(win.field('keys'))
+		#pprint(r)
+		#print(win.ui.privkeysEdit.toPlainText())
+		
+		pks = win.collect_pks(quiet=False)
+		
+		added = 0
+		for pk in pks:
+			try:
+				wallet.addPrivateKey(str(pk))
+				added += 1
+			except Exception as e:
+				import traceback
+				traceback.print_exc()
+				showerror(">>>>" + str(e), additional=pk)
+		
+		#if added == 0:
+		#	# TODO: Remove old keys from wallet
+		#	pass
+		
+		removed = self.iso.removeUselessKeys(account["id"])
+		#self.mergeAccounts()
+		return added
+
 	def OTransfer(self, from_=None, to=None, amount=None, asset=None, memo=None):
 		
 		if from_ is True and self.activeAccount:

@@ -30,68 +30,127 @@
    <enum>QWizard::ModernStyle</enum>
   </property>
   <widget class="QWizardPage" name="introPage">
-   <widget class="QGroupBox" name="groupBox">
+   <widget class="QStackedWidget" name="introStack">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>0</x>
       <y>10</y>
-      <width>551</width>
-      <height>261</height>
+      <width>571</width>
+      <height>271</height>
      </rect>
     </property>
-    <property name="title">
-     <string>Options:</string>
+    <property name="currentIndex">
+     <number>1</number>
     </property>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <property name="spacing">
-      <number>20</number>
-     </property>
-     <item>
-      <widget class="QRadioButton" name="rNewBrain">
-       <property name="text">
-        <string>Create new account (brain key)</string>
+    <widget class="QWidget" name="basicPage">
+     <widget class="QGroupBox" name="groupBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>0</y>
+        <width>551</width>
+        <height>261</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Options:</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="spacing">
+        <number>20</number>
        </property>
-       <property name="checked">
-        <bool>true</bool>
+       <item>
+        <widget class="QRadioButton" name="rNewBrain">
+         <property name="text">
+          <string>Create new account (brain key)</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rNewPass">
+         <property name="text">
+          <string>Create new web-wallet account (password)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="line">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rOldBrain">
+         <property name="text">
+          <string>Import existing account (brain key)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rOldPass">
+         <property name="text">
+          <string>Import existing web-wallet account (password)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rOldKeys">
+         <property name="text">
+          <string>Import existing account (private keys)</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="sweepPage">
+     <widget class="QGroupBox" name="groupBoxR">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>0</y>
+        <width>551</width>
+        <height>161</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Options:</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
+       <property name="spacing">
+        <number>20</number>
        </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QRadioButton" name="rNewPass">
-       <property name="text">
-        <string>Create new web-wallet account</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QRadioButton" name="rOldBrain">
-       <property name="text">
-        <string>Import existing account (brain key)</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QRadioButton" name="rOldPass">
-       <property name="text">
-        <string>Import existing web-wallet account (password)</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QRadioButton" name="rOldKeys">
-       <property name="text">
-        <string>Import existing account (private keys)</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+       <item>
+        <widget class="QRadioButton" name="rRepBrain">
+         <property name="text">
+          <string>Generate new private keys (brain key)</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rRepPass">
+         <property name="text">
+          <string>Generate new private keys (web-wallet password)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="rRepKeys">
+         <property name="text">
+          <string>Use pre-generated private keys</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
    </widget>
   </widget>
   <widget class="QWizardPage" name="passwordPage1">
@@ -251,7 +310,7 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>370</x>
+      <x>380</x>
       <y>-60</y>
       <width>211</width>
       <height>261</height>
@@ -308,7 +367,7 @@
    <widget class="QLabel" name="label_2">
     <property name="geometry">
      <rect>
-      <x>370</x>
+      <x>380</x>
       <y>-60</y>
       <width>211</width>
       <height>261</height>

@@ -202,6 +202,34 @@ class BitsharesIsolator(object):
 		account._balances = blnc
 		return account
 	
+	def getBlindPublicKeys(self):
+		accs = self.getBlindAccounts()
+		pubs = [ ]
+		for acc in accs:
+			pubs.append(acc[1])
+		return pubs
+
+	def removeUselessKeys(self, account_id):
+		blind_pubs = self.getBlindPublicKeys()
+		pubs = self.getLocalAccountKeys(account_id)
+		removed = 0
+#		privs = self.getPrivateKeyForPublicKeys(pubs)
+#		for i in range(0, len(pubs)):
+#			pub = pubs[i]
+#			priv = privs[i]
+		for pub in pubs:
+			try:
+				priv = self.getPrivateKeyForPublicKeys([pub])[0]
+			except:
+				priv = None
+			if str(pub) in blind_pubs:
+				continue
+			if not(self.bts.wallet.getAccountFromPublicKey(pub)):
+				self.bts.wallet.removePrivateKeyFromPublicKey(pub)
+				removed += 1
+		
+		return removed
+	
 	def getRemoteAccounts(self):
 		if self.offline or not self.bts.wallet.rpc:
 			raise ResourceUnavailableOffline()
@@ -231,19 +259,12 @@ class BitsharesIsolator(object):
 		return True if acc else False
 	
 	def getCachedAccounts(self):
-		names = set()
 		accountStorage = self.store.accountStorage
 		accs = accountStorage.getAccounts()
 		return list(accs)
-		#print("GOT AcCS from Storage")
-		#pprint(accs)
-		for acc in accs:
-			#pprint(acc)
-			if acc is None: #?!?!??!
-				continue
-			#if acc['name']:
-				names.add(acc)#acc['name'])
-		return list(names)
+	
+	def getBlindAccounts(self):
+		return self.store.blindAccountStorage.getAccounts()
 	
 	def _accountFromDict(self, account_id, accountInfo):
 		from bitshares.account import Account
@@ -295,6 +316,10 @@ class BitsharesIsolator(object):
 			if pubkey in pubs:
 				return account_name
 		raise KeyError("Account with key " + pubkey)
+	
+	def removeCachedAccount(self, account_name):
+		accountStorage = self.store.accountStorage
+		accountStorage.delete(account_name)
 	
 	def getAccount(self, account_id, force_remote=False, force_local=False, cache=False):
 		
