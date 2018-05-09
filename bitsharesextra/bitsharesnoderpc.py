@@ -154,7 +154,7 @@ class BitSharesNodeRPC(object):
                 raise
             except queue.Empty:
                 pass
-            except:
+            except Exception as error:
                 import traceback
                 traceback.print_exc()
                 self.connected = False
