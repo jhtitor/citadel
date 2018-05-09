@@ -18,7 +18,7 @@ from bitshares.transactionbuilder import TransactionBuilder
 from bitsharesbase.operations import Transfer
 from bitsharesbase.operations import Transfer_to_blind
 from bitsharesbase.operations import Limit_order_create, Limit_order_cancel
-from bitsharesbase.operations import Account_create, Account_upgrade
+from bitsharesbase.operations import Account_create, Account_upgrade, Account_update
 from bitsharesbase.operations import Asset_create, Asset_update, Asset_update_bitasset
 from bitsharesbase.operations import Asset_issue, Asset_reserve, Asset_fund_fee_pool
 from bitsharesbase.operations import getOperationIdForClass
@@ -311,6 +311,64 @@ class QTransactionBuilder(QtGui.QDialog):
 		return win.exec_()
 	
 	
+	@classmethod
+	def QUpdateAccount(self,
+			account_name,
+			owner_key,
+			active_key,
+			memo_key,
+			voting_account,
+			num_witness,
+			num_committee,
+			votes,
+			fee_asset=None,
+			isolator=None):
+		iso = isolator
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
+		src_account = iso.getAccount(account_name)
+		dst_account = iso.getAccount(voting_account)
+		params = {
+			"account": src_account['id'],
+		}
+		from bitshares.blind import key_permission
+		role = "active"
+		if owner_key:
+			owner_auth = key_permission(owner_key)
+			params["owner"] = owner_auth
+			role = "owner"
+		if active_key:
+			active_auth = key_permission(active_key)
+			params["active"] = active_auth
+			role = "owner"
+		if not(votes is None):
+			params["new_options"] = {
+				"voting_account": dst_account["id"],
+				"memo_key": memo_key if memo_key else options["memo_key"],
+				"votes": votes,
+				"num_witness": num_witness,
+				"num_committee": num_committee,
+			}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		from pprint import pprint
+		print("USE:")
+		pprint(params)
+		
+		tx.appendOps(Account_update(**params))
+		
+		if iso.bts.wallet.locked():
+			tx.addSigningInformation(src_account, role, lazy=True)
+		else:
+			tx.appendSigner(src_account, role, lazy=True)
+		
+		win = QTransactionBuilder(trxbuffer=tx, iso=isolator)
+		return win.exec_()
+	
+
 	@classmethod
 	def QCreateAsset(self,
 			issuer,

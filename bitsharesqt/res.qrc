@@ -12,6 +12,8 @@
     <file>../images/op/fill_order.png</file>
     <file>../images/op/limit_order_cancel.png</file>
     <file>../images/op/limit_order_create.png</file>
+    <file>../images/op/account_update.png</file>
+    <file>../images/op/account_update_key.png</file>
     <file>../images/op/account_create.png</file>
     <file>../images/op/account_upgrade.png</file>
     <file>../images/op/transfer_from.png</file>
@@ -19,6 +21,8 @@
     <file>../images/op/transfer.png</file>
   </qresource>
   <qresource prefix="icons">
+    <file>../images/account.png</file>
+    <file>../images/account_suit.png</file>
     <file>../images/unsigned.png</file>
     <file>../images/signed.png</file>
     <file>../images/memo.png</file>

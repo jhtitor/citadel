@@ -637,6 +637,20 @@ class BitsharesIsolator(object):
 			desc = "Upgrade account"
 			#dst_account = iso.getAccount(op_action['account_to_upgrade'])
 			desc += " - " + accname(op_action['account_to_upgrade']) #self.softAccountName(#dst_account['name']
+		if (op_id == 6):
+			desc = "Update account/votes"
+			#dst_account = iso.getAccount(op_action['account'])
+			if "owner_key" in op_action:
+				desc = "Sweep owner key"
+				icon = "account_update_key"
+			if "active_key" in op_action:
+				icon = "account_update_key"
+				if "owner_key" in op_action:
+					desc = "Sweep owner and active keys"
+				else:
+					desc = "Sweep active key"
+			desc += " - " + accname(op_action['account']) #self.softAccountName(#dst_account['name']
+
 		if (op_id == 10):
 			desc = "Create asset"
 			try:
@@ -839,3 +853,26 @@ class BitsharesIsolator(object):
 			timeout -= 1
 			time.sleep(1)
 	
+	def getWitnesses(self, only_active=False, lazy=False):
+		from bitshares.witness import Witnesses
+		return Witnesses(blockchain_instance=self.bts, lazy=lazy)
+	
+	def getCommittee(self, only_active=False, lazy=False):
+		from bitshares.committee import Committee
+		rpc = self.bts.rpc
+		last_name = ""
+		whole = [ ]
+		while True:
+			accs = rpc.lookup_committee_member_accounts(last_name, 100)
+			for name, identifier in accs:
+				member = Committee(identifier, lazy=True, blockchain_instance=self.bts)
+				member.refresh()
+				whole.append(member)
+			last_name = accs[-1][0]
+			if len(accs) < 100:
+				break
+		return whole
+	
+	def getWorkers(self, only_active=False, lazy=False):
+		from bitshares.worker import Workers
+		return Workers(blockchain_instance=self.bts, lazy=lazy)
