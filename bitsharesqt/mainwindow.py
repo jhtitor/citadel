@@ -652,12 +652,13 @@ class MainWindow(QtGui.QMainWindow,
 			return
 		tabs = self._allTabs()
 		dump = self.iso.flush_notes()
+		tabs_need_resync = [ ]
 		for idx, package in dump:
 			if idx >= 100:
 				for tab in tabs:
 					if isinstance(tab, MarketTab):
 						if ("!" + str(idx)) in tab._tags:
-							tab.resync()
+							tabs_need_resync.append(tab)
 							break
 				continue
 			for notes in package:
@@ -668,12 +669,17 @@ class MainWindow(QtGui.QMainWindow,
 					#print("Check out:", idx, note)
 					id = note['id']
 					if id[:4] == "2.6.":
-						self.on_account_note(note)
+						tab = self.on_account_note(note)
+						if tab:
+							tabs_need_resync.append(tab)
 					if id[:4] == "2.5.":
 						self.on_balance_note(note)
 					#from pprint import pprint
 					#pprint(note)
 					#break
+		tabs_need_resync = set(tabs_need_resync)
+		for tab in tabs_need_resync:
+			tab.resync()
 	
 	def sell_open_market(self):
 		asset_name_a = self.ui.sellAssetCombo.currentText()
@@ -727,11 +733,13 @@ class MainWindow(QtGui.QMainWindow,
 			account = None
 		
 		if not account:
-			print("Could not locally resolve account %s to perform sync" % (str(account_id)))
-			return
+			#print("Could not locally resolve account %s to perform sync" % (str(account_id)))
+			return None
 		
-		print("Update for acc name:", account.name)
+		print("Update for account", account.name)
 		tab = self.findTab(HistoryTab, account.name)
+		
+		return tab
 		
 		if tab:
 			print("Have a history tab for it:")
@@ -743,6 +751,15 @@ class MainWindow(QtGui.QMainWindow,
 		account_id = note["owner"]
 		asset_id = note["asset_type"]
 		amount = note["balance"]
+		
+		try:
+			account = self.iso.getAccount(account_id, force_local=True)
+		except:
+			account = None
+		if not account:
+			#print("Could not locally resolve account %s to inject balance" % (str(account_id)))
+			return
+		print("New balance for account", account.name)
 		
 		try:
 			asset = self.iso.getAsset(asset_id)
