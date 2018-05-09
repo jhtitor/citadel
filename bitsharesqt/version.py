@@ -1,6 +1,26 @@
 #!/usr/bin/env python3
 
+# Return the git revision as a string (stolen from numpy)
+def git_version(on_error="Unknown"):
+	import os, subprocess
+	def _minimal_ext_cmd(cmd):
+		env = { } # construct minimal environment
+		for k in ['SYSTEMROOT', 'PATH']:
+			v = os.environ.get(k)
+			if v is not None: env[k] = v
+		# LANGUAGE is used on win32
+		env['LANGUAGE'] = env['LANG'] = env['LC_ALL'] = 'C'
+		return subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
+	try:
+		#out = _minimal_ext_cmd(['git', 'rev-parse', 'HEAD'])
+		out = _minimal_ext_cmd(['git', 'describe', '--always'])
+		GIT_REVISION = out.strip().decode('ascii')
+	except OSError:
+		GIT_REVISION = on_error
+	return GIT_REVISION
+
 VERSION="0.1.0"
+VERSION=git_version(VERSION)
 
 BUNDLE_NAME="BitShares-QT"
 UNIX_NAME="pybitshares-qt"
