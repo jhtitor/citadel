@@ -84,7 +84,8 @@ class AssetWindow(QtGui.QDialog):
 		self.ui.isPredictionMarket.setEnabled(bool(state))
 	
 	def route_buttonbox(self, button):
-		if button == self.ui.buttonBox.button(QtGui.QDialogButtonBox.Apply):
+#		if button == self.ui.buttonBox.button(QtGui.QDialogButtonBox.Apply):
+		if button == self.ui.buttonBox.button(QtGui.QDialogButtonBox.Ok):
 			if self.mode == "create":
 				self.attempt_create()
 			if self.mode == "edit":
