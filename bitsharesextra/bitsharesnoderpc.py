@@ -307,9 +307,9 @@ class BitSharesNodeRPC(object):
 
         if 'error' in ret:
             if 'detail' in ret['error']:
-                raise RPCError(ret['error']['detail'])
+                raise exceptions.RPCError(ret['error']['detail'])
             else:
-                raise RPCError(ret['error']['message'])
+                raise exceptions.RPCError(ret['error']['message'])
         else:
             return ret["result"]
 
