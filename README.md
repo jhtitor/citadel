@@ -4,7 +4,7 @@ To install the dependecies and vendor-drop some additional code,
 run:
 
 ```
-python3 setup.py develop
+pip3 install -r requirements.txt
 python3 vendor_package.py
 ```
 
@@ -40,7 +40,7 @@ https://indy.fulgan.com/SSL/openssl-1.0.2n-i386-win32.zip
 
 Prepare everything else:
 ```
-python -m pip install six ecdsa appdirs qrcode requests pycrypto pyqtgraph
+python -m pip -r requirements.txt
 python vendor_package.py
 ```
 
@@ -59,12 +59,12 @@ gcc -v
 ## MacPorts
 
 ```
-sudo port install py35-pyqt4
+sudo port install py35-pyqt4 py35-pip
 ```
 
 
 ```
-pip-3.5 install six ecdsa appdirs qrcode requests pycrypto pyqtgraph
+pip-3.5 install -r requirements.txt --user
 python3 vendor_package.py
 ```
 
