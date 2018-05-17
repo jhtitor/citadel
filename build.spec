@@ -1,9 +1,11 @@
 # -*- mode: python -*-
-import version
-EXE_NAME=version.UNIX_NAME
-
 import os
 import sys
+sys.path += [ os.path.abspath(SPECPATH) ]
+import bitsharesqt.version as version
+
+EXE_NAME=version.UNIX_NAME
+
 import platform
 def is_os_64bit():
     return platform.machine().endswith('64')
