@@ -23,7 +23,6 @@ https://github.com/mhammond/pywin32/releases/download/b221/pywin32-221.win32-py3
 PyQt4 wheel distribution, get it from
 https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyqt4
 You need the `PyQt4-4.11.4-cp34-cp34m-win32.whl` one
-https://download.lfd.uci.edu/pythonlibs/n1rrk3iq/PyQt4-4.11.4-cp34-cp34m-win32.whl
 
 <s>
 PyCrypto
@@ -58,6 +57,27 @@ python vendor_package.py
 You can now run
 ```
 build.bat
+```
+
+## Windows 7+ 64-bit
+
+Note: building with python 3.6 is trickier (than, say, 3.5), but
+is possible.
+
+PyQt4 wheel distribution, get it from
+https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyqt4
+You need the `PyQt4-4.11.4-cp36-cp36m-win_amd64.whl` one
+
+```
+python -m pip install scrypt
+```
+
+OpenSSL .dlls (for scrypt), unpack into source folder
+https://indy.fulgan.com/SSL/openssl-1.0.2o-i386-win32.zip
+
+```
+py -3.6 -m pip install -r requirements.txt
+py -3.6 venor_package.py
 ```
 
 # OSX
