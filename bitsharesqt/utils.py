@@ -78,6 +78,7 @@ def showerror(message, title="Error", additional=None, details=None):
 
 	msg.setText(message)
 	msg.setWindowTitle(title)
+	msg.setWindowIcon(app().mainwin.windowIcon())
 
 	if additional:
 		msg.setInformativeText(str(additional))
@@ -99,6 +100,7 @@ def showdialog(message, title="Information", additional=None, details=None, min_
 	
 	msg.setText(message)
 	msg.setWindowTitle(title)
+	msg.setWindowIcon(app().mainwin.windowIcon())
 	
 	if min_width:
 		msg.setStyleSheet("QLabel{min-width: "+str(min_width)+"px;}");
