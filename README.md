@@ -36,7 +36,7 @@ python -m pip install scrypt
 ```
 
 OpenSSL .dlls (for scrypt), unpack into source folder
-https://indy.fulgan.com/SSL/openssl-1.0.2n-i386-win32.zip
+https://indy.fulgan.com/SSL/openssl-1.0.2o-i386-win32.zip
 
 Prepare everything else:
 ```

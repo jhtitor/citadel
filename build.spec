@@ -33,9 +33,9 @@ def extract_file(archive, name):
 
 def download_windows_openssl(i686=True):
     if i686:
-        filename = 'openssl-1.0.2n-i386-win32.zip'
+        filename = 'openssl-1.0.2o-i386-win32.zip'
     else:
-        filename = 'openssl-1.0.2n-x64_86-win64.zip'
+        filename = 'openssl-1.0.2o-x64_86-win64.zip'
     url = 'https://indy.fulgan.com/SSL/' + filename
     return download_file(filename, url)
 
