@@ -1452,6 +1452,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		#self.open_wallet(path, autounlock=True)
 		app().reopen(path)
+		return True
 	
 	def setupUIfromConfig(self):
 		#store = self.iso.store
