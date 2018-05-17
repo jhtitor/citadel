@@ -31,6 +31,9 @@ App: $(ICNS_FILE)
 	cp $(SCRYPT_PATH) dist/$(BUNDLE_NAME).app/Contents/Resources/lib/python3.5/lib-dynload/_scrypt.so
 	install_name_tool -change $(SCRYPT_DYLIB) @executable_path/../Frameworks/libcrypto.1.0.0.dylib dist/$(BUNDLE_NAME).app/Contents/Resources/lib/python3.5/lib-dynload/_scrypt.so
 
+app: $(ICNS_FILE)
+	pyinstaller -y build.spec
+
 dmg: dist/$(BUNDLE_NAME).app
 	dmgbuild -s dmg_settings.py "$(BUNDLE_NAME) $(VERSION_STRING)" dist/$(UNIX_NAME)-$(VERSION_STRING)-osx.dmg
 

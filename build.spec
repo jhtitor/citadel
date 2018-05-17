@@ -62,6 +62,9 @@ if sys.platform == 'win32':
     # provide "hidden_imports: _scrypt" below
     hidden_imports.append( '_scrypt' )
 
+if sys.platform == "darwin":
+    hidden_imports.append( '_scrypt' )
+
 block_cipher = None
 
 a = Analysis(['citadel'],
@@ -98,3 +101,16 @@ exe = EXE(pyz,
 #               strip=False,
 #               upx=True,
 #               name='main')
+
+app = BUNDLE(exe,
+         name=version.BUNDLE_NAME+'.app',
+         icon='build/app.icns',
+         bundle_identifier=None,
+         info_plist={
+                "CFBundleName": version.BUNDLE_NAME,
+                "CFBundleDisplayName": version.SHORT_DESCRIPTION,
+                "CFBundleIdentifier": "li.citadel.desktop",
+                "CFBundleShortVersionString": version.VERSION,
+        }
+)
+
