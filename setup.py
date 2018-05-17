@@ -47,7 +47,7 @@ setup(
 
     install_requires=[
         'six', 'ecdsa', 'appdirs',
-        'qrcode', 'requests', 'pycrypto',
+        'qrcode', 'requests', 'pycryptodomex',
         'pyqtgraph', 'scrypt', 'secp256k1prp'
     ],
 

@@ -25,11 +25,22 @@ https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyqt4
 You need the `PyQt4-4.11.4-cp34-cp34m-win32.whl` one
 https://download.lfd.uci.edu/pythonlibs/n1rrk3iq/PyQt4-4.11.4-cp34-cp34m-win32.whl
 
+<s>
 PyCrypto
 http://www.voidspace.org.uk/python/pycrypto-2.6.1/pycrypto-2.6.1-cp34-none-win32.whl
+</s>
+PyCryptodome
+```
+python -m pip install pycryptodome
+```
 
+Note, pycryptodomex will also be pulled from requirements.txt.
+But the vanilla pycryptodome MUST be installed explicitly by you.
+
+<s>
 secp256k1prp-py
 https://github.com/jhtitor/secp256k1prp-py/releases/download/0.13.2.5prp/secp256k1prp-0.13.2-cp34-cp34m-win32.whl
+</s>
 
 ```
 python -m pip install scrypt
