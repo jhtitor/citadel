@@ -10,11 +10,13 @@ def git_version(on_error="Unknown"):
 			if v is not None: env[k] = v
 		# LANGUAGE is used on win32
 		env['LANGUAGE'] = env['LANG'] = env['LC_ALL'] = 'C'
-		return subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
+		return subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0].strip().decode('ascii')
 	try:
-		#out = _minimal_ext_cmd(['git', 'rev-parse', 'HEAD'])
-		out = _minimal_ext_cmd(['git', 'describe', '--always'])
-		GIT_REVISION = out.strip().decode('ascii')
+		GIT_BRANCH = _minimal_ext_cmd(['git', 'rev-parse' ,'--abbrev-ref', 'HEAD'])
+		if not(GIT_BRANCH): return on_error
+		if GIT_BRANCH == "master": return on_error
+		#GIT_REVISION   = _minimal_ext_cmd(['git', 'rev-parse', 'HEAD'])
+		GIT_REVISION = _minimal_ext_cmd(['git', 'describe', '--always'])
 	except OSError:
 		GIT_REVISION = on_error
 	return GIT_REVISION
