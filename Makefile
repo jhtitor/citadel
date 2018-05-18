@@ -5,7 +5,9 @@ ICO_FILE=images/app.ico
 
 SCRYPT_PATH=$(shell bitsharesqt/version.py --scryptlib)
 SCRYPT_DYLIB=$(shell bitsharesqt/version.py --scryptlib --dl)
+UNIX_NAME=$(shell bitsharesqt/version.py --uname)
 BUNDLE_NAME=$(shell bitsharesqt/version.py --bundle)
+VERSION_STRING=$(shell bitsharesqt/version.py --version)
 
 UISRC=bitsharesqt
 
@@ -28,6 +30,9 @@ App: $(ICNS_FILE)
 	python3 setup.py py2app --iconfile $(ICNS_FILE)
 	cp $(SCRYPT_PATH) dist/$(BUNDLE_NAME).app/Contents/Resources/lib/python3.5/lib-dynload/_scrypt.so
 	install_name_tool -change $(SCRYPT_DYLIB) @executable_path/../Frameworks/libcrypto.1.0.0.dylib dist/$(BUNDLE_NAME).app/Contents/Resources/lib/python3.5/lib-dynload/_scrypt.so
+
+dmg: dist/$(BUNDLE_NAME).app
+	dmgbuild -s dmg_settings.py "$(BUNDLE_NAME) $(VERSION_STRING)" dist/$(UNIX_NAME)-$(VERSION_STRING)-osx.dmg
 
 win32: $(ICO_FILE)
 	pyinstaller -D --windowed --icon $(ICO_FILE) citadel
