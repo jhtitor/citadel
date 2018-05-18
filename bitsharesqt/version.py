@@ -1,5 +1,36 @@
 #!/usr/bin/env python3
 
+VERSION="0.1.0"
+
+BUNDLE_NAME="BitShares-QT"
+UNIX_NAME="pybitshares-qt"
+LOGO_1024="images/bitshares_1024x1024.png"
+SHORT_DESCRIPTION="BitShares Wallet"
+
+BUNDLE_NAME="Citadel"
+UNIX_NAME="citadel"
+LOGO_1024="images/citadel_1024x1024.png"
+SHORT_DESCRIPTION="Citadel BitShares Wallet"
+
+import os
+import sys
+def resource_path(relative_path):
+	""" Get absolute path to resource, works for dev and for PyInstaller """
+	try:
+		# PyInstaller creates a temp folder and stores path in _MEIPASS
+		base_path = sys._MEIPASS
+	except Exception:
+		base_path = os.path.abspath(".")
+	return os.path.join(base_path, relative_path)
+
+def txt_version(on_error="Unknown"):
+	try:
+		path = resource_path("version.txt")
+		with open(path) as f:
+			return f.read().strip()
+	except:
+		return on_error
+
 # Return the git revision as a string (stolen from numpy)
 def git_version(on_error="Unknown"):
 	import os, subprocess
@@ -21,18 +52,8 @@ def git_version(on_error="Unknown"):
 		GIT_REVISION = on_error
 	return GIT_REVISION
 
-VERSION="0.1.0"
 VERSION=git_version(VERSION)
-
-BUNDLE_NAME="BitShares-QT"
-UNIX_NAME="pybitshares-qt"
-LOGO_1024="images/bitshares_1024x1024.png"
-SHORT_DESCRIPTION="BitShares Wallet"
-
-BUNDLE_NAME="Citadel"
-UNIX_NAME="citadel"
-LOGO_1024="images/citadel_1024x1024.png"
-SHORT_DESCRIPTION="Citadel BitShares Wallet"
+VERSION=txt_version(VERSION)
 
 if __name__ == "__main__":
 	import sys

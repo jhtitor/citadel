@@ -6,6 +6,13 @@ import bitsharesqt.version as version
 
 EXE_NAME=version.UNIX_NAME
 
+def bundle_version_file():
+    verfile = os.path.abspath(os.path.join(SPECPATH, "version.txt"))
+    with open(verfile, "w") as f:
+        f.write(version.git_version(version.VERSION))
+
+bundle_version_file()
+
 import platform
 def is_os_64bit():
     return platform.machine().endswith('64')
@@ -70,7 +77,7 @@ block_cipher = None
 a = Analysis(['citadel'],
              pathex=[ ],
              binaries=binaries,
-             datas=[],
+             datas=[('version.txt', '.')],
              hiddenimports=hidden_imports,
              hookspath=[],
              runtime_hooks=[],

@@ -5,4 +5,5 @@
 @REM [1]: https://ss64.com/nt/syntax-args.html
 %~d0
 cd %~dp0
+del version.txt
 pyinstaller build.spec

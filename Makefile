@@ -32,13 +32,11 @@ App: $(ICNS_FILE)
 	install_name_tool -change $(SCRYPT_DYLIB) @executable_path/../Frameworks/libcrypto.1.0.0.dylib dist/$(BUNDLE_NAME).app/Contents/Resources/lib/python3.5/lib-dynload/_scrypt.so
 
 app: $(ICNS_FILE)
+	rm version.txt
 	pyinstaller -y build.spec
 
 dmg: dist/$(BUNDLE_NAME).app
 	dmgbuild -s dmg_settings.py "$(BUNDLE_NAME) $(VERSION_STRING)" dist/$(UNIX_NAME)-$(VERSION_STRING)-osx.dmg
-
-win32: $(ICO_FILE)
-	pyinstaller -D --windowed --icon $(ICO_FILE) citadel
 
 $(ICO_FILE): $(ICONSET_ICON)
 	convert -resize x32 -gravity center -crop 32x32+0+0 $(ICONSET_ICON) \
