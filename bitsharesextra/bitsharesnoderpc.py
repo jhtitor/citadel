@@ -32,6 +32,8 @@ class BitSharesNodeRPC(object):
             self._ping_callback = kwargs.pop("ping_callback", None)
         self._preid = 0
 
+        self.rate_limit = kwargs.pop("rate_limit", 0.005)
+
         self.prepare_proxy(kwargs)
         self.notes = queue.Queue()
         self.requests = queue.Queue()
@@ -95,6 +97,7 @@ class BitSharesNodeRPC(object):
                 self.ws.close()
         except:
             pass
+        self.ws = None
         self.connecting = False
         self.connected = False
         self.initialized = False
@@ -117,7 +120,7 @@ class BitSharesNodeRPC(object):
                 time.sleep(0.1)
                 try:
                     self.wsconnect()
-
+                    tm = self.ws.sock.gettimeout()
                     print("now login")
                     self.login(self.user, self.password, api_id=1, plan_b=True)
                     print("now reg api")
@@ -145,26 +148,37 @@ class BitSharesNodeRPC(object):
 
             try:
                 payload = self.requests.get(block=False)
+                self.ws.sock.settimeout(tm)
                 self.ws.send(json.dumps(payload, ensure_ascii=False).encode('utf8'))
             except KeyboardInterrupt:
                 raise
             except queue.Empty:
                 pass
-            except:
+            except Exception as error:
                 import traceback
                 traceback.print_exc()
+                self.connected = False
+                self._ping_callback(self, "disconnected", error)
+                continue
 
             if not(self.needed):
                 break
 
             try:
-                self.ws.sock.settimeout(2)
+                self.ws.sock.settimeout(self.rate_limit) # something not too high
                 reply = self.ws.recv()
             except KeyboardInterrupt:
                 raise
             except websocket._exceptions.WebSocketTimeoutException:
-                self.ws.ping()
-                continue
+                try:
+                    self.ws.sock.settimeout(tm)
+                    self.ws.ping()
+                    continue
+                except Exception as error:
+                    self.connected = False
+                    self._ping_callback(self, "disconnected", error)
+                    continue
+            # yes ^ v - same code
             except Exception as error:
                 self.connected = False
                 self._ping_callback(self, "disconnected", error)
@@ -172,10 +186,17 @@ class BitSharesNodeRPC(object):
 
             log.debug(json.dumps(reply))
             ret = {}
+            err = None
             try:
                 ret = json.loads(reply, strict=False)
             except ValueError:
-                self.errors.put( ValueError("Client returned invalid format. Expected JSON!") )
+                err = ValueError("Client returned invalid format. Expected JSON!")
+            except Exception as e:
+                err = e
+            except BaseException as e:
+                err = e
+            if err:
+                self.errors.put(err)
                 continue
 
             if not('id' in ret) or ('method' in ret and ret['method'] == 'notice'):
@@ -221,8 +242,8 @@ class BitSharesNodeRPC(object):
             self.proxy_rdns = True
             if not(url.scheme.endswith('h')):
                 self.proxy_rdns = False
-            else:
-                self.proxy_type = self.proxy_type[0:len(self.proxy_type)-1]
+            #else:
+            #    self.proxy_type = self.proxy_type[0:len(self.proxy_type)-1]
         else:
             # Defaults (tweakable)
             self.proxy_host = options.pop("proxy_host", None)
@@ -286,9 +307,9 @@ class BitSharesNodeRPC(object):
 
         if 'error' in ret:
             if 'detail' in ret['error']:
-                raise RPCError(ret['error']['detail'])
+                raise exceptions.RPCError(ret['error']['detail'])
             else:
-                raise RPCError(ret['error']['message'])
+                raise exceptions.RPCError(ret['error']['message'])
         else:
             return ret["result"]
 
@@ -310,10 +331,10 @@ class BitSharesNodeRPC(object):
         #if payload['params'][1] == "lookup_account_names":
         #    raise Exception("NO")
         try:
-            if self.connected:
-                self.wssend(payload)
-            else:
-                self.requests.put(payload, block=True)
+            #if self.connected:
+            #    self.wssend(payload)
+            #else:
+            self.requests.put(payload, block=True)
         except KeyboardInterrupt:
             raise
         except:
@@ -348,8 +369,8 @@ class BitSharesNodeRPC(object):
             #sleeptime = (cnt - 1) * 2 if cnt < 10 else 10
 
             if not ret:
-                sleeptime -= 0.1
-                time.sleep(0.1)
+                sleeptime -= self.rate_limit*2
+                time.sleep(self.rate_limit*2)
                 continue
 
 

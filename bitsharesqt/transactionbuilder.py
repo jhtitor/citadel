@@ -18,7 +18,7 @@ from bitshares.transactionbuilder import TransactionBuilder
 from bitsharesbase.operations import Transfer
 from bitsharesbase.operations import Transfer_to_blind
 from bitsharesbase.operations import Limit_order_create, Limit_order_cancel
-from bitsharesbase.operations import Account_create, Account_upgrade
+from bitsharesbase.operations import Account_create, Account_upgrade, Account_update
 from bitsharesbase.operations import Asset_create, Asset_update, Asset_update_bitasset
 from bitsharesbase.operations import Asset_issue, Asset_reserve, Asset_fund_fee_pool
 from bitsharesbase.operations import getOperationIdForClass
@@ -106,7 +106,7 @@ class QTransactionBuilder(QtGui.QDialog):
 			for (op_id, op) in trx["operations"]
 		]
 		
-		tx = TransactionBuilder(trx, bitshares_instance=self.iso.bts)
+		tx = TransactionBuilder(trx, blockchain_instance=self.iso.bts)
 		self.tx = tx
 		self.applyTransaction(tx, self.iso)
 		
@@ -221,8 +221,8 @@ class QTransactionBuilder(QtGui.QDialog):
 	@classmethod
 	def QRegisterAccount(self, registrar_name, referrer_name, data, fee_asset=None, isolator=None):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		registrarAccount = iso.getAccount(registrar_name)
 		referrerAccount = iso.getAccount(referrer_name)
 		
@@ -284,8 +284,8 @@ class QTransactionBuilder(QtGui.QDialog):
 	@classmethod
 	def QUpgradeAccount(self, account_name, fee_asset=None, isolator=None):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(account_name)
 		params = {
 			"account_to_upgrade": src_account['id'],
@@ -312,6 +312,64 @@ class QTransactionBuilder(QtGui.QDialog):
 	
 	
 	@classmethod
+	def QUpdateAccount(self,
+			account_name,
+			owner_key,
+			active_key,
+			memo_key,
+			voting_account,
+			num_witness,
+			num_committee,
+			votes,
+			fee_asset=None,
+			isolator=None):
+		iso = isolator
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
+		src_account = iso.getAccount(account_name)
+		dst_account = iso.getAccount(voting_account)
+		params = {
+			"account": src_account['id'],
+		}
+		from bitshares.blind import key_permission
+		role = "active"
+		if owner_key:
+			owner_auth = key_permission(owner_key)
+			params["owner"] = owner_auth
+			role = "owner"
+		if active_key:
+			active_auth = key_permission(active_key)
+			params["active"] = active_auth
+			role = "owner"
+		if not(votes is None):
+			params["new_options"] = {
+				"voting_account": dst_account["id"],
+				"memo_key": memo_key if memo_key else options["memo_key"],
+				"votes": votes,
+				"num_witness": num_witness,
+				"num_committee": num_committee,
+			}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		from pprint import pprint
+		print("USE:")
+		pprint(params)
+		
+		tx.appendOps(Account_update(**params))
+		
+		if iso.bts.wallet.locked():
+			tx.addSigningInformation(src_account, role, lazy=True)
+		else:
+			tx.appendSigner(src_account, role, lazy=True)
+		
+		win = QTransactionBuilder(trxbuffer=tx, iso=isolator)
+		return win.exec_()
+	
+
+	@classmethod
 	def QCreateAsset(self,
 			issuer,
 			symbol,
@@ -328,8 +386,8 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(issuer)
 		permissions_int = toint(permissions)
 		flags_int = toint(flags)
@@ -420,7 +478,7 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
+		blockchain_instance = iso.bts
 		src_account = iso.getAccount(issuer)
 		asset = iso.getAsset(symbol)
 		bitasset_options = asset['bitasset_data']
@@ -458,8 +516,8 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(issuer)
 		new_account = iso.getAccount(new_issuer) if new_issuer else None
 		if new_account and new_account["id"] == src_account["id"]:
@@ -513,8 +571,8 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(source_account)
 		asset = iso.getAsset(asset_id)
 		amount = iso.getAmount(amount_num, asset_id).json()
@@ -566,14 +624,14 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		dst_account = iso.getAccount(target_account)
 		asset = iso.getAsset(asset_id)
 		amount = iso.getAmount(amount_num, asset_id).json()
 
 		from bitshares.blind import transfer_from_blind
-		confirm = transfer_from_blind(bitshares_instance,
+		confirm = transfer_from_blind(blockchain_instance,
 			source_pubkey,
 			dst_account["id"],
 			amount["amount"],
@@ -614,13 +672,13 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		asset = iso.getAsset(asset_id)
 		amount = iso.getAmount(amount_num, asset_id).json()
 		
 		from bitshares.blind import blind_transfer
-		confirm = blind_transfer(bitshares_instance,
+		confirm = blind_transfer(blockchain_instance,
 			source_pubkey,
 			target_pubkey,
 			amount["amount"],
@@ -672,8 +730,8 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(source_account)
 		params = {
 			"asset_to_issue": iso.getAmount(amount_num, asset_id).json(),
@@ -710,8 +768,8 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(source_account)
 		params = {
 			"amount_to_reserve": iso.getAmount(amount_num, asset_id).json(),
@@ -746,8 +804,8 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(source_account)
 		amount = iso.getAmount(amount_num, asset_id).json()
 		params = {
@@ -787,8 +845,8 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(source_account)
 		params = {
 			"seller": iso.getAccount(source_account)['id'],
@@ -827,8 +885,8 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
-		tx = TransactionBuilder(bitshares_instance=bitshares_instance)
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(source_account)
 		params = {
 			"fee_paying_account": iso.getAccount(source_account)['id'],
@@ -861,7 +919,7 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		tx = TransactionBuilder(bitshares_instance=iso.bts)
+		tx = TransactionBuilder(blockchain_instance=iso.bts)
 		src_account = iso.getAccount(source_account)
 		params = {
 			"amount": iso.getAmount(amount_num, asset_id).json(),
@@ -889,7 +947,7 @@ class QTransactionBuilder(QtGui.QDialog):
 	
 	@classmethod
 	def _QExecS(self, iso, vs):
-		tx = TransactionBuilder(bitshares_instance=iso.bts)
+		tx = TransactionBuilder(blockchain_instance=iso.bts)
 		for (op, sigs) in vs:
 			tx.appendOps(op)
 			for (account,role) in sigs:
@@ -908,14 +966,14 @@ class QTransactionBuilder(QtGui.QDialog):
 			isolator=None
 		):
 		iso = isolator
-		bitshares_instance = iso.bts
+		blockchain_instance = iso.bts
 
 
 		trx["operations"] = [
 			getOperationClassForId(op_id)(**op)
 			for (op_id, op) in trx["operations"]
 		]
-		tx = TransactionBuilder(trx, bitshares_instance=bitshares_instance)
+		tx = TransactionBuilder(trx, blockchain_instance=blockchain_instance)
 		
 		#for (op_id, op) in trx["operations"]:
 		#	op_klass = getOperationClassForId(op_id)

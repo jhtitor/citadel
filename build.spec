@@ -1,9 +1,18 @@
 # -*- mode: python -*-
-import version
-EXE_NAME=version.UNIX_NAME
-
 import os
 import sys
+sys.path += [ os.path.abspath(SPECPATH) ]
+import bitsharesqt.version as version
+
+EXE_NAME=version.UNIX_NAME
+
+def bundle_version_file():
+    verfile = os.path.abspath(os.path.join(SPECPATH, "version.txt"))
+    with open(verfile, "w") as f:
+        f.write(version.git_version(version.VERSION))
+
+bundle_version_file()
+
 import platform
 def is_os_64bit():
     return platform.machine().endswith('64')
@@ -33,9 +42,9 @@ def extract_file(archive, name):
 
 def download_windows_openssl(i686=True):
     if i686:
-        filename = 'openssl-1.0.2n-i386-win32.zip'
+        filename = 'openssl-1.0.2o-i386-win32.zip'
     else:
-        filename = 'openssl-1.0.2n-x64_86-win64.zip'
+        filename = 'openssl-1.0.2o-x64_86-win64.zip'
     url = 'https://indy.fulgan.com/SSL/' + filename
     return download_file(filename, url)
 
@@ -60,12 +69,15 @@ if sys.platform == 'win32':
     # provide "hidden_imports: _scrypt" below
     hidden_imports.append( '_scrypt' )
 
+if sys.platform == "darwin":
+    hidden_imports.append( '_scrypt' )
+
 block_cipher = None
 
 a = Analysis(['citadel'],
              pathex=[ ],
              binaries=binaries,
-             datas=[],
+             datas=[('version.txt', '.')],
              hiddenimports=hidden_imports,
              hookspath=[],
              runtime_hooks=[],
@@ -96,3 +108,16 @@ exe = EXE(pyz,
 #               strip=False,
 #               upx=True,
 #               name='main')
+
+app = BUNDLE(exe,
+         name=version.BUNDLE_NAME+'.app',
+         icon='build/app.icns',
+         bundle_identifier=None,
+         info_plist={
+                "CFBundleName": version.BUNDLE_NAME,
+                "CFBundleDisplayName": version.SHORT_DESCRIPTION,
+                "CFBundleIdentifier": "li.citadel.desktop",
+                "CFBundleShortVersionString": version.VERSION,
+        }
+)
+

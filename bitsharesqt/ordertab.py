@@ -155,7 +155,7 @@ class OrderTab(QtGui.QWidget):
 		mtype = sell_asset + ":" + buy_asset
 		from bitshares.market import Market
 		
-		#market = Market(mtype, bitshares_instance=self._iso.bts)
+		#market = Market(mtype, blockchain_instance=self._iso.bts)
 		#tick = market.ticker()
 		tick = iso.bts.rpc.get_ticker(asset_a["id"], asset_b["id"])
 		

@@ -424,23 +424,34 @@
         </widget>
        </item>
        <item row="4" column="1">
-        <widget class="QLineEdit" name="dashVotesAs">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>20</height>
-          </size>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="frame">
-          <bool>false</bool>
-         </property>
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-        </widget>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QLineEdit" name="dashVotesAs">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="frame">
+            <bool>false</bool>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="voteButton">
+           <property name="text">
+            <string>Vote</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </item>
@@ -519,7 +530,6 @@
   <tabstop>dashAccountName</tabstop>
   <tabstop>dashRegistrar</tabstop>
   <tabstop>dashReferrer</tabstop>
-  <tabstop>dashVotesAs</tabstop>
   <tabstop>upgradeFeeAsset</tabstop>
   <tabstop>upgradeButton</tabstop>
   <tabstop>balanceTable</tabstop>

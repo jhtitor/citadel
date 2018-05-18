@@ -131,7 +131,7 @@ class Accounts(DataDir):
         """
         query = ("DELETE FROM %s " % (self.__tablename__) +
                  "WHERE account=?",
-                 (account_name))
+                 (account_name,))
         self.sql_execute(query)
 
     def wipe(self):
@@ -686,10 +686,10 @@ class Assets(DataDir):
         query = ("DELETE FROM %s " % (self.__tablename__),)
         self.sql_execute(query)
 
+from bitshares.storage import BlindAccounts, BlindHistory
+from bitshares.storage import CommonStorage
 
-from bitshares.storage import BitsharesStorage
-
-class BitsharesStorageExtra(BitsharesStorage):
+class BitsharesStorageExtra(CommonStorage):
 
     def __init__(self, path, create=True, **kwargs):
         log.info("Initializing storage %s create: %s" %(path, str(create)))
@@ -719,3 +719,12 @@ class BitsharesStorageExtra(BitsharesStorage):
         self.gatewayStorage = ExternalHistory(path)
         if not self.gatewayStorage.exists_table() and create:
             self.gatewayStorage.create_table()
+
+        # Additional tables
+        self.blindAccountStorage = BlindAccounts(path)
+        if not self.blindAccountStorage.exists_table() and create:
+            self.blindAccountStorage.create_table()
+
+        self.blindStorage = BlindHistory(path)
+        if not self.blindStorage.exists_table() and create:
+            self.blindStorage.create_table()

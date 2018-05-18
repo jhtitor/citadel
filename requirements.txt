@@ -1,0 +1,9 @@
+six
+ecdsa
+appdirs
+qrcode
+requests
+pyqtgraph
+scrypt
+secp256k1prp
+pycryptodomex

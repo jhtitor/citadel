@@ -179,7 +179,7 @@
              <string>If checked, the order must be filled immediately or not at all</string>
             </property>
             <property name="text">
-             <string>FILL OR KILL</string>
+             <string>FoK</string>
             </property>
            </widget>
           </item>
@@ -412,7 +412,7 @@
              <string>If checked, the order must be filled immediately or not at all</string>
             </property>
             <property name="text">
-             <string>FILL OR KILL</string>
+             <string>FoK</string>
             </property>
            </widget>
           </item>

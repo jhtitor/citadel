@@ -6,8 +6,8 @@
 		from isolator import BitsharesIsolator
 		BitsharesIsolator.enable()
 	
-	This will set a shared_bitshares_instance to broken, unusable
-	object, so all `get_shared_bitshares_instance` consumers will
+	This will set a shared_blockchain_instance to broken, unusable
+	object, so all `get_shared_blockchain_instance` consumers will
 	fail with an Exception upon creation.
 	
 	This should ensure no rogue instances of BitShares are created
@@ -15,7 +15,7 @@
 	
 		asset = Asset("BTS") # <- no bitshare_instance= provided(!)
 	
-	UNLESS your application calls `set_shared_bitshares_instance`
+	UNLESS your application calls `set_shared_blockchain_instance`
 	later!
 	
 	Then, to create/get a singleton instance, use
@@ -53,9 +53,9 @@ class BitsharesIsolator(object):
 	@classmethod
 	def enable(self):
 		if not self.enabled:
-			from bitshares.instance import set_shared_bitshares_instance
+			from bitshares.instance import set_shared_blockchain_instance
 			broken = BrokenBitsharesInstance()
-			set_shared_bitshares_instance(broken)
+			set_shared_blockchain_instance(broken)
 			self.enabled = True
 	
 	def __init__(self, *args, **kwargs):
@@ -202,6 +202,34 @@ class BitsharesIsolator(object):
 		account._balances = blnc
 		return account
 	
+	def getBlindPublicKeys(self):
+		accs = self.getBlindAccounts()
+		pubs = [ ]
+		for acc in accs:
+			pubs.append(acc[1])
+		return pubs
+
+	def removeUselessKeys(self, account_id):
+		blind_pubs = self.getBlindPublicKeys()
+		pubs = self.getLocalAccountKeys(account_id)
+		removed = 0
+#		privs = self.getPrivateKeyForPublicKeys(pubs)
+#		for i in range(0, len(pubs)):
+#			pub = pubs[i]
+#			priv = privs[i]
+		for pub in pubs:
+			try:
+				priv = self.getPrivateKeyForPublicKeys([pub])[0]
+			except:
+				priv = None
+			if str(pub) in blind_pubs:
+				continue
+			if not(self.bts.wallet.getAccountFromPublicKey(pub)):
+				self.bts.wallet.removePrivateKeyFromPublicKey(pub)
+				removed += 1
+		
+		return removed
+	
 	def getRemoteAccounts(self):
 		if self.offline or not self.bts.wallet.rpc:
 			raise ResourceUnavailableOffline()
@@ -231,30 +259,23 @@ class BitsharesIsolator(object):
 		return True if acc else False
 	
 	def getCachedAccounts(self):
-		names = set()
 		accountStorage = self.store.accountStorage
 		accs = accountStorage.getAccounts()
 		return list(accs)
-		#print("GOT AcCS from Storage")
-		#pprint(accs)
-		for acc in accs:
-			#pprint(acc)
-			if acc is None: #?!?!??!
-				continue
-			#if acc['name']:
-				names.add(acc)#acc['name'])
-		return list(names)
+	
+	def getBlindAccounts(self):
+		return self.store.blindAccountStorage.getAccounts()
 	
 	def _accountFromDict(self, account_id, accountInfo):
 		from bitshares.account import Account
 		
 		account = Account.__new__(Account)
 		account.identifier = account_id
-		account.bitshares = self.bts
+		account.blockchain = self.bts
 		account.account_id = account_id
 		account.cached = True
 		account.full = True
-		#	bitshares_instance=self.bts, 
+		#	blockchain_instance=self.bts,
 		#account = Account(accountInfo)
 		for key, val in accountInfo.items():
 			if key == "balances":
@@ -296,6 +317,10 @@ class BitsharesIsolator(object):
 				return account_name
 		raise KeyError("Account with key " + pubkey)
 	
+	def removeCachedAccount(self, account_name):
+		accountStorage = self.store.accountStorage
+		accountStorage.delete(account_name)
+	
 	def getAccount(self, account_id, force_remote=False, force_local=False, cache=False):
 		
 		if account_id.startswith("1.2."):
@@ -327,7 +352,7 @@ class BitsharesIsolator(object):
 					import traceback
 					traceback.print_exc()
 					pass
-			account = Account(account_id, bitshares_instance=self.bts)
+			account = Account(account_id, blockchain_instance=self.bts)
 			
 			if cache:
 				self.storeAccount(account)
@@ -354,7 +379,7 @@ class BitsharesIsolator(object):
 			stored_asset["options"]["max_supply"] = int(stored_asset["options"]["max_supply"])
 			forged_asset = Asset.__new__(Asset)
 			forged_asset.identifier = stored_asset["id"]
-			forged_asset.bitshares = self.bts
+			forged_asset.blockchain = self.bts
 			forged_asset.cached = True
 			forged_asset.lazy = True
 			forged_asset.full = False
@@ -368,7 +393,7 @@ class BitsharesIsolator(object):
 		
 		from bitshares.exceptions import AssetDoesNotExistsException
 		try:
-			remote_asset = Asset(asset_id, full=True, lazy=False, bitshares_instance=self.bts)
+			remote_asset = Asset(asset_id, full=True, lazy=False, blockchain_instance=self.bts)
 		except AssetDoesNotExistsException:
 			raise
 		except:
@@ -420,7 +445,7 @@ class BitsharesIsolator(object):
 			asset_amount = int(asset_amount) / 10 ** asset["precision"]
 		
 		from bitshares.amount import Amount
-		return Amount(asset_amount, asset, bitshares_instance=self.bts)
+		return Amount(asset_amount, asset, blockchain_instance=self.bts)
 	
 	def getAmountOP(self, op_amount):
 		#from pprint import pprint
@@ -441,7 +466,7 @@ class BitsharesIsolator(object):
 					b.symbol = sym
 					b.amount = val
 				self.fave_coinnames.add(sym)
-				balances.append( b ) #Amount(val, sym, bitshares_instance=self.iso.bts) )
+				balances.append( b ) #Amount(val, sym, blockchain_instance=self.iso.bts) )
 			return balances
 		
 		if force_local:
@@ -504,7 +529,7 @@ class BitsharesIsolator(object):
 		memoObj = Memo(
 			from_account=None,#from_account,
 			to_account=None,#to_account,
-			bitshares_instance=self.bts
+			blockchain_instance=self.bts
 		)
 		memoObj.chain_prefix = self.chain_prefix()
 		memoObj.from_account = from_account
@@ -545,7 +570,7 @@ class BitsharesIsolator(object):
 	def downloadOrders(self, account):
 		return account.openorders()
 		#from .price import Order
-		#return [Order(o, bitshares_instance=self.bitshares) for o in self["limit_orders"]]
+		#return [Order(o, blockchain_instance=self.bitshares) for o in self["limit_orders"]]
 	
 	
 	def softAccountName(self, account_id, remote=True):
@@ -637,6 +662,20 @@ class BitsharesIsolator(object):
 			desc = "Upgrade account"
 			#dst_account = iso.getAccount(op_action['account_to_upgrade'])
 			desc += " - " + accname(op_action['account_to_upgrade']) #self.softAccountName(#dst_account['name']
+		if (op_id == 6):
+			desc = "Update account/votes"
+			#dst_account = iso.getAccount(op_action['account'])
+			if "owner_key" in op_action:
+				desc = "Sweep owner key"
+				icon = "account_update_key"
+			if "active_key" in op_action:
+				icon = "account_update_key"
+				if "owner_key" in op_action:
+					desc = "Sweep owner and active keys"
+				else:
+					desc = "Sweep active key"
+			desc += " - " + accname(op_action['account']) #self.softAccountName(#dst_account['name']
+
 		if (op_id == 10):
 			desc = "Create asset"
 			try:
@@ -839,3 +878,26 @@ class BitsharesIsolator(object):
 			timeout -= 1
 			time.sleep(1)
 	
+	def getWitnesses(self, only_active=False, lazy=False):
+		from bitshares.witness import Witnesses
+		return Witnesses(blockchain_instance=self.bts, lazy=lazy)
+	
+	def getCommittee(self, only_active=False, lazy=False):
+		from bitshares.committee import Committee
+		rpc = self.bts.rpc
+		last_name = ""
+		whole = [ ]
+		while True:
+			accs = rpc.lookup_committee_member_accounts(last_name, 100)
+			for name, identifier in accs:
+				member = Committee(identifier, lazy=True, blockchain_instance=self.bts)
+				member.refresh()
+				whole.append(member)
+			last_name = accs[-1][0]
+			if len(accs) < 100:
+				break
+		return whole
+	
+	def getWorkers(self, only_active=False, lazy=False):
+		from bitshares.worker import Workers
+		return Workers(blockchain_instance=self.bts, lazy=lazy)

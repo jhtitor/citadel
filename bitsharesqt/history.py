@@ -354,7 +354,7 @@ class HistoryTab(QtGui.QWidget):
 		
 		# recreate account object
 		#from bitshares.account import Account
-		#account = Account(account.name, bitshares_instance=iso.bts)
+		#account = Account(account.name, blockchain_instance=iso.bts)
 		
 		# load from the net
 		history = list(account.history())
@@ -379,6 +379,7 @@ class HistoryTab(QtGui.QWidget):
 			h['_fulltx'] = json.dumps(ftx)
 			
 			h['_memo'] = 0
+			import bitshares.exceptions
 			try:
 				if h['op'][0] == 0:
 					h['_memo'] = -1
@@ -387,6 +388,8 @@ class HistoryTab(QtGui.QWidget):
 						clear = iso.getMemo(None, None, data=data)
 						if len(clear["message"]) > 0:
 							h['_memo'] = 1
+			except bitshares.exceptions.WalletLocked:
+				h['_memo'] = 1
 			except Exception as e:
 				#import traceback
 				#print(h['op'][1], "failed to metch memo-data")

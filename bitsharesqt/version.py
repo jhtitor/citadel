@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION="0.1.0"
+VERSION="0.1.1"
 
 BUNDLE_NAME="BitShares-QT"
 UNIX_NAME="pybitshares-qt"
@@ -11,6 +11,49 @@ BUNDLE_NAME="Citadel"
 UNIX_NAME="citadel"
 LOGO_1024="images/citadel_1024x1024.png"
 SHORT_DESCRIPTION="Citadel BitShares Wallet"
+
+import os
+import sys
+def resource_path(relative_path):
+	""" Get absolute path to resource, works for dev and for PyInstaller """
+	try:
+		# PyInstaller creates a temp folder and stores path in _MEIPASS
+		base_path = sys._MEIPASS
+	except Exception:
+		base_path = os.path.abspath(".")
+	return os.path.join(base_path, relative_path)
+
+def txt_version(on_error="Unknown"):
+	try:
+		path = resource_path("version.txt")
+		with open(path) as f:
+			return f.read().strip()
+	except:
+		return on_error
+
+# Return the git revision as a string (stolen from numpy)
+def git_version(on_error="Unknown"):
+	import os, subprocess
+	def _minimal_ext_cmd(cmd):
+		env = { } # construct minimal environment
+		for k in ['SYSTEMROOT', 'PATH']:
+			v = os.environ.get(k)
+			if v is not None: env[k] = v
+		# LANGUAGE is used on win32
+		env['LANGUAGE'] = env['LANG'] = env['LC_ALL'] = 'C'
+		return subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0].strip().decode('ascii')
+	try:
+		GIT_BRANCH = _minimal_ext_cmd(['git', 'rev-parse' ,'--abbrev-ref', 'HEAD'])
+		if not(GIT_BRANCH): return on_error
+		if GIT_BRANCH == "master": return on_error
+		#GIT_REVISION   = _minimal_ext_cmd(['git', 'rev-parse', 'HEAD'])
+		GIT_REVISION = _minimal_ext_cmd(['git', 'describe', '--always'])
+	except OSError:
+		GIT_REVISION = on_error
+	return GIT_REVISION
+
+VERSION=git_version(VERSION)
+VERSION=txt_version(VERSION)
 
 if __name__ == "__main__":
 	import sys

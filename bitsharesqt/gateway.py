@@ -274,7 +274,10 @@ class WindowWithGateway(QtCore.QObject):
 			ico = QtGui.QPixmap(":/icons/images/wait.png")
 			if tran['transactionProcessingState'] == 'output_transaction_broadcast':
 				ico = QtGui.QPixmap(":/icons/images/tick.png")
-			if tran['transactionProcessingState'] in ['permanent_output_failure_never_confirmed', 'orphaned']:
+			if tran['transactionProcessingState'] in [
+				'permanent_output_failure_never_confirmed', 'orphaned',
+				'output_transaction_failed',
+			]:
 				ico = QtGui.QPixmap(":/icons/images/crossout.png")
 			
 			img = QtGui.QLabel("")

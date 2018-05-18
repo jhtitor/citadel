@@ -41,6 +41,7 @@ class MarketTab(QtGui.QWidget):
 		self.ui.setupUi(self)
 
 		replaceAxis(self.ui.marketPlot, "bottom", TimeAxisItem(orientation='bottom'))
+		replaceAxis(self.ui.marketPlot, "left", CoinAxisItem(precision=self.asset_b["precision"], orientation='left'))
 #,
 #			axisItems={'bottom': TimeAxisItem(orientation='bottom')}
 
@@ -109,8 +110,8 @@ class MarketTab(QtGui.QWidget):
 		form["altLabel"].setText(asset_b["symbol"])
 		
 		form["price"].valueChanged.connect(self.price_value_changed)
-		form["price"].setDecimals(asset_a["precision"])
-		form["price"].setMaximum(asset_a["options"]["max_supply"] * pow(10, asset_a["precision"]))
+		form["price"].setDecimals(asset_b["precision"])
+		form["price"].setMaximum(asset_b["options"]["max_supply"] * pow(10, asset_b["precision"]))
 		form["mainAmt"].valueChanged.connect(self.main_amount_changed)
 		form["mainAmt"].setDecimals(asset_a["precision"])
 		form["mainAmt"].setMaximum(asset_a["options"]["max_supply"] * pow(10, asset_a["precision"]))
@@ -268,10 +269,10 @@ class MarketTab(QtGui.QWidget):
 			self.subscribed = True
 		
 		from bitshares.market import Market
-		self.market = Market(tag, bitshares_instance=iso.bts)
+		self.market = Market(tag, blockchain_instance=iso.bts)
 		
 		orders = self.market.orderbook()
-		trades = self.market.trades(limit=100, raw=True)
+		trades = self.market.trades(limit=100)
 		
 		return (orders, trades,)
 	
@@ -292,7 +293,7 @@ class MarketTab(QtGui.QWidget):
 			j += 1
 			
 			table.insertRow(j);
-			set_col(table, j, 0, str(order["price"]) )
+			set_col(table, j, 0, price__repr(order, "base") )
 			set_col(table, j, 1, str(order["quote"]), color=color_a, align="right" )
 			set_col(table, j, 2, str(order["base"]), color=color_b, align="right" )
 		
@@ -302,9 +303,10 @@ class MarketTab(QtGui.QWidget):
 		ys = [ ]
 		import datetime
 		for trade in trades:
+			pp(trade)
 			dt = datetime.datetime.strptime(trade["date"], "%Y-%m-%dT%H:%M:%S")
 			x = int(dt.timestamp()) #trade["sequence"]
-			y = float(trade["price"])
+			y = trade["price"]
 			xs.append(x)
 			ys.append(y)
 		#print(xs, ys)
@@ -315,7 +317,12 @@ class MarketTab(QtGui.QWidget):
 		self.ui.marketPlot.clear()
 		self.ui.marketPlot.plot(xs, ys)#, pen=None, symbol=None)
 
-
+class CoinAxisItem(pg.AxisItem):
+	def __init__(self, *args, **kwargs):
+		self._precision = kwargs.pop("precision", 5)
+		super().__init__(*args, **kwargs)
+	def tickStrings(self, values, scale, spacing):
+		return ["{price:.{precision}f}".format(price=value,precision=self._precision) for value in values]
 class TimeAxisItem(pg.AxisItem):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -323,7 +330,7 @@ class TimeAxisItem(pg.AxisItem):
 		return [int2dt(value).strftime("%H:%M:%S") for value in values]
 import datetime
 def int2dt(ts, ts_mult=1e6):
-	return (datetime.datetime.utcfromtimestamp(float(ts)/ts_mult))
+	return (datetime.datetime.utcfromtimestamp(ts))#float(ts)/ts_mult))
 def replaceAxis(widget, k, axis):
 	obj = widget.getPlotItem()
 	old = obj.axes[k]['item']
@@ -348,3 +355,9 @@ def unlinkFromView(axis):
 	else:
 		oldView.sigXRangeChanged.disconnect(axis.linkedViewChanged)
 	oldView.sigResized.disconnect(axis.linkedViewChanged)
+
+def price__repr(p, using="base"):
+	return "{price:.{precision}f}".format(
+		price=p["price"],
+		precision=(p[using]["asset"]["precision"])
+	)

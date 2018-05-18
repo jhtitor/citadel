@@ -5,6 +5,7 @@ from PyQt4.QtGui import QTableWidgetItem
 
 from bitshares.amount import Amount
 from .transactionbuilder import QTransactionBuilder
+from .voting import VotingWindow
 
 from .netloc import RemoteFetch
 from .utils import *
@@ -48,6 +49,8 @@ class DashboardTab(QtGui.QWidget):
 		
 		self._index = 0
 		self._asset_name = None
+		
+		self.ui.voteButton.clicked.connect(self.show_voting)
 	
 	def balance_click(self):
 		j = table_selrow(self.ui.balanceTable)
@@ -237,6 +240,21 @@ class DashboardTab(QtGui.QWidget):
 			showexc(error)
 			return False
 		return True
+
+	def show_voting(self):
+		if not(self.iso.is_connected()):
+			showmsg("Must be online to vote")
+			return False
+		try:
+			w = VotingWindow(
+				accounts=app().mainwin.account_names,
+				account=self._account,
+				isolator=self.iso
+			)
+			r = w.exec_()
+		except Exception as error:
+			showexc(error)
+			return False
 
 	def openAccount(self, iso, account):
 		self._iso = self.iso = iso
