@@ -26,11 +26,6 @@ ui:
 	pyuic4 $(UISRC)/voting.ui -o uidef/voting.py --from-imports
 	pyrcc4 -py3 $(UISRC)/res.qrc -o uidef/res_rc.py
 
-App: $(ICNS_FILE)
-	python3 setup.py py2app --iconfile $(ICNS_FILE)
-	cp $(SCRYPT_PATH) dist/$(BUNDLE_NAME).app/Contents/Resources/lib/python3.5/lib-dynload/_scrypt.so
-	install_name_tool -change $(SCRYPT_DYLIB) @executable_path/../Frameworks/libcrypto.1.0.0.dylib dist/$(BUNDLE_NAME).app/Contents/Resources/lib/python3.5/lib-dynload/_scrypt.so
-
 app: $(ICNS_FILE)
 	rm version.txt
 	pyinstaller -y build.spec

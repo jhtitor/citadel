@@ -102,5 +102,5 @@ python3 vendor_package.py
 
 Bundle
 ```
-make App
+make app
 ```
