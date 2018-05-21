@@ -28,6 +28,7 @@ You need the `PyQt4-4.11.4-cp34-cp34m-win32.whl` one
 PyCrypto
 http://www.voidspace.org.uk/python/pycrypto-2.6.1/pycrypto-2.6.1-cp34-none-win32.whl
 </s>
+
 PyCryptodome
 ```
 python -m pip install pycryptodome
@@ -73,7 +74,7 @@ python -m pip install scrypt
 ```
 
 OpenSSL .dlls (for scrypt), unpack into source folder
-https://indy.fulgan.com/SSL/openssl-1.0.2o-i386-win32.zip
+https://indy.fulgan.com/SSL/openssl-1.0.2o-x64_86-win64.zip
 
 ```
 py -3.6 -m pip install -r requirements.txt
