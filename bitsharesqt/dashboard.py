@@ -349,7 +349,11 @@ class DashboardTab(QtGui.QWidget):
 		for o in balances:
 			j += 1
 			
-			table.setItem(j, 0, QtGui.QTableWidgetItem(str(o.amount)))
+			try:
+				namt = str(self.iso.getAmount(o.amount, o.symbol)).split(" ")[0]
+			except:
+				namt = str(o.amount)
+			table.setItem(j, 0, QtGui.QTableWidgetItem(namt))
 			table.item(j, 0).setIcon( qicon(":/icons/images/token.png") )
 			table.setItem(j, 1, QtGui.QTableWidgetItem(str(o.symbol)))
 			
