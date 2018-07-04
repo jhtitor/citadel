@@ -1,4 +1,6 @@
 from rpcs.blocktradesus import BlockTradesUS
+from rpcs.winexpro import WinexPRO
+from rpcs.rudexorg import RuDexORG
 from rpcs.btsfaucet import BTSFaucet
 
 KnownNodes = [
@@ -31,8 +33,9 @@ KnownTraders = [
 	('CryptoBridge', 'https://ol-api1.openledger.info/api/v0/ol/support/', '', BlockTradesUS),
 	('Citadel', 'https://citadel.li/trade/', '', BlockTradesUS),
 	('Citadel (TOR)', 'http://citadel2miawoaqw.onion/trade/', '', BlockTradesUS),
-	('Crypto-Bridge (unsupported)', 'https://api.crypto-bridge.org/api/v1/', 'https://wallet.crypto-bridge.org', BlockTradesUS)
-#	('RuDEX', '', 'https://wallet.rudex.org', '', RudexORG), # TODO - another API!
+	('Crypto-Bridge (unsupported)', 'https://api.crypto-bridge.org/api/v1/', 'https://wallet.crypto-bridge.org', BlockTradesUS),
+	('Winex', 'https://gateway.winex.pro/api/v0/ol/support/', 'https://exchange.winex.pro', WinexPRO),
+	('RuDEX', 'https://gateway.rudex.org/api/v0_1/', 'https://wallet.rudex.org', RuDexORG),
 #	('localhost', 'http://localhost:8011', '', BlockTradesUS),
 ]
 
@@ -42,7 +45,8 @@ KnownFaucets = [
 	('OpenLedger', 'https://bitshares.openledger.info', 'https://wallet.bitshares.org', BTSFaucet),
 	('RuDEX', 'https://faucet.rudex.org', 'https://market.rudex.org', BTSFaucet),
 	('DacPlay', 'https://bts2faucet.dacplay.org/', 'https://bitshares.dacplay.org', BTSFaucet),
-	('CryptoBridge (wrong url?)', 'https://faucet.crypto-bridge.org/', 'https://wallet.crypto-bridge.org', BlockTradesUS)
+	('CryptoBridge (wrong url?)', 'https://faucet.crypto-bridge.org/', 'https://wallet.crypto-bridge.org', BTSFaucet),
+	('Winex', 'https://faucet.winex.pro/api/v1/accounts', 'https://exchange.winex.pro/', BTSFaucet)
 #	('localhost', 'http://localhost:8012', '', BTSFaucet),
 ]
 

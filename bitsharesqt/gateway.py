@@ -1,6 +1,9 @@
 from PyQt4 import QtCore, QtGui
 
 from rpcs.blocktradesus import BlockTradesUS
+from rpcs.rudexorg import RuDexORG
+from rpcs.winexpro import WinexPRO
+
 from .bootstrap import KnownTraders
 
 from .netloc import RemoteFetch
