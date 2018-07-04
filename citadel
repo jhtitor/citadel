@@ -9,9 +9,11 @@ from traceback import print_exc
 
 from bitsharesqt.isolator import BitsharesIsolator
 from bitsharesextra.storage import DataDir
+from bitsharesqt.walletwizard import RecentWallets
 
 import uidef.res_rc
 from bitsharesqt.mainwindow import MainWindow
+from bitsharesqt.walletwizard import WalletWizard
 
 from bitsharesqt.work import Request
 from bitsharesqt.utils import *
@@ -66,14 +68,31 @@ if  __name__ == "__main__":
 	DataDir.appname = "bitshares"
 	DataDir.appauthor = "Citadel"
 	DataDir.storageDatabaseDefault = "default.bts"
+	RecentWallets.init()
 	
 	app = BitsharesQT(sys.argv)
 	ignore_hidpi_settings()
 	
-	opened = app.mainwin.auto_open_wallet()
+	import argparse
+	parser = argparse.ArgumentParser()
+	parser.add_argument("WALLET", nargs="?", help="wallet file to open")
+	args = parser.parse_args()
+	if args.WALLET:
+		try:
+			opened = app.mainwin.open_wallet(args.WALLET)
+		except Exception as e:
+			showerror("Unable to open file %s: %s" % (args.WALLET, str(e)))
+			app.quit()
+			sys.exit(1)
+	else:
+		opened = app.mainwin.auto_open_wallet()
+		if not(opened):
+			opened, path, is_new, mpw = WalletWizard().run()
+			if (opened):
+				opened = app.mainwin.open_wallet(path, autounlock=not(is_new))
 	
-	if not(opened):
-		opened = app.mainwin.new_wallet()
+#	if not(opened):
+#		opened = app.mainwin.new_wallet()
 #	if not(opened):
 #		opened = app.mainwin.open_wallet()
 	if not(opened):

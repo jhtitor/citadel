@@ -14,6 +14,7 @@ UISRC=bitsharesqt
 ui:
 	mkdir -p uidef
 	pyuic4 $(UISRC)/mainwindow.ui -o uidef/mainwindow.py --from-imports
+	pyuic4 $(UISRC)/walletwizard.ui -o uidef/walletwizard.py --from-imports
 	pyuic4 $(UISRC)/accountwizard.ui -o uidef/accountwizard.py --from-imports
 	pyuic4 $(UISRC)/transactionbuilder.ui -o uidef/transactionbuilder.py --from-imports
 	pyuic4 $(UISRC)/memowindow.ui -o uidef/memowindow.py --from-imports

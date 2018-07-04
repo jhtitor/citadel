@@ -2722,8 +2722,14 @@ image: &quot;&quot;;
     <property name="title">
      <string>&amp;File</string>
     </property>
+    <widget class="QMenu" name="menuOpen_Recent">
+     <property name="title">
+      <string>Open Recent</string>
+     </property>
+    </widget>
     <addaction name="actionNew_wallet"/>
     <addaction name="actionOpen_wallet"/>
+    <addaction name="menuOpen_Recent"/>
     <addaction name="separator"/>
     <addaction name="actionConnect"/>
     <addaction name="actionDisconnect"/>

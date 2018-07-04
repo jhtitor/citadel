@@ -11,6 +11,7 @@ from bitsharesbase.account import PrivateKey
 
 from .version import VERSION, UNIX_NAME
 from .accountwizard import AccountWizard
+from .walletwizard import WalletWizard, RecentWallets
 from .memowindow import MemoWindow
 from .createasset import AssetWindow
 from .settings import SettingsWindow
@@ -85,7 +86,7 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.blindFromFeeAsset,
 		]
 		
-		ui.actionNew_wallet.triggered.connect(self.new_wallet)
+		ui.actionNew_wallet.triggered.connect(self.new_wallet_wizard)
 		ui.actionOpen_wallet.triggered.connect(self.reopen_wallet)
 		
 		ui.actionClose_wallet.triggered.connect(self.close_wallet)
@@ -134,7 +135,7 @@ class MainWindow(QtGui.QMainWindow,
 		ui.actionResync_history.triggered.connect(self.massResync)
 		ui.actionResync_orders.triggered.connect(self.massResync)
 		#
-		
+		self.setupRecentWalletsMenu()
 		#
 		self.account_names = set()
 		self.open_accounts = set()
@@ -301,6 +302,16 @@ class MainWindow(QtGui.QMainWindow,
 		self.ui.statusNetwork.setMenu(self.ui.minimenuNetowrk)
 		#qmenu(self.ui.statusLock, self.show_lock_submenu)
 		#qmenu(self.ui.statusNetwork, self.show_network_submenu)
+	
+	def setupRecentWalletsMenu(self):
+		menu = self.ui.menuOpen_Recent
+		lst = list(RecentWallets.recent)
+		for item in lst:
+			qa = qaction(self, menu, str(item), self.open_recent_wallet)
+	def open_recent_wallet(self):
+		qa = self.sender()
+		path = qa.text()
+		app().reopen(path)
 	
 	def uiAssetsMarketLink(self, a, b, _a, _b, btn):
 		a._bidask = (_a, _b)
@@ -1402,6 +1413,13 @@ class MainWindow(QtGui.QMainWindow,
 	def bootstrap_wallet(self, wipe=False):
 		self.iso.bootstrap_wallet(wipe)
 	
+	def new_wallet_wizard(self):
+		ww = WalletWizard(newOnly = True)
+		ok, path, is_new, masterpwd = ww.run()
+		if ok:
+			app().reopen(path)
+		return ok
+	
 	def new_wallet(self):
 		path = DataDir.preflight()
 		path = QtGui.QFileDialog.getSaveFileName(self, 'New wallet file', path, "PyBitshares Wallet (*.bts *.sqlite)")
@@ -1473,14 +1491,27 @@ class MainWindow(QtGui.QMainWindow,
 		self.ui.sellexpireEdit.setText(deltainterval(expire_seconds))
 		self.ui.fokCheckbox.setChecked(expire_fok)
 	
-	def auto_open_wallet(self):
-		path = DataDir.preflight()
+	def _try_open_wallet(self, path, echo=False):
 		try:
 			ok = self.open_wallet(path, autounlock=False)
 		except Exception as error:
-			#showexc(error)
+			import traceback
+			traceback.print_exc()
+			if echo:
+				showexc(error)
 			return False
 		return ok
+	
+	def auto_open_wallet(self):
+		ok = False
+		path = RecentWallets.last_wallet()
+		if path:
+			ok = self._try_open_wallet(path)
+		if not ok:
+			path = DataDir.preflight()
+			ok = self._try_open_wallet(path)
+		return ok
+	
 	
 	def reopen_wallet(self):
 		path = None
@@ -1512,6 +1543,8 @@ class MainWindow(QtGui.QMainWindow,
 		self.iso.setWallet(wallet)
 		self.iso.setStorage(store)
 		
+		RecentWallets.push_wallet(path)
+		
 		self.ui.statusWallet.setText(path)
 		
 		self.setupUIfromConfig()
@@ -1530,11 +1563,12 @@ class MainWindow(QtGui.QMainWindow,
 			self.unlock_wallet()
 		
 		if n == 0: # Fresh wallet?
-			self.bootstrap_wallet()
 			self.open_network_settings()
-			self.add_account()
+			if askyesno("To function properly, a wallet file must have at least one BitShares account.\n\nAdd an account now?"):
+				self.add_account()
 		
 		self.perhaps_autoconnect()
+		
 		return True
 	
 	def refreshUi_title(self):
