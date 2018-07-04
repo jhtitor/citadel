@@ -100,6 +100,7 @@ class DashboardTab(QtGui.QWidget):
 		#qaction(self, menu, "Transfer...", self._dash_transfer)
 		qaction(self, menu, "Buy...", self._dash_buy_asset)
 		qaction(self, menu, "Sell...", self._dash_sell_asset)
+		qaction(self, menu, "Open Market...", self._dash_openmarket_asset)
 		qaction(self, menu, "Blind...", self._dash_blind_asset)
 		qaction(self, menu, "Burn...", self._dash_burn_asset)
 		menu.addSeparator()
@@ -149,6 +150,22 @@ class DashboardTab(QtGui.QWidget):
 			sell_asset  = symbol,
 			sell_amount = amount,
 		)
+	
+	def _dash_openmarket_asset(self):
+		j = table_selrow(self.ui.balanceTable)
+		if j <= -1:
+			return
+		symbol = self.ui.balanceTable.item(j, 1).text()
+		asset = self.iso.getAsset(symbol)
+		desc = asset["options"]["description"]
+		market = None
+		try:
+			market = json.loads(desc)["market"]
+		except:
+			pass
+		if not(market):
+			market = "BTS"
+		app().mainwin.openMarket(symbol, market)
 	
 	def _dash_blind_asset(self):
 		j = table_selrow(self.ui.balanceTable)
