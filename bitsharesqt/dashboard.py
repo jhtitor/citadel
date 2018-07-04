@@ -6,6 +6,7 @@ from PyQt4.QtGui import QTableWidgetItem
 from bitshares.amount import Amount
 from .transactionbuilder import QTransactionBuilder
 from .voting import VotingWindow
+from .createasset import AssetWindow
 
 from .netloc import RemoteFetch
 from .utils import *
@@ -194,7 +195,7 @@ class DashboardTab(QtGui.QWidget):
 		if not asset_name:
 			return
 		asset = self.iso.getAsset(asset_name)
-		from createasset import AssetWindow
+
 		win = AssetWindow(isolator=self.iso, mode="reserve",
 			asset=asset,
 			accounts=app().mainwin.account_names,
