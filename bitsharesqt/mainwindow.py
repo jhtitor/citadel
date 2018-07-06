@@ -381,11 +381,12 @@ class MainWindow(QtGui.QMainWindow,
 		qact.triggered.connect(self.uiActionFront_perform)
 	
 	def uiActionFront_perform(self):
+		account = self.activeAccount
 		qact = self.sender()
 		find_class = qact._linkedClass
-		tab = self.findTab(find_class, "#account")
+		tab = self.findTab(find_class, account.name)
 		if not tab:
-			print("Tab not found", find_class, "#account")
+			print("Tab not found", find_class, account.name)
 			return
 		self.setTabVisible(tab, True)
 	
