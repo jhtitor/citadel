@@ -52,7 +52,7 @@ class VotingWindow(QtGui.QDialog):
 		
 		set_combo(self.ui.accountProxy, self.proxyAccount["name"], force=True)
 		
-		on_edit(self.ui.accountProxy, self.update_proxy)
+		on_combo(self.ui.accountProxy, self.update_proxy)
 		#self.resync()
 		#return
 		

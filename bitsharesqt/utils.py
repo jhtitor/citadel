@@ -58,7 +58,7 @@ def any_value(widget):
 def any_change(widget, func):
 	if isinstance(widget, QtGui.QComboBox):
 		return on_combo(widget, func)
-	if isinstance(widget, QtGui.QSpinBox):
+	if isinstance(widget, QtGui.QLineEdit):
 		return on_edit(widget, func)
 	if isinstance(widget, QtGui.QSpinBox):
 		return on_spin(widget, func)
