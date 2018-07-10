@@ -472,10 +472,10 @@ class VotingWindow(QtGui.QDialog):
 				continue
 			text = text + delim + desc
 			delim = " | "
-		busy -= mod
+		#busy -= mod
 		if busy:
 			text = text + delim + " Please wait..."
-		if mod and busy < 1:
+		else:
 			text = ""
 		self.ui.statusText.setText("" + text)
 		
