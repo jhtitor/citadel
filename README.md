@@ -105,3 +105,12 @@ Bundle
 ```
 make app
 ```
+
+To create dmgs, get dmgbuild
+```
+pip-3.5 install pyinstaller dmgbuild --install-option="--prefix=/opt/local/bin" --user
+```
+
+```
+make dmg
+```
