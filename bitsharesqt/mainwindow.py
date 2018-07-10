@@ -9,7 +9,7 @@ from .isolator import BitsharesIsolator
 from bitsharesextra.storage import BitsharesStorageExtra, DataDir
 from bitsharesbase.account import PrivateKey
 
-from .version import VERSION, UNIX_NAME
+from .version import VERSION, UNIX_NAME, library_versions
 from .accountwizard import AccountWizard
 from .walletwizard import WalletWizard, RecentWallets
 from .memowindow import MemoWindow
@@ -852,7 +852,9 @@ class MainWindow(QtGui.QMainWindow,
 		self.OSell()
 	
 	def show_about(self):
-		showdialog(UNIX_NAME+" "+VERSION, title="About", additional="Python BitShares Wallet", details="python3, PyQT4, python-bitshares",
+		info = library_versions(platform=True)
+		showdialog(UNIX_NAME+" "+VERSION, title="About",
+		additional="Python BitShares Wallet", details=info,
 		icon=':/images/images/logo.png')
 	
 	def show_account_submenu(self, position):
