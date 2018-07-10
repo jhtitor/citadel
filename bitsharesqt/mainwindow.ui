@@ -36,7 +36,7 @@ image: &quot;&quot;;
     <item>
      <layout class="QHBoxLayout" name="mainFrame">
       <property name="spacing">
-       <number>20</number>
+       <number>10</number>
       </property>
       <item>
        <widget class="QTabWidget" name="tabWidget">
@@ -1099,7 +1099,7 @@ image: &quot;&quot;;
                   </item>
                  </layout>
                 </widget>
-                <widget class="QWidget" name="tab">
+                <widget class="QWidget" name="tabCalculator">
                  <attribute name="title">
                   <string>Calculator</string>
                  </attribute>
