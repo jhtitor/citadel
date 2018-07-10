@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
 from bitshares.transactionbuilder import TransactionBuilder
 from bitsharesbase.operations import getOperationIdForClass

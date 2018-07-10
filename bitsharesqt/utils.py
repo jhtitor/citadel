@@ -1,4 +1,4 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore
 
 COLOR_GREEN = "#27ca41"
 COLOR_RED = "#e44842"
@@ -227,7 +227,7 @@ def table_selrow(table):
 	j = indexes[0].row()
 	return j
 
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5.QtWidgets import QTableWidgetItem
 def set_col(table, row, col, val, fmt=None, color=None, align=None, editable=None, data=None):
 	item = QTableWidgetItem(fmt % val if fmt else str(val))
 	if color:

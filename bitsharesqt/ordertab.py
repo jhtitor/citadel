@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.exchange import Ui_ExchangeTab
-from uidef.exchange import _translate
+_translate = QtCore.QCoreApplication.translate
 
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5.QtWidgets import QTableWidgetItem
 
 from .transactionbuilder import QTransactionBuilder
 
@@ -21,7 +21,7 @@ except AttributeError:
     def _fromUtf8(s):
         return s
 
-class OrderTab(QtGui.QWidget):
+class OrderTab(QtWidgets.QWidget):
 	
 	def __init__(self, *args, **kwargs):
 		self.ping_callback = kwargs.pop("ping_callback", None)

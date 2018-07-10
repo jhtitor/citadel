@@ -1,7 +1,7 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.transactionbuilder import Ui_QTransactionBuilder
 
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5.QtWidgets import QTableWidgetItem
 
 from .utils import *
 import logging
@@ -29,7 +29,7 @@ from graphenebase.objects import GrapheneObject
 
 import json
 
-class QTransactionBuilder(QtGui.QDialog):
+class QTransactionBuilder(QtWidgets.QDialog):
 	def __init__(self, *args, trxbuffer, iso, **kwargs):
 		super(QTransactionBuilder, self).__init__(*args,**kwargs)
 		self.ui = ui = Ui_QTransactionBuilder()
@@ -67,7 +67,7 @@ class QTransactionBuilder(QtGui.QDialog):
 		item.setBackground(1, brush)
 	
 	def export_transaction(self):
-		path = QtGui.QFileDialog.getSaveFileName(self, 'Export transaction', '', "bitshares transaction (*.json)")
+		path, _ = QtGui.QFileDialog.getSaveFileName(self, 'Export transaction', '', "bitshares transaction (*.json)")
 		if not path:
 			return False
 		
@@ -93,7 +93,7 @@ class QTransactionBuilder(QtGui.QDialog):
 		return True
 	
 	def import_transaction(self):
-		path = QtGui.QFileDialog.getOpenFileName(self, 'Import transaction file', '', "bitshares transaction (*.json)")
+		path, _ = QtGui.QFileDialog.getOpenFileName(self, 'Import transaction file', '', "bitshares transaction (*.json)")
 		if not path:
 			return False
 		

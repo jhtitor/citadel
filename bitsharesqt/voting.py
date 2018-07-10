@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.voting import Ui_VotingWindow
 
 from .netloc import RemoteFetch
@@ -9,7 +9,7 @@ import json
 
 from .transactionbuilder import QTransactionBuilder
 
-class VotingWindow(QtGui.QDialog):
+class VotingWindow(QtWidgets.QDialog):
 	
 	def __init__(self, *args, **kwargs):
 		self.iso = kwargs.pop('isolator', None)

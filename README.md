@@ -20,9 +20,8 @@ https://www.python.org/ftp/python/3.4.4/python-3.4.4.msi
 Also install latest version of pywin for python 3.4
 https://github.com/mhammond/pywin32/releases/download/b221/pywin32-221.win32-py3.4.exe
 
-PyQt4 wheel distribution, get it from
-https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyqt4
-You need the `PyQt4-4.11.4-cp34-cp34m-win32.whl` one
+PyQt5 5.5.1 (latest version for python 3.4)
+https://sourceforge.net/projects/pyqt/files/PyQt5/PyQt-5.5.1/PyQt5-5.5.1-gpl-Py3.4-Qt5.5.1-x32.exe/download
 
 <s>
 PyCrypto
@@ -65,9 +64,8 @@ build.bat
 Note: building with python 3.6 is trickier (than, say, 3.5), but
 is possible.
 
-PyQt4 wheel distribution, get it from
-https://www.lfd.uci.edu/~gohlke/pythonlibs/#pyqt4
-You need the `PyQt4-4.11.4-cp36-cp36m-win_amd64.whl` one
+Latest version of PyQt5 from here
+https://sourceforge.net/projects/pyqt/files/PyQt5/
 
 ```
 python -m pip install scrypt
@@ -91,7 +89,7 @@ gcc -v
 ## MacPorts
 
 ```
-sudo port install py35-pyqt4 py35-pip
+sudo port install py35-pyqt5 py35-pip
 ```
 
 

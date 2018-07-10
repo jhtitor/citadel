@@ -1,6 +1,6 @@
 import time
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtCore import Qt
+from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import Qt
 
 from .work import async
 import logging

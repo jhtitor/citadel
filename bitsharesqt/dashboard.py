@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from PyQt4 import QtCore, QtGui
-
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QTableWidgetItem
 
 from bitshares.amount import Amount
 from .transactionbuilder import QTransactionBuilder
@@ -15,7 +14,7 @@ import json
 from pprint import pprint
 
 from uidef.dashboard import Ui_DashboardTab
-from uidef.dashboard import _translate
+_translate = QtCore.QCoreApplication.translate
 
 
 import logging
@@ -28,7 +27,7 @@ except AttributeError:
         return s
 
 
-class DashboardTab(QtGui.QWidget):
+class DashboardTab(QtWidgets.QWidget):
 	
 	def __init__(self, *args, **kwargs):
 		self.ping_callback = kwargs.pop("ping_callback", None)

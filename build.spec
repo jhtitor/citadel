@@ -119,6 +119,8 @@ app = BUNDLE(exe,
                 "CFBundleDisplayName": version.SHORT_DESCRIPTION,
                 "CFBundleIdentifier": "li.citadel.desktop",
                 "CFBundleShortVersionString": version.VERSION,
+                "NSPrincipalClass": "NSApplication",
+                "NSHighResolutionCapable": True,
         }
 )
 

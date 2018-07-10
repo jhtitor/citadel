@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.memowindow import Ui_MemoWindow
 
 from .utils import *
@@ -7,7 +7,7 @@ import json
 import logging
 log = logging.getLogger(__name__)
 
-class MemoWindow(QtGui.QDialog):
+class MemoWindow(QtWidgets.QDialog):
 
 	def __init__(self, *args, **kwargs):
 		self.iso = kwargs.pop('isolator', None)
