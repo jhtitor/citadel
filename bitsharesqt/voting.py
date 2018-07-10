@@ -422,7 +422,7 @@ class VotingWindow(QtGui.QDialog):
 			set_col(table, j, 0, w["id"], data = w)
 			set_col(table, j, 1, w._account["name"])
 			set_col(table, j, 2, w["url"])
-			set_col(table, j, 3, str.split(w["work_end_date"], "T")[0])
+			set_col(table, j, 3, w["work_end_date"].strftime("%Y-%m-%d"))
 			ip = set_col(table, j, 4, int(w["total_votes_for"]), align="right")
 			ic = set_col(table, j, 5, int(w["total_votes_against"]), align="right")
 			#set_itemflags(item, checked=checked, checkable=True, selectable=True, core=table)
