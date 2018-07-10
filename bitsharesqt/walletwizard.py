@@ -161,7 +161,6 @@ class WalletWizard(QtGui.QWizard):
 
 	def validateCurrentPage(self):
 		c = self.currentId()
-		print("VALIDAT")
 		
 		if (c == WalletWizard.PAGE_INTRO):
 			self.ui.masterPassword.setText("")
@@ -191,7 +190,7 @@ class WalletWizard(QtGui.QWizard):
 		
 		if (c == WalletWizard.PAGE_NEW_PASS):
 			password = self.ui.masterPassword.text()
-			confirm = self.ui.masterPassword.text()
+			confirm = self.ui.masterConfirm.text()
 			if password != confirm:
 				showerror("Password and confirmation do not match.")
 				return False

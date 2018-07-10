@@ -145,7 +145,7 @@
       <property name="minimumSize">
        <size>
         <width>0</width>
-        <height>20</height>
+        <height>24</height>
        </size>
       </property>
       <property name="frameShape">
@@ -214,7 +214,11 @@
      </widget>
     </item>
     <item row="8" column="1">
-     <widget class="QLineEdit" name="masterConfirm"/>
+     <widget class="QLineEdit" name="masterConfirm">
+      <property name="echoMode">
+       <enum>QLineEdit::Password</enum>
+      </property>
+     </widget>
     </item>
     <item row="0" column="0">
      <widget class="QLabel" name="walletLabel">
@@ -286,7 +290,7 @@
         <property name="minimumSize">
          <size>
           <width>0</width>
-          <height>20</height>
+          <height>24</height>
          </size>
         </property>
         <property name="frameShape">
