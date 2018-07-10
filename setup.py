@@ -31,7 +31,7 @@ setup(
     scripts=["citadel"],
 
     install_requires=[
-        'six', 'ecdsa', 'appdirs',
+        'six', 'ecdsa', 'appdirs', 'pysocks',
         'qrcode', 'requests', 'pycryptodomex',
         'pyqtgraph', 'scrypt', 'secp256k1prp'
     ],

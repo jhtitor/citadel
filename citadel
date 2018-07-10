@@ -22,6 +22,7 @@ from bitsharesqt.utils import *
 # force import - see if we miss anything important
 #import scrypt
 import secp256k1prp
+import socks # very inderect ref from websocket
 
 class BitsharesQT(QtGui.QApplication):
 	
