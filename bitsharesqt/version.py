@@ -66,8 +66,8 @@ def platform_string():
 
 def library_versions(platform=False):
 	info = ""
-	from PyQt4.QtCore import QT_VERSION_STR
-	from PyQt4.Qt import PYQT_VERSION_STR
+	from PyQt5.QtCore import QT_VERSION_STR
+	from PyQt5.Qt import PYQT_VERSION_STR
 	from sip import SIP_VERSION_STR
 	import sys
 	if platform:

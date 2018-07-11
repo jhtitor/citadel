@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
 from bitshares.amount import Amount
 from bitshares.asset import Asset

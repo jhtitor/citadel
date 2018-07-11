@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 from .mainwindow import Ui_MainWindow
 
 from uidef.market import Ui_MarketTab
-from uidef.market import _translate
+_translate = QtCore.QCoreApplication.translate
 
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5.QtGui import QTableWidgetItem
 
 from .transactionbuilder import QTransactionBuilder
 

@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.createasset import Ui_CreateAsset
 
 from .utils import *
@@ -10,7 +10,7 @@ from .transactionbuilder import QTransactionBuilder
 from bitsharesbase.asset_permissions import asset_permissions
 from bitsharesbase.asset_permissions import todict
 
-class AssetWindow(QtGui.QDialog):
+class AssetWindow(QtWidgets.QDialog):
 	
 	def __init__(self, *args, **kwargs):
 		self.iso = kwargs.pop('isolator', None)

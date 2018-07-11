@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.walletwizard import Ui_walletWizard
 
 from .utils import *
@@ -81,7 +81,7 @@ class RecentWallets(object):
 			j = j + 1
 		return path
 
-class WalletWizard(QtGui.QWizard):
+class WalletWizard(QtWidgets.QWizard):
 
 	PAGE_INTRO = 0
 	PAGE_NEW_PASS = 1
@@ -126,7 +126,7 @@ class WalletWizard(QtGui.QWizard):
 	
 	def change_newpath(self):
 		path = self.ui.newPath.text() #DataDir.preflight()
-		path = QtGui.QFileDialog.getSaveFileName(self, 'New wallet file', path, "PyBitshares Wallet (*.bts *.sqlite)")
+		path, _ = QtGui.QFileDialog.getSaveFileName(self, 'New wallet file', path, "PyBitshares Wallet (*.bts *.sqlite)")
 		if not path:
 			return
 		self.ui.newPath.setText(path)
@@ -233,7 +233,7 @@ class WalletWizard(QtGui.QWizard):
 		
 			if self.ui.rOpenWallet.isChecked():
 				path = DataDir.preflight()
-				path = QtGui.QFileDialog.getOpenFileName(self, 'Open wallet file', path, "PyBitshares wallet (*.bts *.sqlite)")
+				path, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open wallet file', path, "PyBitshares wallet (*.bts *.sqlite)")
 				if not path:
 					return False
 				self._wallet_path = path

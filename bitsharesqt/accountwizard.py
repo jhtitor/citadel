@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.accountwizard import Ui_accountWizard
 
 from .utils import *
@@ -16,7 +16,7 @@ from bitsharesbase.account import BrainKey
 
 from .transactionbuilder import QTransactionBuilder
 
-class AccountWizard(QtGui.QWizard):
+class AccountWizard(QtWidgets.QWizard):
 
 	PAGE_INTRO = 0
 	PAGE_NEW_PASS = 1

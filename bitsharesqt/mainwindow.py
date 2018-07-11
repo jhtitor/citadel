@@ -1,9 +1,9 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 from uidef.mainwindow import Ui_MainWindow
-from uidef.mainwindow import _translate
+_translate = QtCore.QCoreApplication.translate
 import uidef.res_rc
 
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5.QtWidgets import QTableWidgetItem
 
 from .isolator import BitsharesIsolator
 from bitsharesextra.storage import BitsharesStorageExtra, DataDir
@@ -1425,7 +1425,7 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def new_wallet(self):
 		path = DataDir.preflight()
-		path = QtGui.QFileDialog.getSaveFileName(self, 'New wallet file', path, "PyBitshares Wallet (*.bts *.sqlite)")
+		path, _ = QtGui.QFileDialog.getSaveFileName(self, 'New wallet file', path, "PyBitshares Wallet (*.bts *.sqlite)")
 		
 		if not path:
 			return False
@@ -1519,7 +1519,7 @@ class MainWindow(QtGui.QMainWindow,
 	def reopen_wallet(self):
 		path = None
 		path = DataDir.preflight()
-		path = QtGui.QFileDialog.getOpenFileName(self, 'Open wallet file', path, "PyBitshares wallet (*.bts *.sqlite)")
+		path, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open wallet file', path, "PyBitshares wallet (*.bts *.sqlite)")
 		if not path:
 			return False
 		app().reopen(path)
@@ -1527,7 +1527,7 @@ class MainWindow(QtGui.QMainWindow,
 	def open_wallet(self, path=None, autounlock=True):
 		if not path:
 			path = DataDir.preflight()
-			path = QtGui.QFileDialog.getOpenFileName(self, 'Open wallet file', path, "PyBitshares wallet (*.bts *.sqlite)")
+			path, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open wallet file', path, "PyBitshares wallet (*.bts *.sqlite)")
 		if not path:
 			return False
 		
