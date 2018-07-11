@@ -164,12 +164,12 @@ class OrderTab(QtWidgets.QWidget):
 		
 		if buy_amount:
 			amt = float(buy_amount)
-			re = amt / highestBid
+			re = amt * highestBid
 			#self.ui.sellAmountSpin.setValue( re )
 		
 		if sell_amount:
 			amt = float(sell_amount)
-			re = amt * highestBid
+			re = amt / highestBid
 			#self.ui.buyAmountSpin.setValue( re )
 		
 		#self.ui.sellComment.setText( str(tick) )
