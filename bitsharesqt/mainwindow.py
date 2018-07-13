@@ -1740,7 +1740,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.refreshUi_wallet()
 		return True
 	
-	def unlock_wallet(self):
+	def unlock_wallet(self, reason=None):
 		wallet = self.iso.bts.wallet
 		
 		if not wallet.locked():
@@ -1750,6 +1750,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		input, ok = QtGui.QInputDialog.getText(
 			None, 'Password',
+			(('To ' + reason + '\n\n') if reason else '') +
 			'Enter wallet master password:', QtGui.QLineEdit.Password)
 		
 		if not ok:
