@@ -222,7 +222,7 @@ class WalletWizard(QtWidgets.QWizard):
 	
 	def nextId(self):
 		c = self.currentId()
-		print("GIV nextId", c)
+		
 		if (c == WalletWizard.PAGE_INTRO):
 			if self.ui.rNewWallet.isChecked():
 				return WalletWizard.PAGE_NEW_PASS
