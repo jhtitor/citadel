@@ -222,19 +222,21 @@ class WindowWithGateway(QtCore.QObject):
 			if "gatewayName" in receipt:
 				gwname = receipt["gatewayName"]
 				
-				coin = self.cached_coins[gwname][receipt["inputCoinType"]]
-				wallet = self.cached_wallets[gwname][coin["walletType"]]
+				inputCoinType = receipt["inputCoinType"]
+				if inputCoinType in self.cached_coins[gwname]:
+					coin = self.cached_coins[gwname][receipt["inputCoinType"]]
+					wallet = self.cached_wallets[gwname][coin["walletType"]]
 				
-				#self.ui.qrView.setPixmap( None )
-				if coin["walletType"] == 'bitshares2':
-					gph = True
-				if 'extraData' in wallet and wallet['extraData']:
-					if 'uri' in wallet['extraData']:
-						if 'address' in wallet['extraData']['uri']:
-							template = wallet['extraData']['uri']['address']
-							url = template.replace('${address}', receipt['inputAddress'])
-				if not url and coin['coinType'] == 'btc':
-					url = "bitcoin:${address}".replace('${address}', receipt['inputAddress'])
+					#self.ui.qrView.setPixmap( None )
+					if coin["walletType"] == 'bitshares2':
+						gph = True
+					if 'extraData' in wallet and wallet['extraData']:
+						if 'uri' in wallet['extraData']:
+							if 'address' in wallet['extraData']['uri']:
+								template = wallet['extraData']['uri']['address']
+								url = template.replace('${address}', receipt['inputAddress'])
+					if not url and coin['coinType'] == 'btc':
+						url = "bitcoin:${address}".replace('${address}', receipt['inputAddress'])
 			
 			self.ui.gwcalcInputLabel.setText(receipt["inputCoinType"].upper())
 			self.ui.inputAmount.setEnabled(True)
