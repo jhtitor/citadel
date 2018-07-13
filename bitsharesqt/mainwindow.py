@@ -974,7 +974,7 @@ class MainWindow(QtGui.QMainWindow,
 			return
 		account_name = box.currentItem().text()
 		showerror(str(self.ui.accountsList.currentIndex()))
-		if not(askyesno("If you don't have some means to restore this account, you will permamentely lost access to this account.\n\nAre you sure you want to remove account %s from this wallet?" % account_name)):
+		if not(askyesno("If you don't have some means to restore this account, you will permamentely lose access to it.\n\nAre you sure you want to remove account %s from this wallet?" % account_name)):
 			return
 		try:
 			self.iso.bts.wallet.removeAccount(account_name)
