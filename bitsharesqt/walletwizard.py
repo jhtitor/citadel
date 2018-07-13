@@ -175,7 +175,7 @@ class WalletWizard(QtWidgets.QWizard):
 				self.ui.finalWalletPath.setText(path)
 				self._wallet_path = path
 				if os.path.exists(path):
-					showerror("File %s already exists, and for your own sake, WILL NOT be overwritten.")
+					showerror("File %s already exists, and for your own sake, WILL NOT be overwritten." % path)
 					return False
 			
 			if self.ui.rRecentWallet.isChecked():
