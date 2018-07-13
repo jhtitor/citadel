@@ -919,10 +919,15 @@ class MainWindow(QtGui.QMainWindow,
 		if not box.currentIndex().isValid():
 			return
 		account_name = box.currentItem().text()
-		
+
 		try:
-			pubs = self.iso.getLocalAccountKeys(account_name)
-			priv = self.iso.getPrivateKeyForPublicKeys(pubs)
+			with self.iso.unlockedWallet(
+				reason='View Private Keys for ' + account_name
+			) as w:
+				pubs = self.iso.getLocalAccountKeys(account_name)
+				priv = self.iso.getPrivateKeyForPublicKeys(pubs)
+		except WalletLocked:
+			return
 		except Exception as exc:
 			showexc(exc)
 			return
