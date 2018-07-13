@@ -129,11 +129,21 @@ def showmsg(*args, **kwargs):
 	return showdialog(*args, **kwargs)
 
 def askyesno(message):
-	mb = QtGui.QMessageBox
-	if mb.question(None, '', message,
-		mb.Yes | mb.No, mb.No) == mb.Yes:
-		return True
-	return False
+	#mb = QtGui.QMessageBox
+	#if mb.question(None, '', message,
+	#	mb.Yes | mb.No, mb.No) == mb.Yes:
+	#	return True
+	#return False
+	msg = QtGui.QMessageBox()
+	msg.setIcon( QtGui.QMessageBox.Question )
+	
+	msg.setText(message)
+	#msg.setWindowTitle(title)
+	msg.setWindowIcon(app().mainwin.windowIcon())
+	
+	msg.setStandardButtons( QtGui.QMessageBox.Yes | QtGui.QMessageBox.No )
+	retval = msg.exec_()
+	return bool(retval == QtGui.QMessageBox.Yes)
 
 def qmenu(elem, func):
 	elem.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
