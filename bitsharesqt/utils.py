@@ -1,4 +1,4 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore
 
 COLOR_GREEN = "#27ca41"
 COLOR_RED = "#e44842"
@@ -58,7 +58,7 @@ def any_value(widget):
 def any_change(widget, func):
 	if isinstance(widget, QtGui.QComboBox):
 		return on_combo(widget, func)
-	if isinstance(widget, QtGui.QSpinBox):
+	if isinstance(widget, QtGui.QLineEdit):
 		return on_edit(widget, func)
 	if isinstance(widget, QtGui.QSpinBox):
 		return on_spin(widget, func)
@@ -129,11 +129,21 @@ def showmsg(*args, **kwargs):
 	return showdialog(*args, **kwargs)
 
 def askyesno(message):
-	mb = QtGui.QMessageBox
-	if mb.question(None, '', message,
-		mb.Yes | mb.No, mb.No) == mb.Yes:
-		return True
-	return False
+	#mb = QtGui.QMessageBox
+	#if mb.question(None, '', message,
+	#	mb.Yes | mb.No, mb.No) == mb.Yes:
+	#	return True
+	#return False
+	msg = QtGui.QMessageBox()
+	msg.setIcon( QtGui.QMessageBox.Question )
+	
+	msg.setText(message)
+	#msg.setWindowTitle(title)
+	msg.setWindowIcon(app().mainwin.windowIcon())
+	
+	msg.setStandardButtons( QtGui.QMessageBox.Yes | QtGui.QMessageBox.No )
+	retval = msg.exec_()
+	return bool(retval == QtGui.QMessageBox.Yes)
 
 def qmenu(elem, func):
 	elem.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -227,7 +237,7 @@ def table_selrow(table):
 	j = indexes[0].row()
 	return j
 
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5.QtWidgets import QTableWidgetItem
 def set_col(table, row, col, val, fmt=None, color=None, align=None, editable=None, data=None):
 	item = QTableWidgetItem(fmt % val if fmt else str(val))
 	if color:

@@ -45,6 +45,7 @@ def download_windows_openssl(i686=True):
         filename = 'openssl-1.0.2o-i386-win32.zip'
     else:
         filename = 'openssl-1.0.2o-x64_86-win64.zip'
+    # Picked from https://wiki.openssl.org/index.php/Binaries
     url = 'https://indy.fulgan.com/SSL/' + filename
     return download_file(filename, url)
 
@@ -71,6 +72,9 @@ if sys.platform == 'win32':
 
 if sys.platform == "darwin":
     hidden_imports.append( '_scrypt' )
+
+# For PyQt5 >= 5.11, and pyinstaller not yet patched, we add this:
+hidden_imports.append("PyQt5.sip")
 
 block_cipher = None
 
@@ -118,6 +122,8 @@ app = BUNDLE(exe,
                 "CFBundleDisplayName": version.SHORT_DESCRIPTION,
                 "CFBundleIdentifier": "li.citadel.desktop",
                 "CFBundleShortVersionString": version.VERSION,
+                "NSPrincipalClass": "NSApplication",
+                "NSHighResolutionCapable": True,
         }
 )
 

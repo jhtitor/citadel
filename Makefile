@@ -13,23 +13,19 @@ UISRC=bitsharesqt
 
 ui:
 	mkdir -p uidef
-	pyuic4 $(UISRC)/mainwindow.ui -o uidef/mainwindow.py --from-imports
-	pyuic4 $(UISRC)/accountwizard.ui -o uidef/accountwizard.py --from-imports
-	pyuic4 $(UISRC)/transactionbuilder.ui -o uidef/transactionbuilder.py --from-imports
-	pyuic4 $(UISRC)/memowindow.ui -o uidef/memowindow.py --from-imports
-	pyuic4 $(UISRC)/settings.ui -o uidef/settings.py --from-imports
-	pyuic4 $(UISRC)/remotes.ui -o uidef/remotes.py --from-imports
-	pyuic4 $(UISRC)/dashboard.ui -o uidef/dashboard.py --from-imports
-	pyuic4 $(UISRC)/exchange.ui -o uidef/exchange.py --from-imports
-	pyuic4 $(UISRC)/market.ui -o uidef/market.py --from-imports
-	pyuic4 $(UISRC)/createasset.ui -o uidef/createasset.py --from-imports
-	pyuic4 $(UISRC)/voting.ui -o uidef/voting.py --from-imports
-	pyrcc4 -py3 $(UISRC)/res.qrc -o uidef/res_rc.py
-
-App: $(ICNS_FILE)
-	python3 setup.py py2app --iconfile $(ICNS_FILE)
-	cp $(SCRYPT_PATH) dist/$(BUNDLE_NAME).app/Contents/Resources/lib/python3.5/lib-dynload/_scrypt.so
-	install_name_tool -change $(SCRYPT_DYLIB) @executable_path/../Frameworks/libcrypto.1.0.0.dylib dist/$(BUNDLE_NAME).app/Contents/Resources/lib/python3.5/lib-dynload/_scrypt.so
+	pyuic5 $(UISRC)/mainwindow.ui -o uidef/mainwindow.py --from-imports
+	pyuic5 $(UISRC)/walletwizard.ui -o uidef/walletwizard.py --from-imports
+	pyuic5 $(UISRC)/accountwizard.ui -o uidef/accountwizard.py --from-imports
+	pyuic5 $(UISRC)/transactionbuilder.ui -o uidef/transactionbuilder.py --from-imports
+	pyuic5 $(UISRC)/memowindow.ui -o uidef/memowindow.py --from-imports
+	pyuic5 $(UISRC)/settings.ui -o uidef/settings.py --from-imports
+	pyuic5 $(UISRC)/remotes.ui -o uidef/remotes.py --from-imports
+	pyuic5 $(UISRC)/dashboard.ui -o uidef/dashboard.py --from-imports
+	pyuic5 $(UISRC)/exchange.ui -o uidef/exchange.py --from-imports
+	pyuic5 $(UISRC)/market.ui -o uidef/market.py --from-imports
+	pyuic5 $(UISRC)/createasset.ui -o uidef/createasset.py --from-imports
+	pyuic5 $(UISRC)/voting.ui -o uidef/voting.py --from-imports
+	pyrcc5 $(UISRC)/res.qrc -o uidef/res_rc.py
 
 app: $(ICNS_FILE)
 	rm version.txt

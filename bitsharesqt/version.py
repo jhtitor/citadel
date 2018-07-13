@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION="0.1.1"
+VERSION="0.2.0"
 
 BUNDLE_NAME="BitShares-QT"
 UNIX_NAME="pybitshares-qt"
@@ -55,6 +55,29 @@ def git_version(on_error="Unknown"):
 VERSION=git_version(VERSION)
 VERSION=txt_version(VERSION)
 
+def platform_string():
+	import platform
+	base = platform.system() + " " + platform.release()
+	if platform.system() == 'Darwin':
+		osx = platform.mac_ver()[0]
+		if osx:
+			base = "Mac OS X " + osx
+	return base + " " + platform.machine()
+
+def library_versions(platform=False):
+	info = ""
+	from PyQt5.QtCore import QT_VERSION_STR
+	from PyQt5.Qt import PYQT_VERSION_STR
+	from sip import SIP_VERSION_STR
+	import sys
+	if platform:
+	    info += "platform: " + platform_string() + "\n\n"
+	info += "python " + sys.version + "\n"
+	info += "QT " + QT_VERSION_STR + "\n"
+	info += "SIP " + SIP_VERSION_STR + "\n"
+	info += "PyQt " + PYQT_VERSION_STR + "\n"
+	return info
+
 if __name__ == "__main__":
 	import sys
 	def out(s):
@@ -81,4 +104,8 @@ if __name__ == "__main__":
 			dylib = str.split(lines[1], " (")[0].strip()
 			out(dylib)
 		out(so)
+	if ("--platform" in sys.argv):
+		out(platform_string())
+	if ("--libraries" in sys.argv):
+		out(library_versions())
 	out(VERSION)

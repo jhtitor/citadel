@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-from PyQt4 import QtCore, QtGui
-
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QTableWidgetItem
 
 from bitshares.amount import Amount
 from .transactionbuilder import QTransactionBuilder
 from .voting import VotingWindow
+from .createasset import AssetWindow
 
 from .netloc import RemoteFetch
 from .utils import *
@@ -14,7 +14,7 @@ import json
 from pprint import pprint
 
 from uidef.dashboard import Ui_DashboardTab
-from uidef.dashboard import _translate
+_translate = QtCore.QCoreApplication.translate
 
 
 import logging
@@ -27,7 +27,7 @@ except AttributeError:
         return s
 
 
-class DashboardTab(QtGui.QWidget):
+class DashboardTab(QtWidgets.QWidget):
 	
 	def __init__(self, *args, **kwargs):
 		self.ping_callback = kwargs.pop("ping_callback", None)
@@ -100,6 +100,7 @@ class DashboardTab(QtGui.QWidget):
 		#qaction(self, menu, "Transfer...", self._dash_transfer)
 		qaction(self, menu, "Buy...", self._dash_buy_asset)
 		qaction(self, menu, "Sell...", self._dash_sell_asset)
+		qaction(self, menu, "Open Market...", self._dash_openmarket_asset)
 		qaction(self, menu, "Blind...", self._dash_blind_asset)
 		qaction(self, menu, "Burn...", self._dash_burn_asset)
 		menu.addSeparator()
@@ -150,6 +151,22 @@ class DashboardTab(QtGui.QWidget):
 			sell_amount = amount,
 		)
 	
+	def _dash_openmarket_asset(self):
+		j = table_selrow(self.ui.balanceTable)
+		if j <= -1:
+			return
+		symbol = self.ui.balanceTable.item(j, 1).text()
+		asset = self.iso.getAsset(symbol)
+		desc = asset["options"]["description"]
+		market = None
+		try:
+			market = json.loads(desc)["market"]
+		except:
+			pass
+		if not(market):
+			market = "BTS"
+		app().mainwin.openMarket(symbol, market)
+	
 	def _dash_blind_asset(self):
 		j = table_selrow(self.ui.balanceTable)
 		if j <= -1:
@@ -177,7 +194,7 @@ class DashboardTab(QtGui.QWidget):
 		if not asset_name:
 			return
 		asset = self.iso.getAsset(asset_name)
-		from createasset import AssetWindow
+
 		win = AssetWindow(isolator=self.iso, mode="reserve",
 			asset=asset,
 			accounts=app().mainwin.account_names,
@@ -349,7 +366,11 @@ class DashboardTab(QtGui.QWidget):
 		for o in balances:
 			j += 1
 			
-			table.setItem(j, 0, QtGui.QTableWidgetItem(str(o.amount)))
+			try:
+				namt = str(self.iso.getAmount(o.amount, o.symbol)).split(" ")[0]
+			except:
+				namt = str(o.amount)
+			table.setItem(j, 0, QtGui.QTableWidgetItem(namt))
 			table.item(j, 0).setIcon( qicon(":/icons/images/token.png") )
 			table.setItem(j, 1, QtGui.QTableWidgetItem(str(o.symbol)))
 			

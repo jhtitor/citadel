@@ -21,7 +21,7 @@ packages = [
 		"name": "python-bitshares",
 		"repo": (
 			"jhtitor/python-bitshares",
-			"6415732ae1205e84e13bc61bf9eeb6992e954a1c"
+			"20b90542e9747aac7b5c251abe7c630cf4aa8159"
 			),
 		"copy": [ "bitsharesbase", "bitsharesapi", "bitshares" ],
 	},
@@ -29,7 +29,7 @@ packages = [
 		"name": "python-graphenelib",
 		"repo": (
 			"jhtitor/python-graphenelib",
-			"769463726f5a4cd1cd4847fc824ec418cb0ebac4"
+			"dd08ed43d6570f4908ddfd8d5bb31ae264dc9cd6"
 			),
 		"copy": [ "graphenebase", "grapheneapi" ],
 	},

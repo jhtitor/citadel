@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
 from bitshares.amount import Amount
 from bitshares.asset import Asset
@@ -179,6 +179,7 @@ class WindowWithAssets(QtCore.QObject):
 		menu._list = True if send == self.ui.assetList else False
 		qaction(self, menu, "Buy...", self._buy_asset)
 		qaction(self, menu, "Sell...", self._sell_asset)
+		qaction(self, menu, "Open Market...", self._openmarket_asset)
 		menu.addSeparator()
 		qaction(self, menu, "Edit Asset...", self._edit_asset)
 		qaction(self, menu, "Issue Asset...", self._issue_asset)
@@ -211,6 +212,19 @@ class WindowWithAssets(QtCore.QObject):
 		if not asset_name:
 			return
 		self.FSell(account=True, sell_asset=asset_name)
+	
+	def _openmarket_asset(self):
+		asset_name = self._submenu_asset()
+		asset = self.iso.getAsset(asset_name)
+		desc = asset["options"]["description"]
+		market = None
+		try:
+			market = json.loads(desc)["market"]
+		except:
+			pass
+		if not(market):
+			market = "BTS"
+		app().mainwin.openMarket(asset_name, market)
 	
 	def _edit_asset(self):
 		asset_name = self._submenu_asset()

@@ -7,3 +7,4 @@ pyqtgraph
 scrypt
 secp256k1prp
 pycryptodomex
+pysocks

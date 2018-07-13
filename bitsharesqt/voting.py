@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.voting import Ui_VotingWindow
 
 from .netloc import RemoteFetch
@@ -9,7 +9,7 @@ import json
 
 from .transactionbuilder import QTransactionBuilder
 
-class VotingWindow(QtGui.QDialog):
+class VotingWindow(QtWidgets.QDialog):
 	
 	def __init__(self, *args, **kwargs):
 		self.iso = kwargs.pop('isolator', None)
@@ -52,7 +52,7 @@ class VotingWindow(QtGui.QDialog):
 		
 		set_combo(self.ui.accountProxy, self.proxyAccount["name"], force=True)
 		
-		on_edit(self.ui.accountProxy, self.update_proxy)
+		on_combo(self.ui.accountProxy, self.update_proxy)
 		#self.resync()
 		#return
 		
@@ -422,7 +422,7 @@ class VotingWindow(QtGui.QDialog):
 			set_col(table, j, 0, w["id"], data = w)
 			set_col(table, j, 1, w._account["name"])
 			set_col(table, j, 2, w["url"])
-			set_col(table, j, 3, str.split(w["work_end_date"], "T")[0])
+			set_col(table, j, 3, w["work_end_date"].strftime("%Y-%m-%d"))
 			ip = set_col(table, j, 4, int(w["total_votes_for"]), align="right")
 			ic = set_col(table, j, 5, int(w["total_votes_against"]), align="right")
 			#set_itemflags(item, checked=checked, checkable=True, selectable=True, core=table)
@@ -472,10 +472,10 @@ class VotingWindow(QtGui.QDialog):
 				continue
 			text = text + delim + desc
 			delim = " | "
-		busy -= mod
+		#busy -= mod
 		if busy:
 			text = text + delim + " Please wait..."
-		if mod and busy < 1:
+		else:
 			text = ""
 		self.ui.statusText.setText("" + text)
 		

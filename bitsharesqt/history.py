@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5.QtWidgets import QTableWidgetItem
 
 from .netloc import RemoteFetch
 from .utils import *
@@ -76,7 +76,7 @@ class Ui_HistoryTab(object):
 	#def retranslateUi(self, MainWindow):
 	#	pass
 
-class HistoryTab(QtGui.QWidget):
+class HistoryTab(QtWidgets.QWidget):
 	
 	def __init__(self, *args, **kwargs):
 		self.ping_callback = kwargs.pop("ping_callback", None)
@@ -113,7 +113,7 @@ class HistoryTab(QtGui.QWidget):
 		entries = iso.store.historyStorage.getEntries(account.name)
 		
 		path = account.name + ".csv"
-		path = QtGui.QFileDialog.getSaveFileName(self, 'Export account history', path, "CSV File (*.csv)")
+		path, _ = QtGui.QFileDialog.getSaveFileName(self, 'Export account history', path, "CSV File (*.csv)")
 		if not path:
 			return False
 		

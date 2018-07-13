@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 from .mainwindow import Ui_MainWindow
 
 from uidef.market import Ui_MarketTab
-from uidef.market import _translate
+_translate = QtCore.QCoreApplication.translate
 
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5.QtGui import QTableWidgetItem
 
 from .transactionbuilder import QTransactionBuilder
 
@@ -24,6 +24,7 @@ except AttributeError:
         return s
 
 import pyqtgraph as pg
+import datetime
 ## Switch to using white background and black foreground
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
@@ -301,9 +302,7 @@ class MarketTab(QtGui.QWidget):
 	def plotChart(self, trades):
 		xs = [ ]
 		ys = [ ]
-		import datetime
 		for trade in trades:
-			pp(trade)
 			dt = datetime.datetime.strptime(trade["date"], "%Y-%m-%dT%H:%M:%S")
 			x = int(dt.timestamp()) #trade["sequence"]
 			y = trade["price"]

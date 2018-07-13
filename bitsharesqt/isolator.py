@@ -754,22 +754,23 @@ class BitsharesIsolator(object):
 		}
 	
 	class WalletGate(object):
-		def __init__(self, wallet):
+		def __init__(self, wallet, reason=None):
 			self.wallet = wallet
+			self.reason = reason
 			self.relock = wallet.locked()
 		def __enter__(self):
 			from .utils import app
 			if self.relock:
-				unlocked = app().mainwin.unlock_wallet()
+				unlocked = app().mainwin.unlock_wallet(reason=self.reason)
 				if not unlocked:
 					raise WalletLocked()
 			return self.wallet
-		def __exit__(self,exc_type, exc_val, exc_tb):
+		def __exit__(self, exc_type, exc_val, exc_tb):
 			from .utils import app
 			if self.relock:
 				app().mainwin.lock_wallet()
-	def unlockedWallet(self):
-		return self.WalletGate( self.bts.wallet )
+	def unlockedWallet(self, reason=None):
+		return self.WalletGate( self.bts.wallet, reason )
 	
 	
 	def download_assets(self):

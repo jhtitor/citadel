@@ -1,16 +1,17 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 from uidef.mainwindow import Ui_MainWindow
-from uidef.mainwindow import _translate
+_translate = QtCore.QCoreApplication.translate
 import uidef.res_rc
 
-from PyQt4.QtGui import QTableWidgetItem
+from PyQt5.QtWidgets import QTableWidgetItem
 
 from .isolator import BitsharesIsolator
 from bitsharesextra.storage import BitsharesStorageExtra, DataDir
 from bitsharesbase.account import PrivateKey
 
-from .version import VERSION, UNIX_NAME
+from .version import VERSION, UNIX_NAME, library_versions
 from .accountwizard import AccountWizard
+from .walletwizard import WalletWizard, RecentWallets
 from .memowindow import MemoWindow
 from .createasset import AssetWindow
 from .settings import SettingsWindow
@@ -85,7 +86,7 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.blindFromFeeAsset,
 		]
 		
-		ui.actionNew_wallet.triggered.connect(self.new_wallet)
+		ui.actionNew_wallet.triggered.connect(self.new_wallet_wizard)
 		ui.actionOpen_wallet.triggered.connect(self.reopen_wallet)
 		
 		ui.actionClose_wallet.triggered.connect(self.close_wallet)
@@ -134,7 +135,7 @@ class MainWindow(QtGui.QMainWindow,
 		ui.actionResync_history.triggered.connect(self.massResync)
 		ui.actionResync_orders.triggered.connect(self.massResync)
 		#
-		
+		self.setupRecentWalletsMenu()
 		#
 		self.account_names = set()
 		self.open_accounts = set()
@@ -302,6 +303,16 @@ class MainWindow(QtGui.QMainWindow,
 		#qmenu(self.ui.statusLock, self.show_lock_submenu)
 		#qmenu(self.ui.statusNetwork, self.show_network_submenu)
 	
+	def setupRecentWalletsMenu(self):
+		menu = self.ui.menuOpen_Recent
+		lst = list(RecentWallets.recent)
+		for item in lst:
+			qa = qaction(self, menu, str(item), self.open_recent_wallet)
+	def open_recent_wallet(self):
+		qa = self.sender()
+		path = qa.text()
+		app().reopen(path)
+	
 	def uiAssetsMarketLink(self, a, b, _a, _b, btn):
 		a._bidask = (_a, _b)
 		a._other = b
@@ -370,11 +381,12 @@ class MainWindow(QtGui.QMainWindow,
 		qact.triggered.connect(self.uiActionFront_perform)
 	
 	def uiActionFront_perform(self):
+		account = self.activeAccount
 		qact = self.sender()
 		find_class = qact._linkedClass
-		tab = self.findTab(find_class, "#account")
+		tab = self.findTab(find_class, account.name)
 		if not tab:
-			print("Tab not found", find_class, "#account")
+			print("Tab not found", find_class, account.name)
 			return
 		self.setTabVisible(tab, True)
 	
@@ -840,7 +852,9 @@ class MainWindow(QtGui.QMainWindow,
 		self.OSell()
 	
 	def show_about(self):
-		showdialog(UNIX_NAME+" "+VERSION, title="About", additional="Python BitShares Wallet", details="python3, PyQT4, python-bitshares",
+		info = library_versions(platform=True)
+		showdialog(UNIX_NAME+" "+VERSION, title="About",
+		additional="Python BitShares Wallet", details=info,
 		icon=':/images/images/logo.png')
 	
 	def show_account_submenu(self, position):
@@ -905,10 +919,15 @@ class MainWindow(QtGui.QMainWindow,
 		if not box.currentIndex().isValid():
 			return
 		account_name = box.currentItem().text()
-		
+
 		try:
-			pubs = self.iso.getLocalAccountKeys(account_name)
-			priv = self.iso.getPrivateKeyForPublicKeys(pubs)
+			with self.iso.unlockedWallet(
+				reason='View Private Keys for ' + account_name
+			) as w:
+				pubs = self.iso.getLocalAccountKeys(account_name)
+				priv = self.iso.getPrivateKeyForPublicKeys(pubs)
+		except WalletLocked:
+			return
 		except Exception as exc:
 			showexc(exc)
 			return
@@ -955,7 +974,7 @@ class MainWindow(QtGui.QMainWindow,
 			return
 		account_name = box.currentItem().text()
 		showerror(str(self.ui.accountsList.currentIndex()))
-		if not(askyesno("If you don't have some means to restore this account, you will permamentely lost access to this account.\n\nAre you sure you want to remove account %s from this wallet?" % account_name)):
+		if not(askyesno("If you don't have some means to restore this account, you will permamentely lose access to it.\n\nAre you sure you want to remove account %s from this wallet?" % account_name)):
 			return
 		try:
 			self.iso.bts.wallet.removeAccount(account_name)
@@ -1402,9 +1421,16 @@ class MainWindow(QtGui.QMainWindow,
 	def bootstrap_wallet(self, wipe=False):
 		self.iso.bootstrap_wallet(wipe)
 	
+	def new_wallet_wizard(self):
+		ww = WalletWizard(newOnly = True)
+		ok, path, is_new, masterpwd = ww.run()
+		if ok:
+			app().reopen(path)
+		return ok
+	
 	def new_wallet(self):
 		path = DataDir.preflight()
-		path = QtGui.QFileDialog.getSaveFileName(self, 'New wallet file', path, "PyBitshares Wallet (*.bts *.sqlite)")
+		path, _ = QtGui.QFileDialog.getSaveFileName(self, 'New wallet file', path, "PyBitshares Wallet (*.bts *.sqlite)")
 		
 		if not path:
 			return False
@@ -1473,19 +1499,32 @@ class MainWindow(QtGui.QMainWindow,
 		self.ui.sellexpireEdit.setText(deltainterval(expire_seconds))
 		self.ui.fokCheckbox.setChecked(expire_fok)
 	
-	def auto_open_wallet(self):
-		path = DataDir.preflight()
+	def _try_open_wallet(self, path, echo=False):
 		try:
 			ok = self.open_wallet(path, autounlock=False)
 		except Exception as error:
-			#showexc(error)
+			import traceback
+			traceback.print_exc()
+			if echo:
+				showexc(error)
 			return False
 		return ok
+	
+	def auto_open_wallet(self):
+		ok = False
+		path = RecentWallets.last_wallet()
+		if path:
+			ok = self._try_open_wallet(path)
+		if not ok:
+			path = DataDir.preflight()
+			ok = self._try_open_wallet(path)
+		return ok
+	
 	
 	def reopen_wallet(self):
 		path = None
 		path = DataDir.preflight()
-		path = QtGui.QFileDialog.getOpenFileName(self, 'Open wallet file', path, "PyBitshares wallet (*.bts *.sqlite)")
+		path, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open wallet file', path, "PyBitshares wallet (*.bts *.sqlite)")
 		if not path:
 			return False
 		app().reopen(path)
@@ -1493,7 +1532,7 @@ class MainWindow(QtGui.QMainWindow,
 	def open_wallet(self, path=None, autounlock=True):
 		if not path:
 			path = DataDir.preflight()
-			path = QtGui.QFileDialog.getOpenFileName(self, 'Open wallet file', path, "PyBitshares wallet (*.bts *.sqlite)")
+			path, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open wallet file', path, "PyBitshares wallet (*.bts *.sqlite)")
 		if not path:
 			return False
 		
@@ -1511,6 +1550,8 @@ class MainWindow(QtGui.QMainWindow,
 		
 		self.iso.setWallet(wallet)
 		self.iso.setStorage(store)
+		
+		RecentWallets.push_wallet(path)
 		
 		self.ui.statusWallet.setText(path)
 		
@@ -1530,11 +1571,12 @@ class MainWindow(QtGui.QMainWindow,
 			self.unlock_wallet()
 		
 		if n == 0: # Fresh wallet?
-			self.bootstrap_wallet()
 			self.open_network_settings()
-			self.add_account()
+			if askyesno("To function properly, a wallet file must have at least one BitShares account.\n\nAdd an account now?"):
+				self.add_account()
 		
 		self.perhaps_autoconnect()
+		
 		return True
 	
 	def refreshUi_title(self):
@@ -1703,7 +1745,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.refreshUi_wallet()
 		return True
 	
-	def unlock_wallet(self):
+	def unlock_wallet(self, reason=None):
 		wallet = self.iso.bts.wallet
 		
 		if not wallet.locked():
@@ -1713,6 +1755,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		input, ok = QtGui.QInputDialog.getText(
 			None, 'Password',
+			(('To ' + reason + '\n\n') if reason else '') +
 			'Enter wallet master password:', QtGui.QLineEdit.Password)
 		
 		if not ok:

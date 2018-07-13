@@ -21,6 +21,8 @@
     <file>../images/op/transfer.png</file>
   </qresource>
   <qresource prefix="icons">
+    <file>../images/wallet.png</file>
+    <file>../images/folder_open.png</file>
     <file>../images/account.png</file>
     <file>../images/account_suit.png</file>
     <file>../images/unsigned.png</file>

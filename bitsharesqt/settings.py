@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.settings import Ui_SettingsWindow
 
 from .remotes import RemotesEditor
@@ -10,7 +10,7 @@ import json
 import logging
 log = logging.getLogger(__name__)
 
-class SettingsWindow(QtGui.QDialog):
+class SettingsWindow(QtWidgets.QDialog):
 
 	def __init__(self, *args, **kwargs):
 		self.iso = kwargs.pop('isolator', None)
