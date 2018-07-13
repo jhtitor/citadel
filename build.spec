@@ -73,6 +73,9 @@ if sys.platform == 'win32':
 if sys.platform == "darwin":
     hidden_imports.append( '_scrypt' )
 
+# For PyQt5 >= 5.11, and pyinstaller not yet patched, we add this:
+hidden_imports.append("PyQt5.sip")
+
 block_cipher = None
 
 a = Analysis(['citadel'],
