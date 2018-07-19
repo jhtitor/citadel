@@ -593,14 +593,15 @@ class BitsharesIsolator(object):
 		store = self.store.remotesStorage
 		if wipe:
 			store.wipe()
+		
 		for n in bootstrap.KnownFaucets:
-			store.add(2, n[0], n[1], n[2])
+			store.add(2, n[0], n[1], n[2], n[3].__name__)
 		
 		for n in bootstrap.KnownTraders:
-			store.add(1, n[0], n[1], n[2])
+			store.add(1, n[0], n[1], n[2], n[3].__name__)
 		
 		for n in bootstrap.KnownNodes:
-			store.add(0, n[0], n[1], n[2])
+			store.add(0, n[0], n[1], n[2], "")
 	
 	def historyDescription(iso, h, account=None):
 		accname = iso.softAccountName
