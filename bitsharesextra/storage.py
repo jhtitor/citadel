@@ -501,6 +501,14 @@ class Remotes(DataDir):
              query = ("DROP TABLE %s" % (self.__tablename__), ())
              self.sql_execute(query)
              self.create_table()
+             import bitsharesqt.bootstrap as bootstrap
+             for n in bootstrap.KnownFaucets:
+                 self.add(2, n[0], n[1], n[2], n[3].__name__)
+             for n in bootstrap.KnownTraders:
+                 self.add(1, n[0], n[1], n[2], n[3].__name__)
+             for n in bootstrap.KnownNodes:
+                 self.add(0, n[0], n[1], n[2], "")
+
 
     def getRemotes(self, rtype):
         """
