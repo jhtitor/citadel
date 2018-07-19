@@ -28,7 +28,7 @@ ui:
 	pyrcc5 $(UISRC)/res.qrc -o uidef/res_rc.py
 
 app: $(ICNS_FILE)
-	rm version.txt
+	rm -f version.txt
 	pyinstaller -y build.spec
 
 dmg: dist/$(BUNDLE_NAME).app

@@ -23,11 +23,6 @@ https://github.com/mhammond/pywin32/releases/download/b221/pywin32-221.win32-py3
 PyQt5 5.5.1 (latest version for python 3.4)
 https://sourceforge.net/projects/pyqt/files/PyQt5/PyQt-5.5.1/PyQt5-5.5.1-gpl-Py3.4-Qt5.5.1-x32.exe/download
 
-<s>
-PyCrypto
-http://www.voidspace.org.uk/python/pycrypto-2.6.1/pycrypto-2.6.1-cp34-none-win32.whl
-</s>
-
 PyCryptodome
 ```
 python -m pip install pycryptodome
@@ -35,15 +30,6 @@ python -m pip install pycryptodome
 
 Note, pycryptodomex will also be pulled from requirements.txt.
 But the vanilla pycryptodome MUST be installed explicitly by you.
-
-<s>
-secp256k1prp-py
-https://github.com/jhtitor/secp256k1prp-py/releases/download/0.13.2.5prp/secp256k1prp-0.13.2-cp34-cp34m-win32.whl
-</s>
-
-```
-python -m pip install scrypt
-```
 
 OpenSSL .dlls (for scrypt), unpack into source folder
 https://indy.fulgan.com/SSL/openssl-1.0.2o-i386-win32.zip
@@ -64,11 +50,9 @@ build.bat
 Note: building with python 3.6 is trickier (than, say, 3.5), but
 is possible.
 
-Latest version of PyQt5 from here
-https://sourceforge.net/projects/pyqt/files/PyQt5/
-
+PyQt5 from pip will work just fine.
 ```
-python -m pip install scrypt
+py -3.6 -m pip install PyQt5
 ```
 
 OpenSSL .dlls (for scrypt), unpack into source folder

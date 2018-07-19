@@ -7,11 +7,18 @@ log = logging.getLogger(__name__)
 
 import json
 
+from rpcs import gateway_apis
+
 class RemotesEditor(QtWidgets.QDialog):
+	
+	RTYPE_BTS_NODE = 0
+	RTYPE_BTS_GATEWAY = 1
+	RTYPE_BTS_FAUCET = 2
 	
 	def __init__(self, *args, **kwargs):
 		self.iso = kwargs.pop('isolator', None)
 		self.rtype = kwargs.pop('rtype', 0)
+		self.class_edit = bool(self.rtype == RemotesEditor.RTYPE_BTS_GATEWAY)
 		super(RemotesEditor, self).__init__(*args, **kwargs)
 		self.ui = ui = Ui_RemotesWindow()
 		
@@ -30,7 +37,9 @@ class RemotesEditor(QtWidgets.QDialog):
 		
 		self.ui.tableWidget.itemChanged.connect(self.edit_item)
 		
-		stretch_table(self.ui.tableWidget)
+		if not(self.class_edit):
+			self.ui.tableWidget.setColumnCount(2)
+		stretch_table(self.ui.tableWidget, col=1)
 		
 		
 		self.merge()
@@ -52,6 +61,9 @@ class RemotesEditor(QtWidgets.QDialog):
 				c1 = table.item(l, 0)
 				id = c1.data(99)
 				store.delete(id)
+				cb = table.cellWidget(l, 2)
+				if cb:
+					cb.currentIndexChanged.disconnect(self._edit_cb)
 				table.removeRow(l)
 	
 	def edit_item(self, item):
@@ -62,17 +74,26 @@ class RemotesEditor(QtWidgets.QDialog):
 		
 		c1 = table.item(j, 0)
 		c2 = table.item(j, 1)
+		cb = table.cellWidget(j, 2)
 		
 		id = c1.data(99)
-	
+		
 		store.update(id, "label", c1.text() )
 		store.update(id, "url", c2.text() )
+		if cb:
+			store.update(id, "ctype", cb.currentText() )
+	
+	def _edit_cb(self):
+		table = self.ui.tableWidget
+		row = table.currentIndex()
+		item = table.item(row.row(), 0)
+		self.edit_item(item)
 	
 	def add_empty(self):
 		store = self.iso.store.remotesStorage
 		table = self.ui.tableWidget
 		
-		newid = store.add(self.rtype, "", "", "")
+		newid = store.add(self.rtype, "", "", "", "")
 		
 		j = table.rowCount()
 		table.insertRow(j)
@@ -82,6 +103,12 @@ class RemotesEditor(QtWidgets.QDialog):
 		table.setItem(j, 0, QtGui.QTableWidgetItem("New node") )
 		table.setItem(j, 1, QtGui.QTableWidgetItem("wss://") )
 		
+		if self.class_edit:
+			cb = self._gateway_class_cb()
+			on_combo(cb, self._edit_cb)
+			set_combo(cb, 'BlockTradesUS')
+			table.setCellWidget(j, 2, cb)
+		
 		c1 = table.item(j, 0)
 		c2 = table.item(j, 1)
 		c1.setData(99, newid)
@@ -89,6 +116,12 @@ class RemotesEditor(QtWidgets.QDialog):
 		
 		table.blockSignals(False)
 	
+	def _gateway_class_cb(self):
+		cb = QtWidgets.QComboBox()
+		for gw in gateway_apis:
+			set_combo(cb, str(gw), force=True)
+		return cb
+
 	def merge(self):
 		store = self.iso.store.remotesStorage
 		table = self.ui.tableWidget
@@ -101,13 +134,22 @@ class RemotesEditor(QtWidgets.QDialog):
 			j = table.rowCount()
 			table.insertRow(j)
 			
-			table.setItem(j, 0, QtGui.QTableWidgetItem( str(remote['label']) ))
-			table.setItem(j, 1, QtGui.QTableWidgetItem( str(remote['url']) ))
+			#table.setItem(j, 0, QtGui.QTableWidgetItem( str(remote['label']) ))
+			#table.setItem(j, 1, QtGui.QTableWidgetItem( str(remote['url']) ))
 			
-			c1 = table.item(j, 0)
-			c2 = table.item(j, 1)
-			c1.setData(99, remote['id'])
-			c2.setData(99, remote['id'])
+			set_col(table, j, 0, str(remote['label']), data=remote['id'])
+			set_col(table, j, 1, str(remote['url']),   data=remote['id'])
+			
+			if self.class_edit:
+				cb = self._gateway_class_cb()
+				set_combo(cb, remote['ctype'])
+				on_combo(cb, self._edit_cb)
+				table.setCellWidget(j, 2, cb)
+			
+#			c1 = table.item(j, 0)
+#			c2 = table.item(j, 1)
+#			c1.setData(99, remote['id'])
+#			c2.setData(99, remote['id'])
 			
 		table.blockSignals(False)
 	

@@ -66,6 +66,11 @@ class BitsharesQT(QtGui.QApplication):
 		#)
 	
 if  __name__ == "__main__":
+	import argparse
+	parser = argparse.ArgumentParser()
+	parser.add_argument("WALLET", nargs="?", help="wallet file to open")
+	args = parser.parse_args()
+	
 	DataDir.appname = "bitshares"
 	DataDir.appauthor = "Citadel"
 	DataDir.storageDatabaseDefault = "default.bts"
@@ -74,10 +79,6 @@ if  __name__ == "__main__":
 	app = BitsharesQT(sys.argv)
 	ignore_hidpi_settings()
 	
-	import argparse
-	parser = argparse.ArgumentParser()
-	parser.add_argument("WALLET", nargs="?", help="wallet file to open")
-	args = parser.parse_args()
 	if args.WALLET:
 		try:
 			opened = app.mainwin.open_wallet(args.WALLET)

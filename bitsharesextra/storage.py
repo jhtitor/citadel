@@ -472,7 +472,7 @@ class Remotes(DataDir):
     """
     """
     __tablename__ = 'remotes'
-    __columns__ = [ 'id', 'label', 'url', 'rtype', 'ctype' ]
+    __columns__ = [ 'id', 'label', 'url', 'refurl', 'rtype', 'ctype' ]
 
     def __init__(self, *args, **kwargs):
         super(Remotes, self).__init__(*args, **kwargs)
@@ -484,24 +484,45 @@ class Remotes(DataDir):
                  'id INTEGER PRIMARY KEY AUTOINCREMENT,' +
                  'label STRING(256),' +
                  'url STRING(1024),' +
+                 'refurl STRING(1024),' +
                  'rtype INTEGER,' +
                  'ctype STRING(256)' +
                  ')', )
         self.sql_execute(query)
 
+    def migrate_rtype(self):
+        if not self.exists_table():
+            return
+        query = ("SELECT refurl FROM %s" % (self.__tablename__), ())
+        try:
+             self.sql_fetchall(query)
+        except:
+             print("No such row `refurl`")
+             query = ("DROP TABLE %s" % (self.__tablename__), ())
+             self.sql_execute(query)
+             self.create_table()
+             import bitsharesqt.bootstrap as bootstrap
+             for n in bootstrap.KnownFaucets:
+                 self.add(2, n[0], n[1], n[2], n[3].__name__)
+             for n in bootstrap.KnownTraders:
+                 self.add(1, n[0], n[1], n[2], n[3].__name__)
+             for n in bootstrap.KnownNodes:
+                 self.add(0, n[0], n[1], n[2], "")
+
+
     def getRemotes(self, rtype):
         """
         """
-        query = ("SELECT id, label, url, rtype, ctype from %s WHERE rtype = ?" % (self.__tablename__), (rtype,))
+        query = ("SELECT id, label, url, refurl, rtype, ctype from %s WHERE rtype = ?" % (self.__tablename__), (rtype,))
         rows = self.sql_fetchall(query)
         return self.sql_todict(self.__columns__, rows)
 
-    def add(self, rtype, label, url, ctype):
+    def add(self, rtype, label, url, refurl, ctype):
         """
         """
-        query = ('INSERT INTO %s (label, url, ctype, rtype) ' % self.__tablename__ +
-                 'VALUES (?, ?, ?, ?)',
-                 (label, url, ctype, rtype))
+        query = ('INSERT INTO %s (label, url, refurl, ctype, rtype) ' % self.__tablename__ +
+                 'VALUES (?, ?, ?, ?, ?)',
+                 (label, url, refurl, ctype, rtype))
         return self.sql_execute(query, lastid=True)
 
     def update(self, id, key, val):
@@ -713,6 +734,8 @@ class BitsharesStorageExtra(CommonStorage):
             self.historyStorage.create_table()
 
         self.remotesStorage = Remotes(path, mustexist=not(create))
+        # hack -- "upgrade"
+        self.remotesStorage.migrate_rtype()
         if not self.remotesStorage.exists_table() and create:
             self.remotesStorage.create_table()
 
