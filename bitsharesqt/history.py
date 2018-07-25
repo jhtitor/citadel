@@ -9,6 +9,7 @@ import json
 
 from .memowindow import MemoWindow
 from .transactionbuilder import QTransactionBuilder
+from .isolator import WalletLocked
 
 from bitsharesbase.signedtransactions import Signed_Transaction
 
@@ -159,10 +160,15 @@ class HistoryTab(QtWidgets.QWidget):
 		except:
 			account_to = None
 		
-		with iso.unlockedWallet() as w:
-			MemoWindow.QReadMemo(iso, op['memo'],
-				source_account=account_from,
-				target_account=account_to)
+		try:
+			with iso.unlockedWallet() as w:
+				MemoWindow.QReadMemo(iso, op['memo'],
+					source_account=account_from,
+					target_account=account_to)
+		except WalletLocked:
+			pass
+		except Exception as e:
+			showexc(e)
 #		try:
 #			data = op['memo']
 #			clear = iso.getMemo(None, None, data=data)
