@@ -10,6 +10,8 @@ from .transactionbuilder import QTransactionBuilder
 from bitsharesbase.asset_permissions import asset_permissions
 from bitsharesbase.asset_permissions import todict
 
+GRAPHENE_MAX_SHARE_SUPPLY = 1000000000000000
+
 class AssetWindow(QtWidgets.QDialog):
 	
 	def __init__(self, *args, **kwargs):
@@ -60,7 +62,6 @@ class AssetWindow(QtWidgets.QDialog):
 			item.setHidden(True)
 			
 			i += 1
-		
 		self.ui.permList.itemChanged.connect(self.permission_click)
 		
 		self.ui.isBitasset.stateChanged.connect(self.bitasset_toggle)
@@ -69,11 +70,17 @@ class AssetWindow(QtWidgets.QDialog):
 		
 		self.setupMode(self.mode)
 		
+		self.ui.totalEdit.setMaximum(GRAPHENE_MAX_SHARE_SUPPLY)
+		
 		if self.asset:
 			self.setupAsset(self.asset)
 		else:
 			set_combo(self.ui.accountBox, self.activeAccount["name"])
 			self.bitasset_toggle(0)
+			self.ui.precisionEdit.valueChanged.connect(self.precision_adjust)
+			self.ui.totalEdit.valueChanged.connect(self.total_adjust)
+
+			self.ui.totalEdit.setValue(GRAPHENE_MAX_SHARE_SUPPLY)
 		
 		#self.ui.createButton.clicked.connect(self.reject)
 		#self.ui.readButton.clicked.connect(self.read_memo)
@@ -106,8 +113,9 @@ class AssetWindow(QtWidgets.QDialog):
 	
 	def setupAsset(self, asset):
 		self.ui.symbolEdit.setText(asset["symbol"])
-		self.ui.precisionEdit.setText(str(asset["precision"]))
-		self.ui.totalEdit.setText(str(asset["options"]["max_supply"] / pow(10, asset["precision"])))
+		self.ui.precisionEdit.setValue(int(asset["precision"]))
+		self.precision_adjust(False)
+		self.ui.totalEdit.setValue(int(asset["options"]["max_supply"] / pow(10, asset["precision"])))
 		set_combo(self.ui.transferAsset, asset["symbol"])
 		set_combo(self.ui.untransferAsset, asset["symbol"])
 		
@@ -220,6 +228,30 @@ class AssetWindow(QtWidgets.QDialog):
 			if i != xindex:
 				self.ui.tabWidget.removeTab(i)
 	
+
+	def total_adjust(self, full=True):
+		total = int(self.ui.totalEdit.value())
+		req_precision = 16 - len(str(total))
+		precision = int(self.ui.precisionEdit.value())
+		print("Req precision:", req_precision, "current:", precision)
+		if full and req_precision < precision:
+			self.ui.precisionEdit.blockSignals(True)
+			self.ui.precisionEdit.setValue(req_precision)
+			self.precision_adjust(full=False)
+			self.ui.precisionEdit.blockSignals(False)
+
+	def precision_adjust(self, full=True):
+		precision = int(self.ui.precisionEdit.value())
+		if not precision: unit = "1"
+		else: unit = "0." + ("0" * (precision-1)) + "1"
+		self.ui.atomicUnit.setText(unit)
+		req_total = int(GRAPHENE_MAX_SHARE_SUPPLY / pow(10, precision))
+		total = int(self.ui.totalEdit.value())
+		if full and req_total < total:
+			self.ui.totalEdit.blockSignals(True)
+			self.ui.totalEdit.setValue(req_total)
+			self.ui.totalEdit.blockSignals(False)
+	
 	def permission_click(self, item):
 		row = item.data(32)
 		rel_item = self.ui.flagList.item(row)
@@ -283,7 +315,11 @@ class AssetWindow(QtWidgets.QDialog):
 			issuer = issuer["id"]
 		except:
 			pass
-		precision = int(self.ui.precisionEdit.text())
+		symbol = self.ui.symbolEdit.text()
+		if not len(symbol):
+			raise Exception("Enter asset symbol")
+		whole_coins = int(self.ui.totalEdit.value())
+		precision = int(self.ui.precisionEdit.value())
 		rate = float(self.ui.coreExchangeRate.value())
 		cer = { "base": { "amount": 0, "asset_id": "1.3.0" },
 			"quote": { "amount": 0, "asset_id": "1.3.1" } }
@@ -294,11 +330,11 @@ class AssetWindow(QtWidgets.QDialog):
 			cer["quote"]["amount"] = 1 * pow(10, 5)
 			cer["base"]["amount"] = rate * pow(10, precision)
 		return {
-		"symbol": self.ui.symbolEdit.text(),
+		"symbol": symbol,
 		"issuer": issuer,
 		
 		"precision": precision,
-		"max_supply": int(float(self.ui.totalEdit.text()) * pow(10, precision)),
+		"max_supply": int(whole_coins * pow(10, precision)),
 		"core_exchange_rate": cer,
 		
 		"new_issuer": issuer,
@@ -332,8 +368,11 @@ class AssetWindow(QtWidgets.QDialog):
 	
 	def attempt_create(self):
 		fee_asset = anyvalvis(self.ui.feeAsset, None)#.currentText()
-		
-		options = self.collect_options()
+		try:
+			options = self.collect_options()
+		except Exception as e:
+			showexc(e)
+			return
 		options["permissions"] = self.collect_flags(self.ui.permList)
 		options["flags"] = self.collect_flags(self.ui.flagList)
 		options.pop("new_issuer")

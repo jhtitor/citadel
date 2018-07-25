@@ -116,62 +116,24 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="1">
-          <widget class="QLineEdit" name="precisionEdit">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>20</height>
-            </size>
-           </property>
-           <property name="inputMask">
-            <string/>
-           </property>
-           <property name="placeholderText">
-            <string>Number of zeros after decimal point</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
+         <item row="4" column="0">
           <widget class="QLabel" name="label_4">
            <property name="text">
             <string>Total</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="1">
-          <widget class="QLineEdit" name="totalEdit">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>20</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>Monospace</family>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="locale">
-            <locale language="C" country="AnyCountry"/>
-           </property>
-           <property name="placeholderText">
-            <string>Whole coins</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="0">
+         <item row="5" column="0">
           <widget class="QLabel" name="label_5">
            <property name="text">
             <string>Description</string>
            </property>
           </widget>
          </item>
-         <item row="4" column="1">
+         <item row="5" column="1">
           <widget class="QPlainTextEdit" name="descriptionPlain"/>
          </item>
-         <item row="5" column="1">
+         <item row="6" column="1">
           <spacer name="verticalSpacer_2">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
@@ -184,17 +146,80 @@
            </property>
           </spacer>
          </item>
-         <item row="6" column="1">
+         <item row="7" column="1">
           <widget class="QComboBox" name="feeAsset">
            <property name="editable">
             <bool>true</bool>
            </property>
           </widget>
          </item>
-         <item row="6" column="0">
+         <item row="7" column="0">
           <widget class="QLabel" name="feeAssetLabel">
            <property name="text">
             <string>Fee Asset</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_21">
+           <property name="text">
+            <string>Smallest Unit</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <layout class="QVBoxLayout" name="verticalLayout_7">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="sizeConstraint">
+            <enum>QLayout::SetMinimumSize</enum>
+           </property>
+           <item>
+            <widget class="QSpinBox" name="precisionEdit">
+             <property name="maximum">
+              <number>12</number>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_22">
+             <property name="text">
+              <string>Number of zeros after decimal point</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLabel" name="atomicUnit">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Panel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
+           </property>
+           <property name="text">
+            <string>1</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QDoubleSpinBox" name="totalEdit">
+           <property name="suffix">
+            <string/>
+           </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
+           <property name="minimum">
+            <double>1.000000000000000</double>
            </property>
           </widget>
          </item>
@@ -253,7 +278,7 @@
          <item row="2" column="0">
           <widget class="QLabel" name="label_12">
            <property name="text">
-            <string>Market Fee (percent)</string>
+            <string>Market Fee</string>
            </property>
           </widget>
          </item>
@@ -261,6 +286,9 @@
           <widget class="QSpinBox" name="marketFee">
            <property name="buttonSymbols">
             <enum>QAbstractSpinBox::NoButtons</enum>
+           </property>
+           <property name="suffix">
+            <string> %</string>
            </property>
            <property name="maximum">
             <number>100</number>
@@ -283,6 +311,15 @@
              </property>
              <property name="buttonSymbols">
               <enum>QAbstractSpinBox::NoButtons</enum>
+             </property>
+             <property name="decimals">
+              <number>5</number>
+             </property>
+             <property name="minimum">
+              <double>0.000010000000000</double>
+             </property>
+             <property name="maximum">
+              <double>100000.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -362,7 +399,7 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_6">
             <property name="text">
-             <string>Feed Lifetime (seconds)</string>
+             <string>Feed Lifetime</string>
             </property>
            </widget>
           </item>
@@ -370,6 +407,9 @@
            <widget class="QSpinBox" name="feedLifetime">
             <property name="buttonSymbols">
              <enum>QAbstractSpinBox::NoButtons</enum>
+            </property>
+            <property name="suffix">
+             <string> seconds</string>
             </property>
             <property name="maximum">
              <number>999999999</number>
@@ -405,7 +445,7 @@
           <item row="2" column="0">
            <widget class="QLabel" name="label_14">
             <property name="text">
-             <string>Force Settlement Offset (percent)</string>
+             <string>Force Settlement Offset</string>
             </property>
            </widget>
           </item>
@@ -413,6 +453,9 @@
            <widget class="QSpinBox" name="forceSettlementOffset">
             <property name="buttonSymbols">
              <enum>QAbstractSpinBox::NoButtons</enum>
+            </property>
+            <property name="suffix">
+             <string> %</string>
             </property>
             <property name="maximum">
              <number>100</number>
@@ -456,7 +499,7 @@
           <item row="3" column="0">
            <widget class="QLabel" name="label_17">
             <property name="text">
-             <string>Force Settlement Delay (seconds)</string>
+             <string>Force Settlement Delay</string>
             </property>
            </widget>
           </item>
@@ -464,6 +507,9 @@
            <widget class="QSpinBox" name="forceSettlementDelay">
             <property name="buttonSymbols">
              <enum>QAbstractSpinBox::NoButtons</enum>
+            </property>
+            <property name="suffix">
+             <string> seconds</string>
             </property>
             <property name="maximum">
              <number>999999999</number>
@@ -826,8 +872,6 @@
  <tabstops>
   <tabstop>accountBox</tabstop>
   <tabstop>symbolEdit</tabstop>
-  <tabstop>precisionEdit</tabstop>
-  <tabstop>totalEdit</tabstop>
   <tabstop>descriptionPlain</tabstop>
   <tabstop>buttonBox</tabstop>
   <tabstop>permList</tabstop>
