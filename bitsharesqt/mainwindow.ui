@@ -1599,7 +1599,7 @@ image: &quot;&quot;;
                  </layout>
                 </item>
                 <item row="0" column="1">
-                 <widget class="QPlainTextEdit" name="blindBrainkeyPlain"/>
+                 <widget class="QBrainKeyEdit" name="blindBrainkeyPlain"/>
                 </item>
                </layout>
               </widget>
@@ -2593,6 +2593,9 @@ image: &quot;&quot;;
                    <height>20</height>
                   </size>
                  </property>
+                 <property name="editable">
+                  <bool>true</bool>
+                 </property>
                 </widget>
                </item>
               </layout>
@@ -3232,6 +3235,13 @@ image: &quot;&quot;;
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QBrainKeyEdit</class>
+   <extends>QPlainTextEdit</extends>
+   <header>bitsharesqt.qbrainkeyedit</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>marketFilter</tabstop>
   <tabstop>findMarketButton</tabstop>
