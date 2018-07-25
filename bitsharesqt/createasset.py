@@ -23,14 +23,14 @@ class AssetWindow(QtWidgets.QDialog):
 		
 		ui.setupUi(self)
 		
-		for account_name in self.accounts:
-			self.ui.accountBox.addItem(account_name)
-			self.ui.transferFromAccount.addItem(account_name) # keep
-			self.ui.untransferFromAccount.addItem(account_name) # those
 		mw = app().mainwin
 		mw.uiAccountAssetLink(self.ui.accountBox, self.ui.feeAsset)
 		mw.uiAccountAssetLink(self.ui.transferFromAccount, self.ui.transferFeeAsset)
 		mw.uiAccountAssetLink(self.ui.untransferFromAccount, self.ui.untransferFeeAsset)
+		for account_name in self.accounts:
+			self.ui.accountBox.addItem(account_name)
+			self.ui.transferFromAccount.addItem(account_name) # keep
+			self.ui.untransferFromAccount.addItem(account_name) # those
 		
 		if not(mw.is_advancedmode()):
 			hide = [ self.ui.feeAsset, self.ui.feeAssetLabel,
