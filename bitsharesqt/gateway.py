@@ -225,12 +225,15 @@ class WindowWithGateway(QtCore.QObject):
 				inputCoinType = receipt["inputCoinType"]
 				if inputCoinType in self.cached_coins[gwname]:
 					coin = self.cached_coins[gwname][receipt["inputCoinType"]]
-					wallet = self.cached_wallets[gwname][coin["walletType"]]
+					try:
+						wallet = self.cached_wallets[gwname][coin["walletType"]]
+					except:
+						wallet = None
 				
 					#self.ui.qrView.setPixmap( None )
 					if coin["walletType"] == 'bitshares2':
 						gph = True
-					if 'extraData' in wallet and wallet['extraData']:
+					if wallet and 'extraData' in wallet and wallet['extraData']:
 						if 'uri' in wallet['extraData']:
 							if 'address' in wallet['extraData']['uri']:
 								template = wallet['extraData']['uri']['address']
@@ -333,12 +336,12 @@ class WindowWithGateway(QtCore.QObject):
 			self._cache_coin(tr["gatewayName"], coindata)
 		if not walletdata:
 			walletdata = self.__gwwd(gateway.wallets(coindata["walletType"]))
-			if "walletType" in walletdata:
+			if walletdata and "walletType" in walletdata:
 				self._cache_wallet(tr["gatewayName"], walletdata)
 			else:
 				walletdata = None
 		
-		if not coindata or not walletdata:
+		if not coindata:# or not walletdata:
 			showerror("Unexpected malfunction")
 			return
 		
@@ -360,7 +363,7 @@ class WindowWithGateway(QtCore.QObject):
 		self.gw_page_list()
 	
 	def __gwwd(self, data):
-		if data["walletType"] == "btc":
+		if data and data["walletType"] == "btc":
 			data["walletType"] = "bitcoin"
 		return data
 	
@@ -583,9 +586,17 @@ class WindowWithGateway(QtCore.QObject):
 		pprint(tr)
 		pprint(res)
 		
-		if (tr['inputCoinType'] == res['inputCoinType']
-		and tr['outputCoinType'] == res['outputCoinType']
-		and (float(tr['inputAmount']) == float(res['inputAmount']))):
+		match = None
+		try:
+			if (tr['inputCoinType'] == res['inputCoinType']
+			and tr['outputCoinType'] == res['outputCoinType']
+			and (float(tr['inputAmount']) == float(res['inputAmount']))):
+				match = res['outputAmount']
+		except:
+			import traceback
+			traceback.print_exc()
+			return
+		if match:
 			self.ui.outputAmount.blockSignals(True)
 			self.ui.outputAmount.setText(res['outputAmount'])
 			self.ui.outputAmount.blockSignals(False)
