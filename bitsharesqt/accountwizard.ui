@@ -354,7 +354,7 @@
    </widget>
   </widget>
   <widget class="QWizardPage" name="brainPage2">
-   <widget class="QPlainTextEdit" name="brainkeyEdit">
+   <widget class="QBrainKeyEdit" name="brainkeyEdit">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -362,6 +362,9 @@
       <width>521</width>
       <height>161</height>
      </rect>
+    </property>
+    <property name="inputMethodHints">
+     <set>Qt::ImhLatinOnly|Qt::ImhMultiLine|Qt::ImhUppercaseOnly</set>
     </property>
    </widget>
    <widget class="QLabel" name="label_2">
@@ -554,6 +557,13 @@
    </widget>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QBrainKeyEdit</class>
+   <extends>QPlainTextEdit</extends>
+   <header>bitsharesqt.qbrainkeyedit</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="res.qrc"/>
   <include location="res.qrc"/>
