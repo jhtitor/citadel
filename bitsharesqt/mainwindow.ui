@@ -135,7 +135,7 @@ image: &quot;&quot;;
              </size>
             </property>
             <property name="placeholderText">
-             <string>Type to search</string>
+             <string>Type to search, use the : symbol for Market view</string>
             </property>
            </widget>
           </item>

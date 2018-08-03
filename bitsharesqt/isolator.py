@@ -852,8 +852,26 @@ class BitsharesIsolator(object):
 			self.fave_markets.remove(tag)
 		self.fave_markets.add(retag)
 	
+	def download_topmarkets(self):
+		rpc = self.bts.rpc
+		mrs = rpc.get_top_markets(25)
+		markets = [ ]
+		for mr in mrs:
+			name = mr['base']+":"+mr['quote']
+			ticker = { "percent_change": 0., "latest": 0. }
+			ticker = rpc.get_ticker(mr['base'], mr['quote'])
+			vol = { "base": mr['base'],
+				"quote": mr['quote'],
+				"base_volume": mr['base_volume'],
+				"quote_volume": mr['quote_volume']
+				 }
+			markets.append( (name, ticker, vol) )
+#		ticker = rpc.get_ticker(a, b)
+		return markets
+
 	def download_markets(self, names):
 		if names is None:
+			return self.download_topmarkets()
 			names = self._marketMatrix()
 		rpc = self.bts.rpc
 		markets = [ ]

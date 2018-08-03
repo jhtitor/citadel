@@ -70,10 +70,17 @@ class WindowWithMarkets(QtCore.QObject):
 			self._showMarkets(True)
 		
 		name_a, name_b = str.split(name, ":")
+
+		if not name_a and not name_b:
+			markets = [ m for (key,m) in self._markets.items() ]
+			self._intr = [ ]
+			self.place_markets(markets)
+			return
+
 		if not name_a or not name_b:
 			table.setRowCount(0)
 			return
-		
+
 		markets = [ ]
 		self._intr = [ ]
 		for (key, mtupl) in self._markets.items():

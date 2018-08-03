@@ -17,6 +17,7 @@ class BlockTradesUS(object):
 	def __init__(self, endpoint=None, origin=None, proxyUrl='socks5h://localhost:9150'):
 		self.endpoint = endpoint or API_ENDPOINT
 		self.origin = origin or None
+		self.verify = True # SSL certificate checks
 		self.proxies = {
 			'http': proxyUrl,
 			'https': proxyUrl,
@@ -38,6 +39,7 @@ class BlockTradesUS(object):
 			self._make_url(urlp),
 			proxies = self.proxies,
 			headers = self.headers,
+			verify = self.verify,
 			params = params
 		)
 		#print(response.text)
@@ -53,6 +55,7 @@ class BlockTradesUS(object):
 			self._make_url(urlp),
 			proxies = self.proxies,
 			headers = self.headers,
+			verify = self.verify,
 			json = data
 		)
 		#print(response.text)
@@ -270,7 +273,7 @@ class BlockTradesUS(object):
 		if outputMemo:
 			arguments['outputMemo'] = outputMemo
 		
-		return self.post_request(['simple-api', 'initiate-trade'], arguments) 
+		return self.post_request(['simple-api', 'initiate-trade'], arguments)
 		""" Response example:
 		{
 			'inputAddress': "16vEbxHJKJ7JKm87m9aQMpoisdf7JK78zY",
