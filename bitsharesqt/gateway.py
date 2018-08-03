@@ -29,13 +29,9 @@ class WindowWithGateway(QtCore.QObject):
 		self.pairer = RemoteFetch()
 		self.gwupdater = RemoteFetch()
 		
-		gb = self.ui.gatewayBox
-		gb.addItem("select...", None)
-		for name, url, refurl, factory in KnownTraders:
-			gb.addItem(name, (url, refurl))
-			self.cached_pairs[name] = [ ]
-		gb.currentIndexChanged.connect(self.select_gateway)
-		
+		self.gateways_populated = False
+		#self.populate_gateways()
+		self.ui.gatewayBox.currentIndexChanged.connect(self.select_gateway)
 		
 		self.ui.inputCoinType.currentIndexChanged.connect(self.refresh_output_coin)
 		#self.ui.inputCoinType.currentIndexChanged.connect(self.refresh_deposit_limit)
@@ -88,7 +84,21 @@ class WindowWithGateway(QtCore.QObject):
 		
 		self.gw_page_list()
 		
-
+	def populate_gateways(self):
+		self.ui.inputCoinType.clear()
+		self.ui.outputCoinType.clear()
+		self._refresh_address_selector(False, False)
+		gb = self.ui.gatewayBox
+		gb.blockSignals(True)
+		gb.clear()
+		gb.addItem("select...", None)
+		remotes = self.iso.store.remotesStorage.getRemotes(1)
+		for remote in remotes:
+			name = str(remote['label'])
+			gb.addItem(name, remote['id'])
+			self.cached_pairs[name] = [ ]
+		self.gateways_populated = True
+		gb.blockSignals(False)
 	
 	def select_bridge_transaction(self):
 		table = self.ui.bridgeTransactions
@@ -118,6 +128,8 @@ class WindowWithGateway(QtCore.QObject):
 		if not self.iso.bts.wallet:
 			showerror("No wallet open")
 			return False
+		if not self.gateways_populated:
+			self.populate_gateways()
 		self.ui.gatewayStack.setCurrentIndex(0)
 	def gw_page_list(self):
 		self.ui.gatewayStack.setCurrentIndex(1)
@@ -417,7 +429,9 @@ class WindowWithGateway(QtCore.QObject):
 		tr = self._collect_trade();
 		
 		selling_from_graphene, buying_to_graphene, _, _ = self._collect_trade_extra(tr)
-		
+		self._refresh_address_selector(selling_from_graphene, buying_to_graphene)
+
+	def _refresh_address_selector(self, selling_from_graphene, buying_to_graphene):
 		if not(selling_from_graphene is None):
 			if selling_from_graphene:
 				self.ui.gatewaySellAccount.show()
@@ -481,20 +495,35 @@ class WindowWithGateway(QtCore.QObject):
 				self._set_combo(self.ui.inputCoinType, tr['outputCoinType'].upper())
 				self._set_combo(self.ui.outputCoinType, tr['inputCoinType'].upper())
 	
+	def _gw_remotes(self):
+		return self.iso.store.remotesStorage.getRemotes(1)
+	def _gw_wrap_remote(self, remote):
+		return (str(remote['label']),
+			remote['url'], remote['refurl'],
+			remote['ctype'])
+
 	def _find_trader(self, name):
-		for trader in KnownTraders:
-			if trader[0] == name:
-				return trader
+		remotes = self._gw_remotes()
+		for remote in remotes:
+			if remote['label'] == name:
+				return self._gw_wrap_remote(remote)
 		return None
 	
 	def _get_current_trader(self):
-		return KnownTraders[self.ui.gatewayBox.currentIndex()];
+		j = self.ui.gatewayBox.currentIndex()
+		remote_id = self.ui.gatewayBox.itemData(j)
+		if not remote_id: return None
+		remote = self.iso.store.remotesStorage.getById(remote_id)
+		trader = self._gw_wrap_remote(remote)
+		return trader
 	
 	def _get_current_trader_api(self, trader=None):
 		(name, url, refurl, factory) = trader or self._get_current_trader()
 		proxy = self.iso.get_proxy_config()
 		if '://localhost' in url: # Note: extremely unsecure test
 			proxy = None
+		if isinstance(factory, str):
+			factory = globals()[factory]
 		poll = factory(endpoint=url, origin=refurl, proxyUrl=proxy)
 		return poll
 	
@@ -692,7 +721,9 @@ class WindowWithGateway(QtCore.QObject):
 			gb.removeItem(0)
 			j -= 1
 		
-		trader = KnownTraders[j]
+		remote_id = gb.itemData(j)
+		remote = self.iso.store.remotesStorage.getById(remote_id)
+		trader = self._gw_wrap_remote(remote)
 		
 		self.ui.inputAmount.setText('')
 		self.ui.outputAmount.setText('')

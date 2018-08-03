@@ -517,6 +517,15 @@ class Remotes(DataDir):
         rows = self.sql_fetchall(query)
         return self.sql_todict(self.__columns__, rows)
 
+    def getById(self, id):
+        """ Return single entry by internal database id
+        """
+        query = ("SELECT id, label, url, refurl, rtype, ctype from %s WHERE id = ?" % (self.__tablename__), (id,))
+        row = self.sql_fetchone(query)
+        if not row: return None
+        return self.sql_todict(self.__columns__, [row])[0]
+
+
     def add(self, rtype, label, url, refurl, ctype):
         """
         """

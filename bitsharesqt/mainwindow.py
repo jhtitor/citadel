@@ -813,6 +813,7 @@ class MainWindow(QtGui.QMainWindow,
 		win.exec_()
 		self.setupUIfromConfig()
 		self.perhaps_autoconnect()
+		self.gateways_populated = False
 		return True
 	
 	def open_network_settings(self):
