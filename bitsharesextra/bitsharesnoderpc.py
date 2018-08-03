@@ -121,11 +121,11 @@ class BitSharesNodeRPC(object):
                 try:
                     self.wsconnect()
                     tm = self.ws.sock.gettimeout()
-                    print("now login")
+                    log.debug("now login")
                     self.login(self.user, self.password, api_id=1, plan_b=True)
-                    print("now reg api")
+                    log.debug("now reg api")
                     self.register_apis(plan_b=True)
-                    print("now chain params")
+                    log.debug("now chain params")
                     self.chain_params = self.get_network(plan_b=True)
                     self.initialized = True
 
@@ -137,7 +137,7 @@ class BitSharesNodeRPC(object):
                     if not(self.keep_connecting):
                         break
                     continue
-                print("now done")
+                log.debug("now done")
                 self.connected = True
                 self._ping_callback(self, done_ev)
                 done_ev = "reconnected"
@@ -184,7 +184,7 @@ class BitSharesNodeRPC(object):
                 self._ping_callback(self, "disconnected", error)
                 continue
 
-            log.debug(json.dumps(reply))
+            #log.debug("REPLY: %s", reply)
             ret = {}
             err = None
             try:
@@ -290,9 +290,8 @@ class BitSharesNodeRPC(object):
             :raises ValueError: if the server does not respond in proper JSON format
             :raises RPCError: if the server returns an error
         """
-        log.debug(json.dumps(payload))
-
-        #print("RPC-exec-B for", payload['params'][1], payload['params'][2])
+        #log.debug(json.dumps(payload))
+        log.debug("RPC-exec blocking %d for %s %s", payload['id'], payload['params'][1], payload['params'][2])
 
         self.ws.send(json.dumps(payload, ensure_ascii=False).encode('utf8'))
         reply = self.ws.recv()
@@ -303,7 +302,7 @@ class BitSharesNodeRPC(object):
         except ValueError:
             raise ValueError("Client returned invalid format. Expected JSON!")
 
-        log.debug(json.dumps(reply))
+        #log.debug(json.dumps(reply))
 
         if 'error' in ret:
             if 'detail' in ret['error']:
@@ -325,9 +324,9 @@ class BitSharesNodeRPC(object):
         """
         if not(self.needed):
             raise exceptions.NumRetriesReached()
-        log.debug(json.dumps(payload))
+        #log.debug(json.dumps(payload))
         call_id = payload['id']
-        print("RPC-exec request", call_id, payload['params'][1], payload['params'][2])
+        log.debug("RPC-exec request %d %s %s", call_id, payload['params'][1], payload['params'][2])
         #if payload['params'][1] == "lookup_account_names":
         #    raise Exception("NO")
         try:

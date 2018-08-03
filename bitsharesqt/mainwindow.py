@@ -4,6 +4,7 @@ _translate = QtCore.QCoreApplication.translate
 import uidef.res_rc
 
 from PyQt5.QtWidgets import QTableWidgetItem
+from PyQt5.QtGui import QTextCursor
 
 from .isolator import BitsharesIsolator
 from bitsharesextra.storage import BitsharesStorageExtra, DataDir
@@ -45,6 +46,8 @@ class MainWindow(QtGui.QMainWindow,
 	):
 	
 	background_update = QtCore.pyqtSignal(int, str, object)
+	
+	log_record = QtCore.pyqtSignal(object)
 	
 	def __init__(self, *args, **kwargs):
 		self.iso = kwargs.pop('iso', None)
@@ -134,6 +137,9 @@ class MainWindow(QtGui.QMainWindow,
 		ui.actionWipeResync_history.triggered.connect(self.evilDownloadHistory)
 		ui.actionResync_history.triggered.connect(self.massResync)
 		ui.actionResync_orders.triggered.connect(self.massResync)
+
+		self.log_record.connect(self.add_log_record)
+
 		#
 		self.setupRecentWalletsMenu()
 		#
@@ -386,7 +392,7 @@ class MainWindow(QtGui.QMainWindow,
 		find_class = qact._linkedClass
 		tab = self.findTab(find_class, account.name)
 		if not tab:
-			print("Tab not found", find_class, account.name)
+			log.warn("Tab not found %s %s", find_class, account.name)
 			return
 		self.setTabVisible(tab, True)
 	
@@ -500,12 +506,20 @@ class MainWindow(QtGui.QMainWindow,
 		try:
 			asset = self.iso.getAsset(token)
 		except Exception as error:
-			print("Unable to figure out asset %s" % (token))
+			log.error("Unable to figure out asset %s", token)
 			#showexc(error)
 			return
 		
 		amtSpin.setDecimals( int(asset['precision']) )
 		amtSpin.setMaximum( float(asset['options']['max_supply']) )
+	
+	def add_log_record(self, record):
+		msg = record.getMessage()
+		ce = self.ui.consoleEdit
+		tc = ce.textCursor()
+		tc.movePosition(QTextCursor.End)
+		tc.insertText(msg+"\n")
+		ce.setTextCursor(tc)
 	
 	def showAccountBar(self, on):
 		if on:
@@ -748,7 +762,7 @@ class MainWindow(QtGui.QMainWindow,
 			#print("Could not locally resolve account %s to perform sync" % (str(account_id)))
 			return None
 		
-		print("Update for account", account.name)
+		log.info("Update for account %s", account.name)
 		tab = self.findTab(HistoryTab, account.name)
 		
 		return tab
@@ -771,12 +785,12 @@ class MainWindow(QtGui.QMainWindow,
 		if not account:
 			#print("Could not locally resolve account %s to inject balance" % (str(account_id)))
 			return
-		print("New balance for account", account.name)
+		log.info("New balance for account %s", account.name)
 		
 		try:
 			asset = self.iso.getAsset(asset_id)
 		except Exception as error:
-			print("Failed to getAsset", asset_id, "aborting injection; error-", str(error))
+			log.error("Failed to getAsset %s, aborting injection; error %s", asset_id, str(error))
 			return
 		
 		account = self.iso.injectBalance(account_id, asset["symbol"], amount)
@@ -1032,7 +1046,7 @@ class MainWindow(QtGui.QMainWindow,
 		if id != 0:
 			return
 		(data, error) = data_error
-		print("<", tag, ">")
+		log.info("<%s>", tag)
 		#print("OCU", id, tag, data)
 		ws = data
 		desc = tag
@@ -1058,12 +1072,12 @@ class MainWindow(QtGui.QMainWindow,
 			error_callback=self.connection_failed,
 			ping_callback=self.refreshUi_wallet,
 			description="Connecting")
-		print("* Connecting...")
+		log.info("* Connecting...")
 	
 	
 	def connection_established(self, uid, result):
 		self._connecting = False
-		print("* Connection established")
+		log.info("* Connection established")
 		
 		self.iso.offline = False
 		self.iso.subscribed_accounts = set()
@@ -1082,7 +1096,7 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def connection_failed(self, uid, error):
 		self._connecting = False
-		print("* Connection failed")
+		log.info("* Connection failed")
 		self.iso.offline = True
 		self.refreshUi_wallet()
 		self.abort_everything(disconnect=False, wait=True)
@@ -1091,14 +1105,14 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def connection_lost(self, uid):
 		self._connecting = False
-		print("* Connection lost")
+		log.info("* Connection lost")
 		self.iso.offline = True
 		self.refreshUi_wallet()
 		##Request.shutdown(timeout=10)
 		self.abort_everything(disconnect=True, wait=True)
 	
 	def disconnect_from_node(self):
-		print("* Disconnecting...")
+		log.info("* Disconnecting...")
 		self._connecting = False
 		self.refreshUi_wallet()
 		self.iso.disconnect()
@@ -1107,15 +1121,15 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def abort_everything(self, disconnect=True, wait=True):
 		app = QtGui.QApplication.instance()
-		print("1. Emit abort everything")
+		log.debug("1. Emit abort everything")
 		app.abort_everything.emit()
 		#
 		if self.iso and disconnect:
-			print("2. disconnect")
+			log.debug("2. disconnect")
 			self.iso.disconnect()
 		#
 		if wait:
-			print("3. shutdown threads")
+			log.debug("3. shutdown threads")
 			Request.shutdown(timeout=10)
 	
 	

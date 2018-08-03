@@ -2699,7 +2699,7 @@ image: &quot;&quot;;
              <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
             </property>
             <property name="centerOnScroll">
-             <bool>true</bool>
+             <bool>false</bool>
             </property>
            </widget>
           </item>

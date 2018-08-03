@@ -17,7 +17,8 @@ from bitsharesqt.walletwizard import WalletWizard
 
 from bitsharesqt.work import Request
 from bitsharesqt.utils import *
-
+import logging
+log = logging.getLogger(__name__)
 
 # force import - see if we miss anything important
 #import scrypt
@@ -38,6 +39,8 @@ class BitsharesQT(QtGui.QApplication):
 		
 		mainwin.show()
 		
+		self.install_logger()
+
 	def reopen(self, newpath):
 		self.mainwin.close_wallet()
 		self.mainwin.abort_everything()
@@ -47,9 +50,15 @@ class BitsharesQT(QtGui.QApplication):
 		mainwin.show()
 		mainwin.open_wallet(newpath)
 	
+	def install_logger(app):
+		for n in [__name__, 'bitsharesqt', 'bitsharesextra', 'rpcs']:
+			log = logging.getLogger(n)
+			log.setLevel(logging.DEBUG)
+			log.addHandler(ConsoleLogger())
+	
 	def install_sigint(app):
 		def sigint_handler(*args):
-			print("Received SIGINT, quitting...")
+			log.debug("Received SIGINT, quitting...")
 			QtGui.QApplication.quit()
 		import signal
 		signal.signal(signal.SIGINT, sigint_handler)

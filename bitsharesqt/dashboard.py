@@ -327,7 +327,7 @@ class DashboardTab(QtWidgets.QWidget):
 		self.refresh_balances(balances)
 
 	def mergeAccount_abort(self, request_id, error):
-		print("Failed to re-sync account:", str(error), type(error))
+		log.error("Failed to re-sync account: %s %s", str(error), type(error))
 
 	def ping_callback(self):
 		pass

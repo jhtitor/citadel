@@ -420,3 +420,10 @@ class StackLinker(QtCore.QObject):
 		self.stack.setCurrentIndex(ind)
 		self._index = self.stack.currentIndex()
 		self.highlightButtons()
+
+from logging import Handler
+class ConsoleLogger(Handler):
+	def emit(self, record):
+		msg = record.getMessage()
+		print(msg) # good old stdout
+		app().mainwin.log_record.emit(record)
