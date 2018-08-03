@@ -2692,6 +2692,15 @@ image: &quot;&quot;;
           </property>
           <item>
            <widget class="QPlainTextEdit" name="consoleEdit">
+            <property name="font">
+             <font>
+              <family>Monospace</family>
+             </font>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">font-family: Monospace
+</string>
+            </property>
             <property name="plainText">
              <string notr="true"/>
             </property>
