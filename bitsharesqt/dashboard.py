@@ -100,7 +100,7 @@ class DashboardTab(QtWidgets.QWidget):
 		#qaction(self, menu, "Transfer...", self._dash_transfer)
 		qaction(self, menu, "Buy...", self._dash_buy_asset)
 		qaction(self, menu, "Sell...", self._dash_sell_asset)
-		qaction(self, menu, "Open Market...", self._dash_openmarket_asset)
+		qaction(self, menu, "Open Market", self._dash_openmarket_asset)
 		qaction(self, menu, "Blind...", self._dash_blind_asset)
 		qaction(self, menu, "Burn...", self._dash_burn_asset)
 		menu.addSeparator()
@@ -165,7 +165,10 @@ class DashboardTab(QtWidgets.QWidget):
 			pass
 		if not(market):
 			market = "BTS"
-		app().mainwin.openMarket(symbol, market)
+		try:
+			app().mainwin.openMarket(symbol, market)
+		except Exception as err:
+			showexc(err)
 	
 	def _dash_blind_asset(self):
 		j = table_selrow(self.ui.balanceTable)

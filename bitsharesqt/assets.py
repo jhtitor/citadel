@@ -179,7 +179,7 @@ class WindowWithAssets(QtCore.QObject):
 		menu._list = True if send == self.ui.assetList else False
 		qaction(self, menu, "Buy...", self._buy_asset)
 		qaction(self, menu, "Sell...", self._sell_asset)
-		qaction(self, menu, "Open Market...", self._openmarket_asset)
+		qaction(self, menu, "Open Market", self._openmarket_asset)
 		menu.addSeparator()
 		qaction(self, menu, "Edit Asset...", self._edit_asset)
 		qaction(self, menu, "Issue Asset...", self._issue_asset)
