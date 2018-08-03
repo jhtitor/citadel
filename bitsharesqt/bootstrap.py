@@ -1,6 +1,7 @@
 from rpcs.blocktradesus import BlockTradesUS
 from rpcs.winexpro import WinexPRO
 from rpcs.rudexorg import RuDexORG
+from rpcs.xbtsio import XBtsIO
 from rpcs.btsfaucet import BTSFaucet
 
 KnownNodes = [
@@ -36,6 +37,7 @@ KnownTraders = [
 	('Crypto-Bridge (unsupported)', 'https://api.crypto-bridge.org/api/v1/', 'https://wallet.crypto-bridge.org', BlockTradesUS),
 	('Winex', 'https://gateway.winex.pro/api/v0/ol/support/', 'https://exchange.winex.pro', WinexPRO),
 	('RuDEX', 'https://gateway.rudex.org/api/v0_1/', 'https://wallet.rudex.org', RuDexORG),
+	('XBTSX', 'https://apis.xbts.io/api/v1/','https://ex.xbts.io/', XBtsIO)
 #	('localhost', 'http://localhost:8011', '', BlockTradesUS),
 ]
 

@@ -3,6 +3,7 @@ from PyQt5 import QtCore, QtGui
 from rpcs.blocktradesus import BlockTradesUS
 from rpcs.rudexorg import RuDexORG
 from rpcs.winexpro import WinexPRO
+from rpcs.xbtsio import XBtsIO
 
 from .bootstrap import KnownTraders
 
