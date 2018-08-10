@@ -55,8 +55,9 @@ class AccountWizard(QtWidgets.QWizard):
 		self.ui.generatePassword.clicked.connect(self.generate_password)
 
 		fb = self.ui.faucetBox
-		for name, url, refurl, factory in KnownFaucets:
-			fb.addItem(name, (url, refurl))
+		remotes = self.iso.store.remotesStorage.getRemotes(2)
+		for remote in remotes:
+			fb.addItem(remote['label'], (remote['url'], remote['refurl']))
 		
 		rb = self.ui.registrarBox
 		for name in self.account_names:
