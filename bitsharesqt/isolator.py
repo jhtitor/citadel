@@ -78,6 +78,7 @@ class BitsharesIsolator(object):
 		self.subscribed_markets = set()
 		
 		self.minicache_accnames = {} # 1.2.ID to name
+		self.minicache_precision = {} # SYMBOL to precision
 		self.fave_coinnames = set() # semi-random
 		self.fave_markets = set() # same
 		
@@ -386,6 +387,7 @@ class BitsharesIsolator(object):
 			forged_asset.asset = stored_asset["symbol"]
 			for k, v in stored_asset.items():
 				forged_asset[k] = v
+			self.minicache_precision[stored_asset["symbol"]] = stored_asset["precision"]
 			return forged_asset
 		
 		if self.offline:
@@ -458,10 +460,15 @@ class BitsharesIsolator(object):
 		account = self.getAccount(account_name_or_id)
 		balances = [ ]
 		if hasattr(account, '_balances') and not(force_remote):
-			for sym,val in account._balances.items():
-				try:
-					b = self.getAmountOP({"amount":val, "asset": sym})
-				except:
+			for sym, val in account._balances.items():
+				val = self.softAmountStr(val, sym)
+				b = None
+				if not(sym in self.minicache_precision):
+					try:
+						b = self.getAmountOP({"amount":val, "asset": sym})
+					except:
+						pass
+				if b is None:
 					b = lambda: None
 					b.symbol = sym
 					b.amount = val
@@ -587,6 +594,21 @@ class BitsharesIsolator(object):
 			cache[account_id] = account["name"]
 			return account["name"]
 		return account_id
+	
+	def softAmountStr(self, asset_amount, asset_id, delim=""):
+		precision = 8
+		if asset_id in self.minicache_precision:
+			precision = self.minicache_precision[asset_id]
+		#if not(type(asset_amount) == int):
+		#	t = str(asset_amount)
+		#	if not("e" in t):
+		#		return t # perfect as is
+		if type(asset_amount) == int:
+			asset_amount = int(asset_amount) / 10 ** precision
+		if not(type(asset_amount) == float):
+			asset_amount = float(asset_amount)
+		return ("{:"+delim+".{p}f}").format(asset_amount, p=precision)
+		return ("%0."+str(int(math.log10(precision)))+"f") % amount
 	
 	def bootstrap_wallet(self, wipe=False):
 		import bitsharesqt.bootstrap as bootstrap

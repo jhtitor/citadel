@@ -370,7 +370,7 @@ class DashboardTab(QtWidgets.QWidget):
 			j += 1
 			
 			try:
-				namt = str(self.iso.getAmount(o.amount, o.symbol)).split(" ")[0]
+				namt = self.iso.softAmountStr(o.amount, o.symbol)
 			except:
 				namt = str(o.amount)
 			table.setItem(j, 0, QtGui.QTableWidgetItem(namt))
