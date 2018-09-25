@@ -380,3 +380,5 @@ class DashboardTab(QtWidgets.QWidget):
 			fc.addItem(o.symbol)
 			#if self.single_user_mode:
 			#	self.add_asset_name(o.symbol)
+		
+		table.sortByColumn(1, QtCore.Qt.AscendingOrder)
