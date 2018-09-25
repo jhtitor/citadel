@@ -663,10 +663,12 @@ class BitsharesIsolator(object):
 			desc += str(amt_b)
 			desc += " paying "
 			desc += str(amt_a)
+			short = "Placed order for " + str(amt_b) + " paying " + str(amt_a)
 		if (op_id == 2):
 			desc = "Cancel order"
+			short = "Canceled order"
 		if (op_id == 4):
-			desc = "Traded"
+			desc = "Trade"
 			#who = Account(op_action['account_id'])
 			amt_a = iso.getAmountOP(op_action['pays'])
 			amt_b = iso.getAmountOP(op_action['receives'])
@@ -681,10 +683,12 @@ class BitsharesIsolator(object):
 			#dst_account = iso.getAccount(op_action['name'])
 			desc += " by " + accname(op_action['registrar']) #reg_account['name']
 			desc += " - " + accname(op_action['name']) #self.softAccountName(#dst_account['name']
+			short = "Registered account " + accname(op_action['name'])
 		if (op_id == 8):
 			desc = "Upgrade account"
 			#dst_account = iso.getAccount(op_action['account_to_upgrade'])
 			desc += " - " + accname(op_action['account_to_upgrade']) #self.softAccountName(#dst_account['name']
+			short = "Upgraded account " + accname(op_action['account_to_upgrade'])
 		if (op_id == 6):
 			desc = "Update account/votes"
 			#dst_account = iso.getAccount(op_action['account'])
@@ -747,6 +751,11 @@ class BitsharesIsolator(object):
 			if is_asset["issuer"] == op_action["payer"]:
 				plus = str(amt)
 			short = "Reserved by " + accname(op_action["payer"]) + " - " + str(amt)
+		if (op_id == 19):
+			desc = "Publish feed for asset"
+			f_asset = iso.getAsset(op_action['asset_id'])
+			desc += " " + f_asset["symbol"]
+			short = "Published feed for " + f_asset["symbol"]
 		if (op_id == 39):
 			desc = "Transfer to blind"
 			amt = iso.getAmountOP(op_action['amount'])
