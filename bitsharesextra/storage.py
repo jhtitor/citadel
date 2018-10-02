@@ -101,9 +101,25 @@ class Accounts(DataDir):
     def getAccounts(self):
         """ Returns all account names stored in the database
         """
-        query = ("SELECT account from %s " % (self.__tablename__), )
+        query = ("SELECT account from %s WHERE keys > 0" % (self.__tablename__), )
         results = self.sql_fetchall(query)
         return [x[0] for x in results]
+
+    def getContacts(self):
+        """ Returns ALL accounts stored in the database
+        """
+        query = ("SELECT graphene_json, balances_json, account, account_id, keys, comment from %s " % (self.__tablename__), )
+        results = self.sql_fetchall(query)
+        ret = [ ]
+        for row in results:
+            body = json.loads(row[0])
+            body['balances'] = json.loads(row[1]) if row[1] else { }
+            body['name'] = row[2]
+            body['id'] = row[3]
+            body['keys'] = int(row[4])
+            body['comment'] = row[5]
+            ret.append(body)
+        return ret
 
     def getBy(self, key, some_id):
         """
