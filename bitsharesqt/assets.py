@@ -224,7 +224,10 @@ class WindowWithAssets(QtCore.QObject):
 			pass
 		if not(market):
 			market = "BTS"
-		app().mainwin.openMarket(asset_name, market)
+		try:
+			app().mainwin.openMarket(asset_name, market)
+		except Exception as error:
+			showexc(error)
 	
 	def _edit_asset(self):
 		asset_name = self._submenu_asset()

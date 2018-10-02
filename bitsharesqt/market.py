@@ -99,7 +99,10 @@ class MarketTab(QtGui.QWidget):
 		app().mainwin.closeMarket(self._pairtag)
 	
 	def swap_me(self):
-		app().mainwin.swapMarket(self._pairtag)
+		try:
+			app().mainwin.swapMarket(self._pairtag)
+		except Exception as error:
+			showexc(error)
 	
 	def close(self):
 		# TODO: unsubscribe from market!!!
@@ -251,7 +254,7 @@ class MarketTab(QtGui.QWidget):
 			self.mergeMarket_before, self.iso, (self.asset_a,self.asset_b), self._pairtag,
 			ready_callback=self.mergeMarket_after,
 			ping_callback=self.ping_callback,
-			description="Refreshing market")
+			description="Refreshing market " + self._pairtag)
 	
 	def mergeMarket_before(self, iso, pair, tag):
 		

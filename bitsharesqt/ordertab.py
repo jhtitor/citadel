@@ -212,7 +212,10 @@ class OrderTab(QtWidgets.QWidget):
 		asset_name_a = str.split(col_a, " ")[1]
 		asset_name_b = str.split(col_b, " ")[1]
 		
-		app().mainwin.openMarket(asset_name_a, asset_name_b)
+		try:
+			app().mainwin.openMarket(asset_name_a, asset_name_b)
+		except Exception as error:
+			showexc(error)
 	
 	
 	def cancel_order(self):
