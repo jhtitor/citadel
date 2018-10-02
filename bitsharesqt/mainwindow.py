@@ -472,20 +472,20 @@ class MainWindow(QtGui.QMainWindow,
 		for symCombo in symCombos:
 			symCombo.clear()
 		
-		if hasattr(account, '_balances'):
-			balances = [ ]
-			for sym, val in account._balances.items():
-				b = lambda: None
-				b.symbol = sym
-				b.amount = val
-				balances.append( b ) #Amount(val, sym, blockchain_instance=self.iso.bts) )
+		balances = self.iso.getBalances(account)
 		
-		if not(self.iso.offline):
-			balances = self.iso.getBalances(account["id"])#.balances
-			blnc = { }
-			for b in balances:
-				blnc[b.symbol] = b.amount
-			self.iso.storeBalances(account.name, blnc)
+		#if hasattr(account, '_balances'):
+		#	balances = [ ]
+		#	for sym, val in account._balances.items():
+		#		b = lambda: None
+		#		b.symbol = sym
+		#		b.amount = val
+		#		balances.append( b ) #Amount(val, sym, blockchain_instance=self.iso.bts) )
+		#if not(self.iso.offline):
+		#	blnc = { }
+		#	for b in balances:
+		#		blnc[b.symbol] = b.amount
+		#	self.iso.storeBalances(account.name, blnc)
 		
 		for b in balances:
 			for symCombo in symCombos:
@@ -794,7 +794,7 @@ class MainWindow(QtGui.QMainWindow,
 			return
 		
 		account = self.iso.injectBalance(account_id, asset["symbol"], amount)
-		balances = self.iso.getBalances(account_id, force_remote=False)
+		balances = self.iso.getBalances(account, force_remote=False)
 		
 		dash = self.findTab(DashboardTab, account_id)
 		if dash:

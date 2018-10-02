@@ -193,7 +193,7 @@ class BitsharesIsolator(object):
 		account = self.getAccount(account_id, force_remote=False)
 		asset = self.getAsset(asset_symbol)
 		value = int(amount) / pow(10, asset["precision"])
-		acc_blnc = iso.getBalances(account["id"])
+		acc_blnc = iso.getBalances(account)
 		blnc = { }
 		for o in acc_blnc:
 			blnc[o.symbol] = o.amount
@@ -435,6 +435,36 @@ class BitsharesIsolator(object):
 		else:
 			store.add(asset['id'], asset['symbol'], asset)
 	
+	def getBalance(self, amount, asset_id):
+		if asset_id.startswith('1.3.'):
+			store = self.assetStorage
+			if asset_id in store.ids_to_symbols:
+				sym = store.ids_to_symbols[asset_id]
+			else:
+				sym = None
+		else:
+			sym = asset_id
+		b = None
+		if not(sym in self.minicache_precision):
+			if sym: op = {"amount":amount, "asset": sym}
+			else: op = {"amount":amount, "asset_id": asset_id}
+			try:
+				b = self.getAmountOP(op)
+			except:
+				import traceback
+				traceback.print_exc()
+				pass
+		if b is None:
+			b = lambda: None
+			b.symbol = sym
+			b.amount = amount
+		return b
+	
+	def getBalanceOP(self, op_amount):
+		if 'asset' in op_amount:
+			return self.getBalance(float(op_amount['amount']), op_amount['asset'])
+		return self.getBalance(int(op_amount['amount']), op_amount['asset_id'])
+	
 	def getAmount(self, asset_amount, asset_id):
 		asset = self.getAsset(asset_id)
 		
@@ -457,23 +487,16 @@ class BitsharesIsolator(object):
 		return self.getAmount(int(op_amount['amount']), op_amount['asset_id'])
 	
 	def getBalances(self, account_name_or_id, force_local=False, force_remote=False, cache=True):
-		account = self.getAccount(account_name_or_id)
+		if isinstance(account_name_or_id, str):
+			account = self.getAccount(account_name_or_id)
+		else:
+			account = account_name_or_id
 		balances = [ ]
 		if hasattr(account, '_balances') and not(force_remote):
 			for sym, val in account._balances.items():
-				val = self.softAmountStr(val, sym)
-				b = None
-				if not(sym in self.minicache_precision):
-					try:
-						b = self.getAmountOP({"amount":val, "asset": sym})
-					except:
-						pass
-				if b is None:
-					b = lambda: None
-					b.symbol = sym
-					b.amount = val
-				self.fave_coinnames.add(sym)
-				balances.append( b ) #Amount(val, sym, blockchain_instance=self.iso.bts) )
+				b = self.getBalance(val, sym)
+				self.fave_coinnames.add(b.symbol)
+				balances.append(b)
 			return balances
 		
 		if force_local:
@@ -482,7 +505,7 @@ class BitsharesIsolator(object):
 		rpc = self.bts.rpc
 		op_balances = rpc.get_account_balances(account["id"], [])
 		for op_amount in op_balances:
-			b = self.getAmountOP(op_amount)
+			b = self.getBalanceOP(op_amount)
 			self.fave_coinnames.add(b.symbol)
 			balances.append(b)
 		
