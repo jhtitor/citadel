@@ -24,6 +24,9 @@
     just yanks the global `cached_coins` array and forms appropriate
     response locally.
 """
+import logging
+log = logging.getLogger(__name__)
+
 import requests
 import json
 
@@ -55,7 +58,7 @@ class RuDexORG(object):
 		return "/".join([ self.endpoint.strip('/') ] + _parts)
 
 	def get_request(self, urlp, params={ }):
-		#print("HTTP GET", self._make_url(urlp) )
+		log.debug("HTTP GET %s", self._make_url(urlp) )
 		response = requests.get(
 			self._make_url(urlp),
 			proxies = self.proxies,
@@ -70,7 +73,7 @@ class RuDexORG(object):
 		return response
 
 	def post_request(self, urlp, data={ }):
-		#print("HTTP POST", self._make_url(urlp) )
+		log.debug("HTTP POST %s", self._make_url(urlp) )
 		response = requests.post(
 			self._make_url(urlp),
 			proxies = self.proxies,
