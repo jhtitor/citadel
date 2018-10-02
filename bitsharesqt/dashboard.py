@@ -368,6 +368,7 @@ class DashboardTab(QtWidgets.QWidget):
 			balances = [ o ]
 		
 		table = self.ui.balanceTable
+		table.setRowCount(0)
 		table.setRowCount(len(balances))
 		#if self.single_user_mode:
 		#	self.clear_asset_names()
@@ -375,6 +376,7 @@ class DashboardTab(QtWidgets.QWidget):
 		fc.clear()
 		
 		j = -1
+		icon = qicon(":/icons/images/token.png")
 		for o in balances:
 			j += 1
 			
@@ -383,7 +385,7 @@ class DashboardTab(QtWidgets.QWidget):
 			except:
 				namt = str(o.amount)
 			table.setItem(j, 0, QtGui.QTableWidgetItem(namt))
-			table.item(j, 0).setIcon( qicon(":/icons/images/token.png") )
+			table.item(j, 0).setIcon( icon )
 			table.setItem(j, 1, QtGui.QTableWidgetItem(str(o.symbol)))
 			
 			fc.addItem(o.symbol)
