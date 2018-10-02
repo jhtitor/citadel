@@ -55,11 +55,10 @@ class MainWindow(QtGui.QMainWindow,
 		self.iso = kwargs.pop('iso', None)
 		super(MainWindow, self).__init__(*args, **kwargs)
 		
-#		
 		
 		self.ui = ui = Ui_MainWindow()
 		self.ui.setupUi(self)
-
+		
 		self.setupStatusBar()
 		
 		self.activeAccount = None
@@ -1943,7 +1942,6 @@ class MainWindow(QtGui.QMainWindow,
 		#pprint(r)
 		#print(win.ui.privkeysEdit.toPlainText())
 		
-
 		pks = win.collect_pks(quiet=False)
 		
 		for pk in pks:
