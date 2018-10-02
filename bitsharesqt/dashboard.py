@@ -291,7 +291,7 @@ class DashboardTab(QtWidgets.QWidget):
 		
 		# local
 		self.refresh_dashboard(account["name"], remote=False)
-		balances = self.iso.getBalances(account["id"], force_remote=False)
+		balances = self.iso.getBalances(account["id"], force_local=True)
 		self.refresh_balances(balances)
 		
 		#self.ui.dashAccountId.setText( account['id'] )
