@@ -75,7 +75,7 @@ class Accounts(DataDir):
         in the `accounts` table in the SQLite3 database.
     """
     __tablename__ = 'accounts'
-    __columns__ = [ 'id', 'account', 'account_id', 'graphene_json', 'balances_json' ]
+    __columns__ = [ 'id', 'account', 'account_id', 'graphene_json', 'balances_json', 'keys', 'comment' ]
 
     def __init__(self, *args, **kwargs):
         super(Accounts, self).__init__(*args, **kwargs)
@@ -89,9 +89,14 @@ class Accounts(DataDir):
                  'account_id STRING(256),' +
                  'graphene_json TEXT,' +
                  'balances_json TEXT,' +
-                 'keys INTEGER'
+                 'keys INTEGER,'
+                 'comment STRING(256)'
                  ')',)
         self.sql_execute(query)
+
+    def upgrade_table(self):
+        self.add_column('comment', 'STRING(256)')
+
 
     def getAccounts(self):
         """ Returns all account names stored in the database
@@ -127,13 +132,15 @@ class Accounts(DataDir):
     def update(self, account_name, key, val):
         """
         """
-        if not(key in ['graphene_json','balances_json']):
-            raise ValueError("'key' must be graphene_json or balances_json")
+        if not(key in ['graphene_json','balances_json','keys','comment']):
+            raise ValueError("'key' must be graphene_json, balances_json, keys or comment")
         if key == 'graphene_json':
            val.pop('balances', None)
+        if key.endswith('_json'):
+           val = json.dumps(val)
         query = ("UPDATE %s " % self.__tablename__ +
                  ("SET %s=? WHERE account=?" % key),
-                 (json.dumps(val), account_name))
+                 (val, account_name))
         self.sql_execute(query)
 
     def add(self, account_name, account_id=None, keys=2):
