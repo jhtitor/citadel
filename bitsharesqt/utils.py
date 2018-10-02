@@ -69,7 +69,7 @@ import traceback
 def showexc(e, echo=False):
 	if echo or True:
 		traceback.print_exc()
-	showerror(e.__class__.__name__ + ' | ' + str(e), additional=e.__class__.__doc__);
+	showerror(e.__class__.__name__ + ' | ' + str(e), additional=e.__class__.__doc__)
 
 
 def showerror(message, title="Error", additional=None, details=None):
@@ -103,11 +103,11 @@ def showdialog(message, title="Information", additional=None, details=None, min_
 	msg.setWindowIcon(app().mainwin.windowIcon())
 	
 	if min_width:
-		msg.setStyleSheet("QLabel{min-width: "+str(min_width)+"px;}");
+		msg.setStyleSheet("QLabel{min-width: "+str(min_width)+"px;}")
 		msg.setIcon(QtGui.QMessageBox.NoIcon)
 	
 	if icon:
-		msg.setIconPixmap(QtGui.QPixmap(icon));
+		msg.setIconPixmap(QtGui.QPixmap(icon))
 
 	if additional:
 		msg.setInformativeText(str(additional))
@@ -155,8 +155,8 @@ def qmenu_exec(elem, menu, position):
 def qaction(qttr, menu, text, func):
 	act = QtGui.QAction(qttr.tr(text), menu)
 	act.triggered.connect(func)
-	#newAct->setShortcuts(QKeySequence::New);
-	#newAct->setStatusTip(tr("Create a new file"));
+	#newAct->setShortcuts(QKeySequence::New)
+	#newAct->setStatusTip(tr("Create a new file"))
 	menu.addAction(act)
 	return act
 
@@ -276,8 +276,8 @@ def stretch_table(table, col=None, hidehoriz=False):
 def stretch_tree(tree):
 	header = tree.header()
 	header.setResizeMode(0, QtGui.QHeaderView.ResizeToContents)
-	#_treeWidget->header()->setStretchLastSection(false);
-	#_treeWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	#_treeWidget->header()->setStretchLastSection(false)
+	#_treeWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents)
 	#header.setResizeMode(1, QtGui.QHeaderView.Stretch)
 	#table.verticalHeader().hide()
 

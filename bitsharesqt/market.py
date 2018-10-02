@@ -293,7 +293,7 @@ class MarketTab(QtGui.QWidget):
 		for order in orders:
 			j += 1
 			
-			table.insertRow(j);
+			table.insertRow(j)
 			set_col(table, j, 0, price__repr(order, "base") )
 			set_col(table, j, 1, str(order["quote"]), color=color_a, align="right" )
 			set_col(table, j, 2, str(order["base"]), color=color_b, align="right" )

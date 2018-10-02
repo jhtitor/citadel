@@ -279,7 +279,7 @@ class OrderTab(QtWidgets.QWidget):
 		for order in added:
 			j += 1
 			
-			table.insertRow(j);
+			table.insertRow(j)
 			table.setItem(j, 0, QTableWidgetItem( str(order['id'] )))
 			table.item(j, 0).setIcon(qicon(":/icons/images/limit_order.png"))
 			set_col(table, j, 1, str(order["quote"]), color=COLOR_GREEN )

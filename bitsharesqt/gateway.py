@@ -142,7 +142,7 @@ class WindowWithGateway(QtCore.QObject):
 		#entry = item.data(99)
 		internal_id = int(item.data(99))
 		iso = self.iso
-		store = iso.store.gatewayStorage;
+		store = iso.store.gatewayStorage
 		entry = store.getEntry(internal_id, 'id')
 		return entry
 	
@@ -193,7 +193,7 @@ class WindowWithGateway(QtCore.QObject):
 		#	return
 		#internal_id = int(item.data(99))
 		iso = self.iso
-		store = iso.store.gatewayStorage;
+		store = iso.store.gatewayStorage
 		
 		entry = self._get_selected_bridge_entry()
 		if not entry:
@@ -427,7 +427,7 @@ class WindowWithGateway(QtCore.QObject):
 	
 	def refresh_address_selector(self):
 		name, _, _, _ = self._get_current_trader()
-		tr = self._collect_trade();
+		tr = self._collect_trade()
 		
 		selling_from_graphene, buying_to_graphene, _, _ = self._collect_trade_extra(tr)
 		self._refresh_address_selector(selling_from_graphene, buying_to_graphene)
@@ -841,7 +841,7 @@ class WindowWithGateway(QtCore.QObject):
 			self.ui.outputCoinType.addItem(icon, coin.upper(), coin)
 	
 	def openExternalHistory(self, iso, account):
-		entries = iso.store.gatewayStorage.getAllEntries()#Entries(account.name);
+		entries = iso.store.gatewayStorage.getAllEntries()#Entries(account.name)
 		
 		table = self.ui.paymentList
 		
@@ -854,7 +854,7 @@ class WindowWithGateway(QtCore.QObject):
 		for h in entries:
 			j += 1
 			
-			#table.insertRow(j);
+			#table.insertRow(j)
 			#table.setItem(j, 0, QTableWidgetItem( str(h[3] )))
 			#table.setItem(j, 1, QTableWidgetItem( h[2] ))
 			#pprint(h)
