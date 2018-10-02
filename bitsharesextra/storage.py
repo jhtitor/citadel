@@ -45,6 +45,30 @@ class DataDir(BTSDataDir):
             return d
         return os.path.join(d, self.storageDatabaseDefault)
 
+    def column_exists(self, colname):
+        query = ("SELECT %s FROM %s" % (colname, self.__tablename__), ())
+        try:
+            self.sql_fetchall(query)
+        except:
+            print("No such column `%s` in table %s" % (colname, self.__tablename__))
+            return False
+        return True
+
+    def add_column(self, colname, sqltype):
+        if self.column_exists(colname): return
+        query = ("ALTER TABLE %s ADD COLUMN %s %s" % (self.__tablename__, colname, sqltype), )
+        self.sql_execute(query)
+
+    def upgrade_table(self):
+        pass
+
+    def init_table(self, create=False):
+        if self.exists_table():
+            self.upgrade_table()
+        elif create:
+            self.create_table()
+
+
 class Accounts(DataDir):
     """ This is the account storage that stores account names,
         ids, full blockchain dump and a dict of balances
@@ -70,7 +94,7 @@ class Accounts(DataDir):
         self.sql_execute(query)
 
     def getAccounts(self):
-        """ Returns all accounts stored in the database
+        """ Returns all account names stored in the database
         """
         query = ("SELECT account from %s " % (self.__tablename__), )
         results = self.sql_fetchall(query)
@@ -338,9 +362,7 @@ class History(DataDir):
 
 
 class ExternalHistory(DataDir):
-    """ This is the account storage that stores account names,
-        and optional public keys (for cache sake)
-        in the `accounts` table in the SQLite3 database.
+    """ This table stores gateway bridges.
     """
     __tablename__ = 'payments'
     __columns__ = [
@@ -567,7 +589,7 @@ class Assets(DataDir):
     """
     __tablename__ = 'assets'
 
-    def __init__(self, *args, **kwargs ):
+    def __init__(self, *args, **kwargs):
         super(Assets, self).__init__(*args, **kwargs)
         self.symbols_to_ids = { }
         self.ids_to_symbols = { }
@@ -726,36 +748,30 @@ class BitsharesStorageExtra(CommonStorage):
         super(BitsharesStorageExtra, self).__init__(path=path, create=create, **kwargs)
 
         # Extra storages
-        self.accountStorage = Accounts(path, mustexist = not(create))
-        if not self.accountStorage.exists_table() and create:
-            self.accountStorage.create_table()
+        self.accountStorage = Accounts(path, mustexist=not(create))
+        self.accountStorage.init_table(create)
 
         #self.labelStorage = Label(path)
-        #if not self.labelStorage.exists_table() and create:
-        #    self.labelStorage.create_table()
+        #if create:
+        #    self.labelStorage.init_table()
 
         self.assetStorage = Assets(path, mustexist=not(create))
-        if not self.assetStorage.exists_table() and create:
-            self.assetStorage.create_table()
+        self.assetStorage.init_table(create)
 
         self.historyStorage = History(path, mustexist=not(create))
-        if not self.historyStorage.exists_table() and create:
-            self.historyStorage.create_table()
+        self.historyStorage.init_table(create)
 
         self.remotesStorage = Remotes(path, mustexist=not(create))
-        # hack -- "upgrade"
-        self.remotesStorage.migrate_rtype()
-        if not self.remotesStorage.exists_table() and create:
-            self.remotesStorage.create_table()
+        self.remotesStorage.init_table(create)
 
         self.gatewayStorage = ExternalHistory(path)
-        if not self.gatewayStorage.exists_table() and create:
-            self.gatewayStorage.create_table()
+        self.gatewayStorage.init_table(create)
 
         # Additional tables
-        self.blindAccountStorage = BlindAccounts(path)
-        if not self.blindAccountStorage.exists_table() and create:
-            self.blindAccountStorage.create_table()
+        #self.blindAccountStorage = BlindAccounts(path)
+        #self.blindAccountStorage.create_table()
+        #self.blindStorage = BlindHistory(path)
+        #self.blindStorage.create_table()
 
         self.blindStorage = BlindHistory(path)
         if not self.blindStorage.exists_table() and create:
