@@ -28,6 +28,7 @@ class AssetWindow(QtWidgets.QDialog):
 		self.activeAccount = kwargs.pop('account', None)
 		self.mode = kwargs.pop('mode', "create")
 		self.asset = kwargs.pop('asset', None)
+		self.contacts = kwargs.pop('contacts', [ ])
 		super(AssetWindow, self).__init__(*args, **kwargs)
 		self.ui = ui = Ui_CreateAsset()
 		
@@ -41,6 +42,9 @@ class AssetWindow(QtWidgets.QDialog):
 			self.ui.accountBox.addItem(account_name)
 			self.ui.transferFromAccount.addItem(account_name) # keep
 			self.ui.untransferFromAccount.addItem(account_name) # those
+		for contact_name in self.contacts:
+			self.ui.transferToAccount.addItem(contact_name)
+		set_combo(self.ui.transferToAccount, "")
 		
 		if not(mw.is_advancedmode()):
 			hide = [ self.ui.feeAsset, self.ui.feeAssetLabel,
@@ -80,10 +84,11 @@ class AssetWindow(QtWidgets.QDialog):
 		
 		self.ui.totalEdit.setMaximum(GRAPHENE_MAX_SHARE_SUPPLY)
 		
+		set_combo(self.ui.accountBox, self.activeAccount["name"])
+		
 		if self.asset:
 			self.setupAsset(self.asset)
 		else:
-			set_combo(self.ui.accountBox, self.activeAccount["name"])
 			self.bitasset_toggle(0)
 			self.ui.precisionEdit.valueChanged.connect(self.precision_adjust)
 			self.ui.totalEdit.valueChanged.connect(self.total_adjust)

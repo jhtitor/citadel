@@ -258,6 +258,7 @@ class WindowWithAssets(QtCore.QObject):
 		asset = self.iso.getAsset(asset_name)
 		win = AssetWindow(isolator=self.iso, mode="issue",
 			asset=asset,
+			contacts=self.contact_names,
 			accounts=self.account_names,
 			account=self.activeAccount)
 		win.exec_()

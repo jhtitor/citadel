@@ -21,6 +21,7 @@ from .history import HistoryTab
 from .ordertab import OrderTab
 from .market import MarketTab
 from .transactionbuilder import QTransactionBuilder
+from .contacts import WindowWithContacts
 from .assets import WindowWithAssets
 from .topmarkets import WindowWithMarkets
 from .gateway import WindowWithGateway
@@ -37,6 +38,7 @@ import logging
 log = logging.getLogger(__name__)
 
 class MainWindow(QtGui.QMainWindow,
+	WindowWithContacts,
 	WindowWithAssets,
 	WindowWithMarkets,
 	WindowWithGateway,
@@ -73,10 +75,12 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.gatewaySellAccount,
 			self.ui.gatewayBuyAccount,
 			self.ui.transferFromAccount,
-			self.ui.transferToAccount,
 			self.ui.sellerBox,
 			#self.ui.marketAccountBox,
 			self.ui.blindFromAccount,
+		]
+		self.contact_boxes = [
+			self.ui.transferToAccount,
 			self.ui.blindToAccount,
 		]
 		self.asset_boxes = [
@@ -144,6 +148,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.setupRecentWalletsMenu()
 		#
 		self.account_names = set()
+		self.contact_names = set("")
 		self.open_accounts = set()
 		
 		self.stash = [ ]
@@ -155,6 +160,8 @@ class MainWindow(QtGui.QMainWindow,
 		self.init_markets()
 		
 		self.init_gateway()
+		
+		self.init_contacts()
 		
 		self.connector = RemoteFetch()
 		self.background_update.connect(self.on_connector_update)
@@ -195,7 +202,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		# tag tabs:
 		j = -1
-		for tag in [ "markets", "gateways", "blind", "ops", "console" ]:
+		for tag in [ "markets", "gateways", "blind", "ops", "console", "contacts" ]:
 			j += 1
 			tab = self.ui.tabWidget.widget(j)
 			tab._tags = [ "^" + tag ]
@@ -209,6 +216,12 @@ class MainWindow(QtGui.QMainWindow,
 		self.uiActionFrontLink(self.ui.actionBalances, DashboardTab)
 		self.uiActionFrontLink(self.ui.actionHistory, HistoryTab)
 		self.uiActionFrontLink(self.ui.actionOrders, OrderTab)
+		
+		self.uiSingletonActionLink(
+			gettab("^contacts"),
+			self.ui.actionContacts,
+			"ui_showcontacts",
+			False)
 		
 		self.uiSingletonActionLink(
 			gettab("^console"),
@@ -1313,6 +1326,8 @@ class MainWindow(QtGui.QMainWindow,
 		self.uiExpireSliderLink(tab.ui.sellExpireEdit, tab.ui.sellExpireSlider)
 		self.late_inject_account_box(tab.ui.buyAccount)
 		self.late_inject_account_box(tab.ui.sellAccount)
+		set_combo(tab.ui.buyAccount, self.activeAccount["name"])
+		set_combo(tab.ui.sellAccount, self.activeAccount["name"])
 		self.late_inject_asset_box(tab.ui.buyFeeAsset)
 		self.late_inject_asset_box(tab.ui.sellFeeAsset)
 		self.late_inject_advanced_controls(
@@ -1420,6 +1435,9 @@ class MainWindow(QtGui.QMainWindow,
 				tab.ui.transferFeeAsset,
 				tab.ui.upgradeButton,
 			]
+		)
+		self.late_inject_contact_box(
+			tab.ui.transferToAccount
 		)
 		
 		tab.openAccount(self.iso, account)
@@ -1575,6 +1593,8 @@ class MainWindow(QtGui.QMainWindow,
 		n = self.loadAccounts()
 		
 		self.loadBlindAccounts()
+		
+		self.loadContacts()
 		
 		#print("Public keys in storage:")
 		#from pprint import pprint
@@ -1737,6 +1757,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.iso.setStorage(None)
 		
 		self.clear_account_names()
+		self.clear_contact_names()
 		self.clear_asset_names()
 		
 		self.refreshUi_wallet()
@@ -1797,6 +1818,11 @@ class MainWindow(QtGui.QMainWindow,
 			box.clear()
 		self.account_names = set()
 	
+	def clear_contact_names(self):
+		for box in self.contact_boxes:
+			box.clear()
+		self.contact_names = set()
+	
 	def add_account_name(self, name):
 		for box in self.account_boxes:
 			box.addItem(name)
@@ -1812,12 +1838,35 @@ class MainWindow(QtGui.QMainWindow,
 				box.takeItem(box.row(item))
 		self.account_names.remove(name)
 	
+	def add_contact_name(self, name):
+		for box in self.contact_boxes:
+			box.addItem(name)
+			set_combo(box, "")
+		self.contact_names.add(name)
+	
+	def remove_contact_name(self, name):
+		for box in self.contact_boxes:
+			if isinstance(box, QtGui.QComboBox):
+				item = box.findText(name, QtCore.Qt.MatchExactly)
+				box.removeItem(item)
+			else:
+				item = box.findItems(name, QtCore.Qt.MatchExactly)[0]
+				box.takeItem(box.row(item))
+		self.contact_names.remove(name)
+	
 	def late_inject_account_box(self, box):
 		box.clear()
 		for name in self.account_names:
 			box.addItem(name)
 		self.account_boxes.append(box)
-
+	
+	def late_inject_contact_box(self, box):
+		box.clear()
+		for name in self.contact_names:
+			box.addItem(name)
+		set_combo(box, "")
+		self.contact_boxes.append(box)
+	
 	def clear_asset_names(self):
 		for box in self.asset_boxes:
 			box.clear()
@@ -1998,7 +2047,11 @@ class MainWindow(QtGui.QMainWindow,
 		#if not(memo is None):
 		#	win.ui.transferMemo.setPlainText(memo)
 		
-		if not(isinstance(asset, str)):
+		if asset is None:
+			asset = win._asset_name
+		if asset is None:
+			asset = "BTS"
+		elif not(isinstance(asset, str)):
 			asset = asset["symbol"]
 		
 		win.quick_transfer(asset, to, memo)

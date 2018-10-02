@@ -2742,6 +2742,97 @@ image: &quot;&quot;;
           </item>
          </layout>
         </widget>
+        <widget class="QWidget" name="tabContacts">
+         <attribute name="title">
+          <string>Contacts</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <property name="spacing">
+           <number>20</number>
+          </property>
+          <property name="leftMargin">
+           <number>20</number>
+          </property>
+          <property name="topMargin">
+           <number>20</number>
+          </property>
+          <property name="rightMargin">
+           <number>20</number>
+          </property>
+          <property name="bottomMargin">
+           <number>20</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_19">
+            <property name="spacing">
+             <number>20</number>
+            </property>
+            <item>
+             <widget class="QLineEdit" name="contactName">
+              <property name="placeholderText">
+               <string>Enter BitShares account name or ID</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="contactAdd">
+              <property name="text">
+               <string>Add Contact</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QTableWidget" name="contactTable">
+            <property name="editTriggers">
+             <set>QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
+            </property>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::SingleSelection</enum>
+            </property>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectRows</enum>
+            </property>
+            <property name="sortingEnabled">
+             <bool>true</bool>
+            </property>
+            <row>
+             <property name="text">
+              <string>New Row</string>
+             </property>
+            </row>
+            <column>
+             <property name="text">
+              <string>Name</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Comment</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="dashHolder">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>164</height>
+             </size>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_21"/>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
       <item>
@@ -2952,6 +3043,7 @@ image: &quot;&quot;;
     <addaction name="actionBalances"/>
     <addaction name="actionOrders"/>
     <addaction name="actionHistory"/>
+    <addaction name="actionContacts"/>
     <addaction name="separator"/>
     <addaction name="actionGoto_market"/>
     <addaction name="separator"/>
@@ -3160,7 +3252,7 @@ image: &quot;&quot;;
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;Console</string>
+    <string>C&amp;onsole</string>
    </property>
   </action>
   <action name="actionAdvancedOptions">
@@ -3240,7 +3332,15 @@ image: &quot;&quot;;
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Blin&amp;d Transfers</string>
+    <string>Blind Tran&amp;sfers</string>
+   </property>
+  </action>
+  <action name="actionContacts">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Contacts</string>
    </property>
   </action>
  </widget>
