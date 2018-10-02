@@ -530,6 +530,9 @@
        <property name="plainText">
         <string/>
        </property>
+       <property name="placeholderText">
+        <string>One private key per line.</string>
+       </property>
       </widget>
      </item>
      <item row="0" column="0">

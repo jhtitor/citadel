@@ -31,6 +31,7 @@ class AccountWizard(QtWidgets.QWizard):
 		self.account_names = kwargs.pop('registrars', [ ])
 		self.activeAccount = kwargs.pop('active', None)
 		self.sweepMode = kwargs.pop('sweepMode', False)
+		self.importMode = kwargs.pop('importMode', False)
 		super(AccountWizard, self).__init__(*args, **kwargs)
 		self.ui = ui = Ui_accountWizard()
 		ui.setupUi(self)
@@ -45,6 +46,15 @@ class AccountWizard(QtWidgets.QWizard):
 			self.ui.accountName.setText(self.activeAccount["name"])
 			self.ui.oldAccount.setText(self.activeAccount["name"])
 			self.ui.inventAccount.setText(self.activeAccount["name"])
+		if self.importMode:
+			self.ui.line.setVisible(False)
+			self.ui.rNewBrain.setVisible(False)
+			self.ui.rNewPass.setVisible(False)
+			self.ui.oldAccount.setText(self.importMode)
+			self.ui.accountEdit.setText(self.importMode)
+			self.ui.oldAccount.setEnabled(False)
+			self.ui.accountEdit.setEnabled(False)
+			self.ui.rOldKeys.setChecked(True)
 
 		#self._curid = -1
 		#self.currentIdChanged.connect(self._cur_id)
