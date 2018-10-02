@@ -64,7 +64,8 @@ class WindowWithGateway(QtCore.QObject):
 		self.ui.externalpayButton.hide()
 		
 		self.ui.paymentList.itemClicked.connect(self.show_payment)
-		self.ui.paymentList.itemActivated.connect(self.show_payment)
+		self.ui.paymentList.itemSelectionChanged.connect(self.show_payment)
+		#self.ui.paymentList.itemActivated.connect(self.show_payment)
 		
 		self.gw_trans_timer = qtimer(60000, self.refresh_transactions)
 		
