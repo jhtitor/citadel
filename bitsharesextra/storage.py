@@ -824,6 +824,5 @@ class BitsharesStorageExtra(CommonStorage):
         #self.blindStorage = BlindHistory(path)
         #self.blindStorage.create_table()
 
-        self.blindStorage = BlindHistory(path)
-        if not self.blindStorage.exists_table() and create:
-            self.blindStorage.create_table()
+        # Set latest db version
+        self.configStorage["db_version"] = "3"
