@@ -246,6 +246,16 @@ class BitsharesIsolator(object):
 		
 		return list(names)
 	
+	def countStoredPrivateKeys(self, account_id, update=False):
+		accountStorage = self.store.accountStorage
+		keyStorage = self.store.keyStorage
+		account = self.getAccount(account_id)
+		pubs = self.getLocalAccountKeys(account_id)
+		nkeys = keyStorage.countPrivateKeys(pubs)
+		if update:
+			accountStorage.update(acc["name"], "keys", nkeys)
+		return nkeys
+	
 	def isCachedAccount(self, account_id):
 		accountStorage = self.store.accountStorage
 		try:
@@ -406,7 +416,7 @@ class BitsharesIsolator(object):
 		
 		return remote_asset
 	
-	def storeAccount(self, account):
+	def storeAccount(self, account, keys=2):
 		iso = self
 		accountStore = iso.accountStorage
 		jsond =  { }
@@ -421,7 +431,7 @@ class BitsharesIsolator(object):
 			blnc[str(amount.symbol)] = float(amount)
 		
 		try:
-			accountStore.add(account['name'], account['id'])
+			accountStore.add(account['name'], account['id'], keys=keys)
 		except ValueError: # already exists
 			pass # it's ok
 		accountStore.update(account['name'], 'graphene_json', jsond)
