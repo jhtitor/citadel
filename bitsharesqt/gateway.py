@@ -340,9 +340,10 @@ class WindowWithGateway(QtCore.QObject):
 		
 		if selling_from_graphene:
 			account_name = tr['inputAddress']
-		
-		if buying_from_graphene:
+		elif buying_from_graphene:
 			account_name = tr['outputAddress']
+		else:
+			account_name = self.activeAccount["name"]
 		
 		if not coindata:
 			coindata = self.__gwwd(gateway.coins(tr["inputCoinType"]))
@@ -531,6 +532,9 @@ class WindowWithGateway(QtCore.QObject):
 	def refresh_deposit_limit(self, tr=None):
 		tr = tr or self._collect_trade()
 		trader = self._find_trader(tr['gatewayName'])
+		if not trader:
+			showerror("Gateway `%s` was not found in your config. See `Settings -> Edit Gateways`." % tr['gatewayName'])
+			return
 		poll = self._get_current_trader_api(trader=trader)
 		
 		if not tr['outputCoinType'] or not tr['inputCoinType']:
@@ -560,7 +564,7 @@ class WindowWithGateway(QtCore.QObject):
 		#	return
 		#self.ui.outputAmount.setText(res['outputAmount'])
 	def payment_deposit_error(self, request_id, error):
-		print("Could not fetch deposit limit:", str(error))
+		log.error("Could not fetch deposit limit: %s", str(error))
 		self.ui.depositLimit.setText("gateway error")
 		self.refreshUi_wallet()
 	
@@ -579,6 +583,9 @@ class WindowWithGateway(QtCore.QObject):
 		tr = self._receipt
 		tr["inputAmount"] = self.ui.inputAmount.text()
 		trader = self._find_trader(tr["gatewayName"])
+		if not trader:
+			showerror("Gateway `%s` was not found in your config. See `Settings -> Edit Gateways`." % tr['gatewayName'])
+			return
 		poll = self._get_current_trader_api(trader)
 		
 		if not tr['outputCoinType'] or not tr['inputCoinType']:
@@ -640,6 +647,9 @@ class WindowWithGateway(QtCore.QObject):
 		tr = self._receipt
 		tr["outputAmount"] = self.ui.outputAmount.text()
 		trader = self._find_trader[tr["gatewayName"]]
+		if not trader:
+			showerror("Gateway `%s` was not found in your config. See `Settings -> Edit Gateways`." % tr['gatewayName'])
+			return
 		poll = self._get_current_trader_api(trader)
 		
 		if not tr['outputCoinType'] or not tr['inputCoinType']:
@@ -672,6 +682,9 @@ class WindowWithGateway(QtCore.QObject):
 			return
 		
 		trader = self._find_trader(entry['gateway'])
+		if not trader:
+			#showerror("Gateway `%s` was not found in your config. See `Settings -> Edit Gateways`." % entry['gateway'])
+			return
 		poll = self._get_current_trader_api(trader=trader)
 		
 		self.gwupdater.fetch(
