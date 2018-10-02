@@ -71,30 +71,45 @@ def showexc(e, echo=False):
 		traceback.print_exc()
 	showerror(e.__class__.__name__ + ' | ' + str(e), additional=e.__class__.__doc__)
 
-
-def showerror(message, title="Error", additional=None, details=None):
+def showmb(message, title="Information", additional=None, details=None, min_width=None, icon=None):
 	msg = QtGui.QMessageBox()
-	msg.setIcon( QtGui.QMessageBox.Critical )
-
+	msg.setIcon( QtGui.QMessageBox.Information )
+	
 	msg.setText(message)
 	msg.setWindowTitle(title)
 	msg.setWindowIcon(app().mainwin.windowIcon())
+	
+	if min_width:
+		msg.setStyleSheet("QLabel{min-width: "+str(min_width)+"px;}")
+		msg.setIcon(QtGui.QMessageBox.NoIcon)
+	
+	if icon == "error":
+		msg.setIcon( QtGui.QMessageBox.Critical )
+	elif icon == "warning":
+		msg.setIcon( QtGui.QMessageBox.Warning )
+	elif icon:
+		msg.setIconPixmap(QtGui.QPixmap(icon))
 
 	if additional:
 		msg.setInformativeText(str(additional))
-
+	
 	if details:
 		msg.setDetailedText(details)
-
-	msg.setStandardButtons( QtGui.QMessageBox.Ok )# |  QtGui.QMessageBox.Cancel)
-	#msg.buttonClicked.connect(msgbtn)
-
+	
+	msg.setStandardButtons( QtGui.QMessageBox.Ok )
+	
 	retval = msg.exec_()
-	#print("value of pressed message box button:", retval)
 	return retval
 
 
+def showwarning(message, title="Warning", additional=None, details=None):
+	return showmb(message, title, additional, details, icon="warning")
+
+def showerror(message, title="Error", additional=None, details=None):
+	return showmb(message, title, additional, details, icon="error")
+
 def showdialog(message, title="Information", additional=None, details=None, min_width=None, icon=None):
+	return showmb(message, title, additional, details, min_width, icon)
 	msg = QtGui.QMessageBox()
 	msg.setIcon( QtGui.QMessageBox.Information )
 	
@@ -115,11 +130,9 @@ def showdialog(message, title="Information", additional=None, details=None, min_
 	if details:
 		msg.setDetailedText(details)
 	
-	msg.setStandardButtons( QtGui.QMessageBox.Ok )# |  QtGui.QMessageBox.Cancel)
-	#msg.buttonClicked.connect(msgbtn)
+	msg.setStandardButtons( QtGui.QMessageBox.Ok )
 	
 	retval = msg.exec_()
-	#print("value of pressed message box button:", retval)
 	return retval
 
 # Aliases:
@@ -127,6 +140,11 @@ def showmessage(*args, **kwargs):
 	return showdialog(*args, **kwargs)
 def showmsg(*args, **kwargs):
 	return showdialog(*args, **kwargs)
+def showwarn(*args, **kwargs):
+	return showwarning(*args, **kwargs)
+def showerr(*args, **kwargs):
+	return showerror(*args, **kwargs)
+
 
 def askyesno(message):
 	#mb = QtGui.QMessageBox
