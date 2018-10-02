@@ -31,21 +31,30 @@ class DashboardTab(QtWidgets.QWidget):
 	
 	def __init__(self, *args, **kwargs):
 		self.ping_callback = kwargs.pop("ping_callback", None)
+		simplify = kwargs.pop("simplify", False)
 		super(DashboardTab, self).__init__(*args, **kwargs)
 		self.ui = Ui_DashboardTab()
 		self.ui.setupUi(self)
 		
+		stretch_table(self.ui.balanceTable)
+		
 		self.updater = RemoteFetch()
+		
+		self.ui.transferGroup.setVisible(False)
+		
+		if simplify:
+			self.ui.upgradeButton.setVisible(False)
+			self.ui.voteButton.setVisible(False)
+			self.ui.upgradeFeeAsset.setVisible(False)
+			self.ui.upgradeFeeLabel.setVisible(False)
+			return
 		
 		qmenu(self.ui.balanceTable, self.show_balances_submenu)
 		self.ui.upgradeButton.clicked.connect(self.make_upgrade)
-		self.ui.transferGroup.setVisible(False)
 		self.ui.transferButton.clicked.connect(self.make_transfer)
 		
 		self.ui.balanceTable.itemClicked.connect(self.balance_click)
 		self.ui.balanceTable.itemDoubleClicked.connect(self.balance_dblclick)
-		
-		stretch_table(self.ui.balanceTable)
 		
 		self._index = 0
 		self._asset_name = None
@@ -321,13 +330,13 @@ class DashboardTab(QtWidgets.QWidget):
 		(balances, account_name, ) = args
 		
 		# refresh info
-		self.refresh_dashboard(account_name)
+		self.refresh_dashboard(account_name, remote=False)
 		
 		# balances
 		self.refresh_balances(balances)
 
 	def mergeAccount_abort(self, request_id, error):
-		log.error("Failed to re-sync account: %s %s", str(error), type(error))
+		log.error("Failed to re-sync account: %s", str(error))
 
 	def ping_callback(self):
 		pass
