@@ -29,7 +29,7 @@ import json
 
 API_ENDPOINT = "https://gateway.rudex.org/api/v0_1/"
 
-class RuDexORG_Exception(BaseException):
+class RuDexORG_Exception(Exception):
 	pass
 
 class RuDexORG(object):

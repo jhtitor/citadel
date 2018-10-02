@@ -9,7 +9,7 @@ import json
 
 API_ENDPOINT = "https://api.blocktrades.us/v2/"
 
-class BlockTradesUS_Exception(BaseException):
+class BlockTradesUS_Exception(Exception):
 	pass
 
 class BlockTradesUS(object):
