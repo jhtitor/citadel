@@ -167,7 +167,7 @@ class BlockTradesUS(object):
 		"""
 
 	def estimate_input_amount(self, outputAmount, inputCoinType, outputCoinType):
-		return self.get_request(
+		r = self.get_request(
 			['estimate-input-amount'],
 			{
 				'outputAmount': outputAmount,
@@ -175,6 +175,14 @@ class BlockTradesUS(object):
 				'outputCoinType': outputCoinType.lower()
 			}
 		)
+		# Hack -- openledger can return "[]" instead of useful data
+		if isinstance(r, list) and len(r) == 0:
+			return {
+				"inputAmount": str(outputAmount),
+				"inputCoinType": inputCoinType.lower(),
+				"outputAmount": str(outputAmount), # 1:1
+				"outputCoinType": outputCoinType.lower(),
+			}
 		""" Response example:
 		{
 			'inputAmount': '0.00003241',
@@ -185,7 +193,7 @@ class BlockTradesUS(object):
 		"""
 
 	def estimate_output_amount(self, inputAmount, inputCoinType, outputCoinType):
-		return self.get_request(
+		r = self.get_request(
 			[ 'estimate-output-amount' ],
 			{
 				'inputAmount': inputAmount,
@@ -193,6 +201,14 @@ class BlockTradesUS(object):
 				'outputCoinType': outputCoinType.lower()
 			}
 		)
+		# Hack -- openledger can return "[]" instead of useful data
+		if isinstance(r, list) and len(r) == 0:
+			return {
+				"inputAmount": str(inputAmount),
+				"inputCoinType": inputCoinType.lower(),
+				"outputAmount": str(inputAmount), # 1:1
+				"outputCoinType": outputCoinType.lower(),
+			}
 		""" Response example:
 		{	'inputAmount': '1.00000000',
 			'inputCoinType': 'btc',
