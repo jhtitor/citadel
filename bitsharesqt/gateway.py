@@ -613,8 +613,10 @@ class WindowWithGateway(QtCore.QObject):
 		
 	
 	def estimated_output_error(self, request_id, error):
-		print("Can not estimate outout:", str(error))
+		log.error("Can not estimate output: %s", str(error))
+		self.ui.outputAmount.blockSignals(True)
 		self.ui.outputAmount.setText("error")
+		self.ui.outputAmount.blockSignals(False)
 		
 	def estimated_output_amount(self, request_id, res):
 		tr = self._receipt # _collect_trade()
@@ -727,7 +729,7 @@ class WindowWithGateway(QtCore.QObject):
 	
 	
 	def transactions_error(self, request_id, error):
-		print("Could not get bridge transactions:", str(error))
+		log.error("Could not get bridge transactions: %s", str(error))
 	
 	def select_gateway(self, j):
 		gb = self.ui.gatewayBox
@@ -768,7 +770,7 @@ class WindowWithGateway(QtCore.QObject):
 			cns = gateway.coins()
 			for coin in cns:
 				if not coin['walletType']:
-					print("There is a coin without a wallet, skipping [%s]" % coin['coinType'])
+					log.warning("There is a coin without a wallet, skipping [%s]", coin['coinType'])
 					continue
 				coin = self.__gwwd(coin)
 				self._cache_coin(name, coin)
@@ -790,7 +792,7 @@ class WindowWithGateway(QtCore.QObject):
 				wallet = self.cached_wallets[name][coin['walletType']]
 				storage.updateCoinData(name, coin['coinType'], json.dumps(coin), json.dumps(wallet))
 			except:
-				print(":(", coin_name, coin)
+				log.warning("Failed to cache gateway coin %s %s", coin_name, str(coin))
 		
 		
 		self.ui.inputCoinType.clear()
