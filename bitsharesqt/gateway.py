@@ -739,21 +739,22 @@ class WindowWithGateway(QtCore.QObject):
 		remote_id = gb.itemData(j)
 		remote = self.iso.store.remotesStorage.getById(remote_id)
 		trader = self._gw_wrap_remote(remote)
+		gateway = self._get_current_trader_api(trader)
 		
 		self.ui.inputAmount.setText('')
 		self.ui.outputAmount.setText('')
 		
 		#self.ui.gatewayComment.setText("Updating coin lists on %s" % trader[0])
 		
-		self.pairer.fetch( self.grab_gateway_pairs, trader,
+		self.pairer.fetch( self.grab_gateway_pairs, trader, gateway,
 			ready_callback=self.grab_gateway_pairs_after,
 			error_callback=self.grab_gateway_pairs_error,
 			ping_callback=self.refreshUi_wallet,
 			description="Updating coin lists on %s" % trader[0])
 	
-	def grab_gateway_pairs(self, trader):
+	def grab_gateway_pairs(self, trader, gateway):
 		name, _, _, _ = trader
-		gateway = self._get_current_trader_api(trader)
+		#gateway = self._get_current_trader_api(trader)
 		
 		self.ui.inputCoinType.clear()
 		
