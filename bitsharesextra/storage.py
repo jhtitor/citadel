@@ -537,10 +537,22 @@ class Remotes(DataDir):
 
     def upgrade_table(self):
         """ You must check if `table_exists()` before calling this. """
-        self.add_column('refurl', 'STRING(1024')
-        self.add_column('rtype', 'INTEGER')
-        self.add_column('ctype', 'STRING(256)')
+        if self.column_exists('refurl'): return
 
+        query = ("DROP TABLE %s" % (self.__tablename__), ())
+        self.sql_execute(query)
+        self.create_table()
+        import bitsharesqt.bootstrap as bootstrap
+        for n in bootstrap.KnownFaucets:
+            self.add(2, n[0], n[1], n[2], n[3].__name__)
+        for n in bootstrap.KnownTraders:
+            self.add(1, n[0], n[1], n[2], n[3].__name__)
+        for n in bootstrap.KnownNodes:
+            self.add(0, n[0], n[1], n[2], "")
+
+        #self.add_column('refurl', 'STRING(1024)')
+        #self.add_column('rtype', 'INTEGER')
+        #self.add_column('ctype', 'STRING(256)')
 
     def getRemotes(self, rtype):
         """
