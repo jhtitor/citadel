@@ -113,6 +113,7 @@ class Accounts(DataDir):
         ret = [ ]
         for row in results:
             body = json.loads(row[0])
+            body.pop('_balances', None)
             body['balances'] = json.loads(row[1]) if row[1] else { }
             body['name'] = row[2]
             body['id'] = row[3]
@@ -134,6 +135,7 @@ class Accounts(DataDir):
             return None
 
         body = json.loads(row[0])
+        body.pop('_balances', None)
         body['balances'] = json.loads(row[1]) if row[1] else { }
         body['name'] = row[2]
         body['id'] = row[3]
@@ -152,6 +154,7 @@ class Accounts(DataDir):
             raise ValueError("'key' must be graphene_json, balances_json, keys or comment")
         if key == 'graphene_json':
            val.pop('balances', None)
+           val.pop('_balances', None)
         if key.endswith('_json'):
            val = json.dumps(val)
         query = ("UPDATE %s " % self.__tablename__ +

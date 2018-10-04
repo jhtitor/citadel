@@ -485,20 +485,6 @@ class MainWindow(QtGui.QMainWindow,
 			symCombo.clear()
 		
 		balances = self.iso.getBalances(account)
-		
-		#if hasattr(account, '_balances'):
-		#	balances = [ ]
-		#	for sym, val in account._balances.items():
-		#		b = lambda: None
-		#		b.symbol = sym
-		#		b.amount = val
-		#		balances.append( b ) #Amount(val, sym, blockchain_instance=self.iso.bts) )
-		#if not(self.iso.offline):
-		#	blnc = { }
-		#	for b in balances:
-		#		blnc[b.symbol] = b.amount
-		#	self.iso.storeBalances(account.name, blnc)
-		
 		for b in balances:
 			for symCombo in symCombos:
 				symCombo.addItem(b.symbol)
