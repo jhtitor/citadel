@@ -31,7 +31,6 @@ KnownNodes = [
 KnownTraders = [
 	('BlockTrades', 'https://api.blocktrades.us/v2/', 'https://wallet.bitshares.org', BlockTradesUS),
 	('OpenLedger', 'https://ol-api1.openledger.info/api/v0/ol/support/', 'https://wallet.bitshares.org', BlockTradesUS),
-	('CryptoBridge', 'https://ol-api1.openledger.info/api/v0/ol/support/', '', BlockTradesUS),
 	('Citadel', 'https://citadel.li/trade/', '', BlockTradesUS),
 	('Citadel (TOR)', 'http://citadel2miawoaqw.onion/trade/', '', BlockTradesUS),
 	('Crypto-Bridge (unsupported)', 'https://api.crypto-bridge.org/api/v1/', 'https://wallet.crypto-bridge.org', BlockTradesUS),
