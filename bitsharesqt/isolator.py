@@ -985,3 +985,39 @@ class BitsharesIsolator(object):
 	def getWorkers(self, only_active=False, lazy=False):
 		from bitshares.worker import Workers
 		return Workers(blockchain_instance=self.bts, lazy=lazy)
+	
+	def getMarketBuckets(self, asset_a, asset_b, start=None, stop=None, raw=False):
+		from datetime import datetime, timedelta
+		from bitshares.utils import formatTime
+		if not stop: stop = datetime.now()
+		if not start: start = stop - timedelta(hours=24)
+		interval = (stop - start).total_seconds()
+		bucket_len = interval / 200
+		bucket_sizes = self.bts.rpc.market_buckets
+		actual_bucket_len = bucket_sizes[-1]#60
+		#for b in bucket_sizes:
+		#	if bucket_len >= b:
+		#		actual_bucket_len = b
+		for b in reversed(bucket_sizes):
+			if bucket_len <= b:
+				actual_bucket_len = b
+		#stop = stop + timedelta(seconds=actual_bucket_len)
+		buckets = self.bts.rpc.get_market_history(
+			asset_a["id"],
+			asset_b["id"],
+			int(actual_bucket_len),
+			formatTime(start),
+			formatTime(stop),
+			api="history",
+		)
+		if raw:
+			return buckets
+		trades = [ ]
+		for o in buckets:
+			prec1 = self.softAmountStr(int(o["close_base"]), asset_a["symbol"], delim="")
+			prec2 = self.softAmountStr(int(o["close_quote"]), asset_b["symbol"], delim="")
+			price = float(prec1) / float(prec2)
+			t = { "date": o["key"]["open"], "price": price }
+			trades.append(t)
+		return trades
+	

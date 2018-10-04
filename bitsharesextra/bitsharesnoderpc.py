@@ -127,6 +127,7 @@ class BitSharesNodeRPC(object):
                     self.register_apis(plan_b=True)
                     log.debug("now chain params")
                     self.chain_params = self.get_network(plan_b=True)
+                    self.market_buckets = self.get_market_history_buckets(plan_b=True, api="history")
                     self.initialized = True
 
                 except Exception as error:
