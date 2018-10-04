@@ -211,7 +211,9 @@ class MarketTab(QtGui.QWidget):
 		price = form["price"].value()
 		amt_a = form["mainAmt"].value()
 		amt_b = form["altAmt"].value()
-		if price == 0 and amt_a != 0:
+		if price == 0:
+			if amt_a == 0:
+				return
 			price = amt_b / amt_a
 			self._set_spin_value(form["price"], price)
 			return
@@ -224,9 +226,11 @@ class MarketTab(QtGui.QWidget):
 		price = form["price"].value()
 		amt_a = form["mainAmt"].value()
 		amt_b = form["altAmt"].value()
-		if price == 0 and amt_a != 0:
+		if price == 0:
+			if amt_a == 0:
+				return
 			price = amt_b / amt_a
-			form["price"].setValue(price)
+			#form["price"].setValue(price)
 			self._set_spin_value(form["price"], price)
 			return
 		
