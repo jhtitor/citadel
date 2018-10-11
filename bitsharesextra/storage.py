@@ -45,13 +45,37 @@ class DataDir(BTSDataDir):
             return d
         return os.path.join(d, self.storageDatabaseDefault)
 
+    def column_exists(self, colname):
+        query = ("SELECT %s FROM %s" % (colname, self.__tablename__), ())
+        try:
+            self.sql_fetchall(query)
+        except:
+            print("No such column `%s` in table %s" % (colname, self.__tablename__))
+            return False
+        return True
+
+    def add_column(self, colname, sqltype):
+        if self.column_exists(colname): return
+        query = ("ALTER TABLE %s ADD COLUMN %s %s" % (self.__tablename__, colname, sqltype), )
+        self.sql_execute(query)
+
+    def upgrade_table(self):
+        pass
+
+    def init_table(self, create=False):
+        if self.exists_table():
+            self.upgrade_table()
+        elif create:
+            self.create_table()
+
+
 class Accounts(DataDir):
     """ This is the account storage that stores account names,
         ids, full blockchain dump and a dict of balances
         in the `accounts` table in the SQLite3 database.
     """
     __tablename__ = 'accounts'
-    __columns__ = [ 'id', 'account', 'account_id', 'graphene_json', 'balances_json' ]
+    __columns__ = [ 'id', 'account', 'account_id', 'graphene_json', 'balances_json', 'keys', 'comment' ]
 
     def __init__(self, *args, **kwargs):
         super(Accounts, self).__init__(*args, **kwargs)
@@ -65,16 +89,38 @@ class Accounts(DataDir):
                  'account_id STRING(256),' +
                  'graphene_json TEXT,' +
                  'balances_json TEXT,' +
-                 'keys INTEGER'
+                 'keys INTEGER,'
+                 'comment STRING(256)'
                  ')',)
         self.sql_execute(query)
 
+    def upgrade_table(self):
+        self.add_column('comment', 'STRING(256)')
+
+
     def getAccounts(self):
-        """ Returns all accounts stored in the database
+        """ Returns all account names stored in the database
         """
-        query = ("SELECT account from %s " % (self.__tablename__), )
+        query = ("SELECT account from %s WHERE keys > 0" % (self.__tablename__), )
         results = self.sql_fetchall(query)
         return [x[0] for x in results]
+
+    def getContacts(self):
+        """ Returns ALL accounts stored in the database
+        """
+        query = ("SELECT graphene_json, balances_json, account, account_id, keys, comment from %s " % (self.__tablename__), )
+        results = self.sql_fetchall(query)
+        ret = [ ]
+        for row in results:
+            body = json.loads(row[0])
+            body.pop('_balances', None)
+            body['balances'] = json.loads(row[1]) if row[1] else { }
+            body['name'] = row[2]
+            body['id'] = row[3]
+            body['keys'] = int(row[4])
+            body['comment'] = row[5]
+            ret.append(body)
+        return ret
 
     def getBy(self, key, some_id):
         """
@@ -89,6 +135,7 @@ class Accounts(DataDir):
             return None
 
         body = json.loads(row[0])
+        body.pop('_balances', None)
         body['balances'] = json.loads(row[1]) if row[1] else { }
         body['name'] = row[2]
         body['id'] = row[3]
@@ -103,13 +150,16 @@ class Accounts(DataDir):
     def update(self, account_name, key, val):
         """
         """
-        if not(key in ['graphene_json','balances_json']):
-            raise ValueError("'key' must be graphene_json or balances_json")
+        if not(key in ['graphene_json','balances_json','keys','comment']):
+            raise ValueError("'key' must be graphene_json, balances_json, keys or comment")
         if key == 'graphene_json':
            val.pop('balances', None)
+           val.pop('_balances', None)
+        if key.endswith('_json'):
+           val = json.dumps(val)
         query = ("UPDATE %s " % self.__tablename__ +
                  ("SET %s=? WHERE account=?" % key),
-                 (json.dumps(val), account_name))
+                 (val, account_name))
         self.sql_execute(query)
 
     def add(self, account_name, account_id=None, keys=2):
@@ -338,9 +388,7 @@ class History(DataDir):
 
 
 class ExternalHistory(DataDir):
-    """ This is the account storage that stores account names,
-        and optional public keys (for cache sake)
-        in the `accounts` table in the SQLite3 database.
+    """ This table stores gateway bridges.
     """
     __tablename__ = 'payments'
     __columns__ = [
@@ -490,32 +538,50 @@ class Remotes(DataDir):
                  ')', )
         self.sql_execute(query)
 
-    def migrate_rtype(self):
-        if not self.exists_table():
-            return
-        query = ("SELECT refurl FROM %s" % (self.__tablename__), ())
-        try:
-             self.sql_fetchall(query)
-        except:
-             print("No such row `refurl`")
-             query = ("DROP TABLE %s" % (self.__tablename__), ())
-             self.sql_execute(query)
-             self.create_table()
-             import bitsharesqt.bootstrap as bootstrap
-             for n in bootstrap.KnownFaucets:
-                 self.add(2, n[0], n[1], n[2], n[3].__name__)
-             for n in bootstrap.KnownTraders:
-                 self.add(1, n[0], n[1], n[2], n[3].__name__)
-             for n in bootstrap.KnownNodes:
-                 self.add(0, n[0], n[1], n[2], "")
+    def upgrade_table(self):
+        """ You must check if `table_exists()` before calling this. """
+        if self.column_exists('refurl'): return
 
+        query = ("DROP TABLE %s" % (self.__tablename__), ())
+        self.sql_execute(query)
+        self.create_table()
+        import bitsharesqt.bootstrap as bootstrap
+        for n in bootstrap.KnownFaucets:
+            self.add(2, n[0], n[1], n[2], n[3].__name__)
+        for n in bootstrap.KnownTraders:
+            self.add(1, n[0], n[1], n[2], n[3].__name__)
+        for n in bootstrap.KnownNodes:
+            self.add(0, n[0], n[1], n[2], "")
+
+        #self.add_column('refurl', 'STRING(1024)')
+        #self.add_column('rtype', 'INTEGER')
+        #self.add_column('ctype', 'STRING(256)')
 
     def getRemotes(self, rtype):
         """
         """
-        query = ("SELECT id, label, url, refurl, rtype, ctype from %s WHERE rtype = ?" % (self.__tablename__), (rtype,))
+        query = ("SELECT " +
+            (",".join(self.__columns__)) +
+            (" FROM %s " % self.__tablename__) +
+            "WHERE rtype=?",
+            (rtype,)
+        )
         rows = self.sql_fetchall(query)
         return self.sql_todict(self.__columns__, rows)
+
+    def getById(self, id):
+        """ Return single entry by internal database id
+        """
+        query = ("SELECT " +
+            (",".join(self.__columns__)) +
+            (" FROM %s " % self.__tablename__) +
+            "WHERE id=?",
+            (id,)
+        )
+        row = self.sql_fetchone(query)
+        if not row: return None
+        return self.sql_todict(self.__columns__, [row])[0]
+
 
     def add(self, rtype, label, url, refurl, ctype):
         """
@@ -558,7 +624,7 @@ class Assets(DataDir):
     """
     __tablename__ = 'assets'
 
-    def __init__(self, *args, **kwargs ):
+    def __init__(self, *args, **kwargs):
         super(Assets, self).__init__(*args, **kwargs)
         self.symbols_to_ids = { }
         self.ids_to_symbols = { }
@@ -572,24 +638,30 @@ class Assets(DataDir):
                  'symbol STRING(256),' +
                  'asset_id STRING(256),' +
                  'issuer_id STRING(256),' +
-                 'graphene_json TEXT' +
+                 'graphene_json TEXT,' +
+                 'favourite INTEGER DEFAULT 0'
                  ')', )
         self.sql_execute(query)
 
-    def getAssets(self, invert_keys=None):
+    def upgrade_table(self):
+        self.add_column('favourite','INTEGER DEFAULT 0')
+
+    def getAssets(self, invert_keys=None, favourite=None):
         """ Returns all assets cached in the database
             if `invert_keys` is None, returns a list of asset names
             if it is True, returns a dict of ids=>symbol mappings
             if it is False, returns a dict of symbol=>id mappings
         """
-        query = ("SELECT asset_id, symbol, graphene_json from %s " % (self.__tablename__))
-        result = self.sql_fetchall(query)
+        extra = ""
+        if not(favourite is None):
+            extra += " WHERE favourite = %d " % (1 if favourite else 0)
+        query = ("SELECT asset_id, symbol, graphene_json from %s " % (self.__tablename__) + extra)
+        results = self.sql_fetchall(query)
         for result in results:
             id = result[0]
             sym = result[1]
             self.symbols_to_ids[sym] = id
             self.ids_to_symbols[id] = sym
-
             self.loaded_assets[id] = json.loads(result[3])
 
         if invert_keys == False:
@@ -632,20 +704,29 @@ class Assets(DataDir):
     def getById(self, asset_id, is_symbol=False):
         """
         """
-        if not is_symbol:
-            query = ("SELECT graphene_json from %s " % (self.__tablename__) +
-                     "WHERE asset_id=?",
-                     (asset_id, ))
-        else:
-            query = ("SELECT graphene_json from %s " % (self.__tablename__) +
-                     "WHERE symbol=?",
-                     (asset_id, ))
+        if is_symbol:
+            if asset_id in self.symbols_to_ids:
+                asset_id = self.symbols_to_ids[asset_id]
+                is_symbol = False
 
+        if not is_symbol:
+            if asset_id in self.loaded_assets:
+                return self.loaded_assets[asset_id]
+
+        query = ("SELECT graphene_json from %s " % (self.__tablename__) +
+                 "WHERE %s=?" % ("symbol" if is_symbol else "asset_id"),
+                 (asset_id, ))
         row = self.sql_fetchone(query)
         if not row:
             return None
 
-        return json.loads(row[0])
+        body = json.loads(row[0])
+        sym = body["symbol"]
+        asset_id = id = body["id"]
+        self.symbols_to_ids[sym] = id
+        self.ids_to_symbols[id] = sym
+        self.loaded_assets[asset_id] = body
+        return body
 
     def add(self, asset_id, symbol, graphene_json):
         """ Add an asset
@@ -670,13 +751,25 @@ class Assets(DataDir):
         return int(op[0])
 
     def update(self, asset_id, graphene_json):
-        """ Add an account
+        """ Update an asset
 
-           :param str account_name: Account name
+           :param dict graphene_json: New asset data
         """
         query = ('UPDATE %s SET graphene_json = ? ' % self.__tablename__ +
                  'WHERE asset_id = ?',
                  (json.dumps(graphene_json), asset_id))
+        self.sql_execute(query)
+        self.loaded_assets[asset_id] = graphene_json
+
+    def set_favourite(self, asset_id, fav=True):
+        """ Update an asset
+
+           :param str asset_id: Asset ID ('1.2.0')
+           :param bool fav: Is user favourite
+        """
+        query = ('UPDATE %s SET favourite = ? ' % self.__tablename__ +
+                 'WHERE asset_id = ?',
+                 ((1 if fav else 0), asset_id))
         self.sql_execute(query)
 
     def deleteBySymbol(self, symbol):
@@ -684,28 +777,32 @@ class Assets(DataDir):
 
            :param str symbol: Asset Symbol ('bts')
         """
-        self.sql_execute(
-            "DELETE FROM %s " % (self.__tablename__) +
-            "WHERE symbol=?",
-             (symbol.upper())
-        )
+        return self.deleteById(symbol, is_symbol=True)
 
-    def deleteById(self, asset_id):
+    def deleteById(self, asset_id, is_symbol=False):
         """ Delete the record identified as `asset_id`
 
            :param str asset_id: Asset ID ('1.2.0')
         """
+        if is_symbol:
+            if asset_id in self.symbols_to_ids:
+                asset_id = self.symbols_to_ids[asset_id]
+                is_symbol = False
+
         self.sql_execute(
             "DELETE FROM %s " % (self.__tablename__) +
-            "WHERE asset_id=?",
-            (asset_id)
+            "WHERE %s=?" ("symbol" if is_symbol else "asset_id"),
+            (asset_id, )
         )
+        if asset_id in self.loaded_assets:
+            self.loaded_assets.pop(asset_id)
 
     def wipe(self):
         """ Delete ALL entries
         """
         query = ("DELETE FROM %s " % (self.__tablename__),)
         self.sql_execute(query)
+        self.loaded_assets = { }
 
 from bitshares.storage import BlindAccounts, BlindHistory
 from bitshares.storage import CommonStorage
@@ -717,37 +814,30 @@ class BitsharesStorageExtra(CommonStorage):
         super(BitsharesStorageExtra, self).__init__(path=path, create=create, **kwargs)
 
         # Extra storages
-        self.accountStorage = Accounts(path, mustexist = not(create))
-        if not self.accountStorage.exists_table() and create:
-            self.accountStorage.create_table()
+        self.accountStorage = Accounts(path, mustexist=not(create))
+        self.accountStorage.init_table(create)
 
         #self.labelStorage = Label(path)
-        #if not self.labelStorage.exists_table() and create:
-        #    self.labelStorage.create_table()
+        #if create:
+        #    self.labelStorage.init_table()
 
         self.assetStorage = Assets(path, mustexist=not(create))
-        if not self.assetStorage.exists_table() and create:
-            self.assetStorage.create_table()
+        self.assetStorage.init_table(create)
 
         self.historyStorage = History(path, mustexist=not(create))
-        if not self.historyStorage.exists_table() and create:
-            self.historyStorage.create_table()
+        self.historyStorage.init_table(create)
 
         self.remotesStorage = Remotes(path, mustexist=not(create))
-        # hack -- "upgrade"
-        self.remotesStorage.migrate_rtype()
-        if not self.remotesStorage.exists_table() and create:
-            self.remotesStorage.create_table()
+        self.remotesStorage.init_table(create)
 
         self.gatewayStorage = ExternalHistory(path)
-        if not self.gatewayStorage.exists_table() and create:
-            self.gatewayStorage.create_table()
+        self.gatewayStorage.init_table(create)
 
         # Additional tables
-        self.blindAccountStorage = BlindAccounts(path)
-        if not self.blindAccountStorage.exists_table() and create:
-            self.blindAccountStorage.create_table()
+        #self.blindAccountStorage = BlindAccounts(path)
+        #self.blindAccountStorage.create_table()
+        #self.blindStorage = BlindHistory(path)
+        #self.blindStorage.create_table()
 
-        self.blindStorage = BlindHistory(path)
-        if not self.blindStorage.exists_table() and create:
-            self.blindStorage.create_table()
+        # Set latest db version
+        self.configStorage["db_version"] = "3"

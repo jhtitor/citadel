@@ -52,7 +52,7 @@ class RemotesEditor(QtWidgets.QDialog):
 		
 		rows = set()
 		for item in items:
-			rows.add(item.row());
+			rows.add(item.row())
 		
 		n = table.rowCount()
 		for j in range(0, n):

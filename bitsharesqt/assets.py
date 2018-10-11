@@ -179,7 +179,7 @@ class WindowWithAssets(QtCore.QObject):
 		menu._list = True if send == self.ui.assetList else False
 		qaction(self, menu, "Buy...", self._buy_asset)
 		qaction(self, menu, "Sell...", self._sell_asset)
-		qaction(self, menu, "Open Market...", self._openmarket_asset)
+		qaction(self, menu, "Open Market", self._openmarket_asset)
 		menu.addSeparator()
 		qaction(self, menu, "Edit Asset...", self._edit_asset)
 		qaction(self, menu, "Issue Asset...", self._issue_asset)
@@ -224,7 +224,10 @@ class WindowWithAssets(QtCore.QObject):
 			pass
 		if not(market):
 			market = "BTS"
-		app().mainwin.openMarket(asset_name, market)
+		try:
+			app().mainwin.openMarket(asset_name, market)
+		except Exception as error:
+			showexc(error)
 	
 	def _edit_asset(self):
 		asset_name = self._submenu_asset()
@@ -255,6 +258,7 @@ class WindowWithAssets(QtCore.QObject):
 		asset = self.iso.getAsset(asset_name)
 		win = AssetWindow(isolator=self.iso, mode="issue",
 			asset=asset,
+			contacts=self.contact_names,
 			accounts=self.account_names,
 			account=self.activeAccount)
 		win.exec_()

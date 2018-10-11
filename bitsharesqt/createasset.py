@@ -12,6 +12,14 @@ from bitsharesbase.asset_permissions import todict
 
 GRAPHENE_MAX_SHARE_SUPPLY = 1000000000000000
 
+# Tab IDs
+TID_MAIN = 0
+TID_ADVANCED = 1
+TID_BITASSET = 2
+TID_ISSUE = 3
+TID_RESERVE = 4 # Same tab as FUND
+TID_FUND = 4    # Same tab as RESERVE
+
 class AssetWindow(QtWidgets.QDialog):
 	
 	def __init__(self, *args, **kwargs):
@@ -20,6 +28,7 @@ class AssetWindow(QtWidgets.QDialog):
 		self.activeAccount = kwargs.pop('account', None)
 		self.mode = kwargs.pop('mode', "create")
 		self.asset = kwargs.pop('asset', None)
+		self.contacts = kwargs.pop('contacts', [ ])
 		super(AssetWindow, self).__init__(*args, **kwargs)
 		self.ui = ui = Ui_CreateAsset()
 		
@@ -33,6 +42,9 @@ class AssetWindow(QtWidgets.QDialog):
 			self.ui.accountBox.addItem(account_name)
 			self.ui.transferFromAccount.addItem(account_name) # keep
 			self.ui.untransferFromAccount.addItem(account_name) # those
+		for contact_name in self.contacts:
+			self.ui.transferToAccount.addItem(contact_name)
+		set_combo(self.ui.transferToAccount, "")
 		
 		if not(mw.is_advancedmode()):
 			hide = [ self.ui.feeAsset, self.ui.feeAssetLabel,
@@ -72,10 +84,11 @@ class AssetWindow(QtWidgets.QDialog):
 		
 		self.ui.totalEdit.setMaximum(GRAPHENE_MAX_SHARE_SUPPLY)
 		
+		set_combo(self.ui.accountBox, self.activeAccount["name"])
+		
 		if self.asset:
 			self.setupAsset(self.asset)
 		else:
-			set_combo(self.ui.accountBox, self.activeAccount["name"])
 			self.bitasset_toggle(0)
 			self.ui.precisionEdit.valueChanged.connect(self.precision_adjust)
 			self.ui.totalEdit.valueChanged.connect(self.total_adjust)
@@ -199,20 +212,20 @@ class AssetWindow(QtWidgets.QDialog):
 	
 	def setupMode(self, mode):
 		if mode == "create":
-			self.hideTabs([5, 4, 3])
-			self.showTab(0)
+			self.hideTabs([TID_RESERVE, TID_ISSUE])
+			self.showTab(TID_MAIN)
 		if mode == "edit":
-			self.hideTabs([5, 4, 3])
-			self.showTab(0)
+			self.hideTabs([TID_RESERVE, TID_ISSUE])
+			self.showTab(TID_MAIN)
 		if mode == "bitasset":
-			self.hideTabs([5, 4, 3])
-			self.showTab(2)
+			self.hideTabs([TID_RESERVE, TID_ISSUE])
+			self.showTab(TID_BITASSET)
 		if mode == "issue":
-			self.hideTabsX(3)
+			self.hideTabsX(TID_ISSUE)
 		if mode == "reserve":
-			self.hideTabsX(4)
+			self.hideTabsX(TID_RESERVE)
 		if mode == "fund":
-			self.hideTabsX(4)
+			self.hideTabsX(TID_FUND)
 			self.ui.tabWidget.setTabText(0, "Fund Fee Pool")
 	
 	
@@ -220,14 +233,13 @@ class AssetWindow(QtWidgets.QDialog):
 		self.ui.tabWidget.setCurrentIndex(i)
 	
 	def hideTabs(self, inds):
-		for i in inds:
+		for i in reversed(sorted(inds)):
 			self.ui.tabWidget.removeTab(i)
 	
 	def hideTabsX(self, xindex):
-		for i in range(5, -1, -1):
-			if i != xindex:
-				self.ui.tabWidget.removeTab(i)
-	
+		inds = list(range(0, self.ui.tabWidget.count()))
+		inds.pop(xindex)
+		self.hideTabs(inds)
 
 	def total_adjust(self, full=True):
 		total = int(self.ui.totalEdit.value())

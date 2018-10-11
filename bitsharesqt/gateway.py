@@ -3,6 +3,7 @@ from PyQt5 import QtCore, QtGui
 from rpcs.blocktradesus import BlockTradesUS
 from rpcs.rudexorg import RuDexORG
 from rpcs.winexpro import WinexPRO
+from rpcs.xbtsio import XBtsIO
 
 from .bootstrap import KnownTraders
 
@@ -29,13 +30,9 @@ class WindowWithGateway(QtCore.QObject):
 		self.pairer = RemoteFetch()
 		self.gwupdater = RemoteFetch()
 		
-		gb = self.ui.gatewayBox
-		gb.addItem("select...", None)
-		for name, url, refurl, factory in KnownTraders:
-			gb.addItem(name, (url, refurl))
-			self.cached_pairs[name] = [ ]
-		gb.currentIndexChanged.connect(self.select_gateway)
-		
+		self.gateways_populated = False
+		#self.populate_gateways()
+		self.ui.gatewayBox.currentIndexChanged.connect(self.select_gateway)
 		
 		self.ui.inputCoinType.currentIndexChanged.connect(self.refresh_output_coin)
 		#self.ui.inputCoinType.currentIndexChanged.connect(self.refresh_deposit_limit)
@@ -67,7 +64,8 @@ class WindowWithGateway(QtCore.QObject):
 		self.ui.externalpayButton.hide()
 		
 		self.ui.paymentList.itemClicked.connect(self.show_payment)
-		self.ui.paymentList.itemActivated.connect(self.show_payment)
+		self.ui.paymentList.itemSelectionChanged.connect(self.show_payment)
+		#self.ui.paymentList.itemActivated.connect(self.show_payment)
 		
 		self.gw_trans_timer = qtimer(60000, self.refresh_transactions)
 		
@@ -88,7 +86,21 @@ class WindowWithGateway(QtCore.QObject):
 		
 		self.gw_page_list()
 		
-
+	def populate_gateways(self):
+		self.ui.inputCoinType.clear()
+		self.ui.outputCoinType.clear()
+		self._refresh_address_selector(False, False)
+		gb = self.ui.gatewayBox
+		gb.blockSignals(True)
+		gb.clear()
+		gb.addItem("select...", None)
+		remotes = self.iso.store.remotesStorage.getRemotes(1)
+		for remote in remotes:
+			name = str(remote['label'])
+			gb.addItem(name, remote['id'])
+			self.cached_pairs[name] = [ ]
+		self.gateways_populated = True
+		gb.blockSignals(False)
 	
 	def select_bridge_transaction(self):
 		table = self.ui.bridgeTransactions
@@ -118,6 +130,8 @@ class WindowWithGateway(QtCore.QObject):
 		if not self.iso.bts.wallet:
 			showerror("No wallet open")
 			return False
+		if not self.gateways_populated:
+			self.populate_gateways()
 		self.ui.gatewayStack.setCurrentIndex(0)
 	def gw_page_list(self):
 		self.ui.gatewayStack.setCurrentIndex(1)
@@ -129,7 +143,7 @@ class WindowWithGateway(QtCore.QObject):
 		#entry = item.data(99)
 		internal_id = int(item.data(99))
 		iso = self.iso
-		store = iso.store.gatewayStorage;
+		store = iso.store.gatewayStorage
 		entry = store.getEntry(internal_id, 'id')
 		return entry
 	
@@ -180,7 +194,7 @@ class WindowWithGateway(QtCore.QObject):
 		#	return
 		#internal_id = int(item.data(99))
 		iso = self.iso
-		store = iso.store.gatewayStorage;
+		store = iso.store.gatewayStorage
 		
 		entry = self._get_selected_bridge_entry()
 		if not entry:
@@ -327,9 +341,10 @@ class WindowWithGateway(QtCore.QObject):
 		
 		if selling_from_graphene:
 			account_name = tr['inputAddress']
-		
-		if buying_from_graphene:
+		elif buying_from_graphene:
 			account_name = tr['outputAddress']
+		else:
+			account_name = self.activeAccount["name"]
 		
 		if not coindata:
 			coindata = self.__gwwd(gateway.coins(tr["inputCoinType"]))
@@ -414,10 +429,12 @@ class WindowWithGateway(QtCore.QObject):
 	
 	def refresh_address_selector(self):
 		name, _, _, _ = self._get_current_trader()
-		tr = self._collect_trade();
+		tr = self._collect_trade()
 		
 		selling_from_graphene, buying_to_graphene, _, _ = self._collect_trade_extra(tr)
-		
+		self._refresh_address_selector(selling_from_graphene, buying_to_graphene)
+
+	def _refresh_address_selector(self, selling_from_graphene, buying_to_graphene):
 		if not(selling_from_graphene is None):
 			if selling_from_graphene:
 				self.ui.gatewaySellAccount.show()
@@ -481,26 +498,44 @@ class WindowWithGateway(QtCore.QObject):
 				self._set_combo(self.ui.inputCoinType, tr['outputCoinType'].upper())
 				self._set_combo(self.ui.outputCoinType, tr['inputCoinType'].upper())
 	
+	def _gw_remotes(self):
+		return self.iso.store.remotesStorage.getRemotes(1)
+	def _gw_wrap_remote(self, remote):
+		return (str(remote['label']),
+			remote['url'], remote['refurl'],
+			remote['ctype'])
+
 	def _find_trader(self, name):
-		for trader in KnownTraders:
-			if trader[0] == name:
-				return trader
+		remotes = self._gw_remotes()
+		for remote in remotes:
+			if remote['label'] == name:
+				return self._gw_wrap_remote(remote)
 		return None
 	
 	def _get_current_trader(self):
-		return KnownTraders[self.ui.gatewayBox.currentIndex()];
+		j = self.ui.gatewayBox.currentIndex()
+		remote_id = self.ui.gatewayBox.itemData(j)
+		if not remote_id: return None
+		remote = self.iso.store.remotesStorage.getById(remote_id)
+		trader = self._gw_wrap_remote(remote)
+		return trader
 	
 	def _get_current_trader_api(self, trader=None):
 		(name, url, refurl, factory) = trader or self._get_current_trader()
 		proxy = self.iso.get_proxy_config()
 		if '://localhost' in url: # Note: extremely unsecure test
 			proxy = None
+		if isinstance(factory, str):
+			factory = globals()[factory]
 		poll = factory(endpoint=url, origin=refurl, proxyUrl=proxy)
 		return poll
 	
 	def refresh_deposit_limit(self, tr=None):
 		tr = tr or self._collect_trade()
 		trader = self._find_trader(tr['gatewayName'])
+		if not trader:
+			showerror("Gateway `%s` was not found in your config. See `Settings -> Edit Gateways`." % tr['gatewayName'])
+			return
 		poll = self._get_current_trader_api(trader=trader)
 		
 		if not tr['outputCoinType'] or not tr['inputCoinType']:
@@ -530,7 +565,7 @@ class WindowWithGateway(QtCore.QObject):
 		#	return
 		#self.ui.outputAmount.setText(res['outputAmount'])
 	def payment_deposit_error(self, request_id, error):
-		print("Could not fetch deposit limit:", str(error))
+		log.error("Could not fetch deposit limit: %s", str(error))
 		self.ui.depositLimit.setText("gateway error")
 		self.refreshUi_wallet()
 	
@@ -549,6 +584,9 @@ class WindowWithGateway(QtCore.QObject):
 		tr = self._receipt
 		tr["inputAmount"] = self.ui.inputAmount.text()
 		trader = self._find_trader(tr["gatewayName"])
+		if not trader:
+			showerror("Gateway `%s` was not found in your config. See `Settings -> Edit Gateways`." % tr['gatewayName'])
+			return
 		poll = self._get_current_trader_api(trader)
 		
 		if not tr['outputCoinType'] or not tr['inputCoinType']:
@@ -575,8 +613,10 @@ class WindowWithGateway(QtCore.QObject):
 		
 	
 	def estimated_output_error(self, request_id, error):
-		print("Can not estimate outout:", str(error))
+		log.error("Can not estimate output: %s", str(error))
+		self.ui.outputAmount.blockSignals(True)
 		self.ui.outputAmount.setText("error")
+		self.ui.outputAmount.blockSignals(False)
 		
 	def estimated_output_amount(self, request_id, res):
 		tr = self._receipt # _collect_trade()
@@ -610,6 +650,9 @@ class WindowWithGateway(QtCore.QObject):
 		tr = self._receipt
 		tr["outputAmount"] = self.ui.outputAmount.text()
 		trader = self._find_trader[tr["gatewayName"]]
+		if not trader:
+			showerror("Gateway `%s` was not found in your config. See `Settings -> Edit Gateways`." % tr['gatewayName'])
+			return
 		poll = self._get_current_trader_api(trader)
 		
 		if not tr['outputCoinType'] or not tr['inputCoinType']:
@@ -642,6 +685,9 @@ class WindowWithGateway(QtCore.QObject):
 			return
 		
 		trader = self._find_trader(entry['gateway'])
+		if not trader:
+			#showerror("Gateway `%s` was not found in your config. See `Settings -> Edit Gateways`." % entry['gateway'])
+			return
 		poll = self._get_current_trader_api(trader=trader)
 		
 		self.gwupdater.fetch(
@@ -683,7 +729,7 @@ class WindowWithGateway(QtCore.QObject):
 	
 	
 	def transactions_error(self, request_id, error):
-		print("Could not get bridge transactions:", str(error))
+		log.error("Could not get bridge transactions: %s", str(error))
 	
 	def select_gateway(self, j):
 		gb = self.ui.gatewayBox
@@ -692,22 +738,25 @@ class WindowWithGateway(QtCore.QObject):
 			gb.removeItem(0)
 			j -= 1
 		
-		trader = KnownTraders[j]
+		remote_id = gb.itemData(j)
+		remote = self.iso.store.remotesStorage.getById(remote_id)
+		trader = self._gw_wrap_remote(remote)
+		gateway = self._get_current_trader_api(trader)
 		
 		self.ui.inputAmount.setText('')
 		self.ui.outputAmount.setText('')
 		
 		#self.ui.gatewayComment.setText("Updating coin lists on %s" % trader[0])
 		
-		self.pairer.fetch( self.grab_gateway_pairs, trader,
+		self.pairer.fetch( self.grab_gateway_pairs, trader, gateway,
 			ready_callback=self.grab_gateway_pairs_after,
 			error_callback=self.grab_gateway_pairs_error,
 			ping_callback=self.refreshUi_wallet,
 			description="Updating coin lists on %s" % trader[0])
 	
-	def grab_gateway_pairs(self, trader):
+	def grab_gateway_pairs(self, trader, gateway):
 		name, _, _, _ = trader
-		gateway = self._get_current_trader_api(trader)
+		#gateway = self._get_current_trader_api(trader)
 		
 		self.ui.inputCoinType.clear()
 		
@@ -721,7 +770,7 @@ class WindowWithGateway(QtCore.QObject):
 			cns = gateway.coins()
 			for coin in cns:
 				if not coin['walletType']:
-					print("There is a coin without a wallet, skipping [%s]" % coin['coinType'])
+					log.warning("There is a coin without a wallet, skipping [%s]", coin['coinType'])
 					continue
 				coin = self.__gwwd(coin)
 				self._cache_coin(name, coin)
@@ -743,7 +792,7 @@ class WindowWithGateway(QtCore.QObject):
 				wallet = self.cached_wallets[name][coin['walletType']]
 				storage.updateCoinData(name, coin['coinType'], json.dumps(coin), json.dumps(wallet))
 			except:
-				print(":(", coin_name, coin)
+				log.warning("Failed to cache gateway coin %s %s", coin_name, str(coin))
 		
 		
 		self.ui.inputCoinType.clear()
@@ -809,7 +858,7 @@ class WindowWithGateway(QtCore.QObject):
 			self.ui.outputCoinType.addItem(icon, coin.upper(), coin)
 	
 	def openExternalHistory(self, iso, account):
-		entries = iso.store.gatewayStorage.getAllEntries()#Entries(account.name);
+		entries = iso.store.gatewayStorage.getAllEntries()#Entries(account.name)
 		
 		table = self.ui.paymentList
 		
@@ -822,7 +871,7 @@ class WindowWithGateway(QtCore.QObject):
 		for h in entries:
 			j += 1
 			
-			#table.insertRow(j);
+			#table.insertRow(j)
 			#table.setItem(j, 0, QTableWidgetItem( str(h[3] )))
 			#table.setItem(j, 1, QTableWidgetItem( h[2] ))
 			#pprint(h)

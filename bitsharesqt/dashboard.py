@@ -31,21 +31,30 @@ class DashboardTab(QtWidgets.QWidget):
 	
 	def __init__(self, *args, **kwargs):
 		self.ping_callback = kwargs.pop("ping_callback", None)
+		simplify = kwargs.pop("simplify", False)
 		super(DashboardTab, self).__init__(*args, **kwargs)
 		self.ui = Ui_DashboardTab()
 		self.ui.setupUi(self)
 		
+		stretch_table(self.ui.balanceTable)
+		
 		self.updater = RemoteFetch()
+		
+		self.ui.transferGroup.setVisible(False)
+		
+		if simplify:
+			self.ui.upgradeButton.setVisible(False)
+			self.ui.voteButton.setVisible(False)
+			self.ui.upgradeFeeAsset.setVisible(False)
+			self.ui.upgradeFeeLabel.setVisible(False)
+			return
 		
 		qmenu(self.ui.balanceTable, self.show_balances_submenu)
 		self.ui.upgradeButton.clicked.connect(self.make_upgrade)
-		self.ui.transferGroup.setVisible(False)
 		self.ui.transferButton.clicked.connect(self.make_transfer)
 		
 		self.ui.balanceTable.itemClicked.connect(self.balance_click)
 		self.ui.balanceTable.itemDoubleClicked.connect(self.balance_dblclick)
-		
-		stretch_table(self.ui.balanceTable)
 		
 		self._index = 0
 		self._asset_name = None
@@ -100,7 +109,7 @@ class DashboardTab(QtWidgets.QWidget):
 		#qaction(self, menu, "Transfer...", self._dash_transfer)
 		qaction(self, menu, "Buy...", self._dash_buy_asset)
 		qaction(self, menu, "Sell...", self._dash_sell_asset)
-		qaction(self, menu, "Open Market...", self._dash_openmarket_asset)
+		qaction(self, menu, "Open Market", self._dash_openmarket_asset)
 		qaction(self, menu, "Blind...", self._dash_blind_asset)
 		qaction(self, menu, "Burn...", self._dash_burn_asset)
 		menu.addSeparator()
@@ -165,7 +174,10 @@ class DashboardTab(QtWidgets.QWidget):
 			pass
 		if not(market):
 			market = "BTS"
-		app().mainwin.openMarket(symbol, market)
+		try:
+			app().mainwin.openMarket(symbol, market)
+		except Exception as err:
+			showexc(err)
 	
 	def _dash_blind_asset(self):
 		j = table_selrow(self.ui.balanceTable)
@@ -279,7 +291,7 @@ class DashboardTab(QtWidgets.QWidget):
 		
 		# local
 		self.refresh_dashboard(account["name"], remote=False)
-		balances = self.iso.getBalances(account["id"], force_remote=False)
+		balances = self.iso.getBalances(account["id"], force_local=True)
 		self.refresh_balances(balances)
 		
 		#self.ui.dashAccountId.setText( account['id'] )
@@ -318,13 +330,13 @@ class DashboardTab(QtWidgets.QWidget):
 		(balances, account_name, ) = args
 		
 		# refresh info
-		self.refresh_dashboard(account_name)
+		self.refresh_dashboard(account_name, remote=False)
 		
 		# balances
 		self.refresh_balances(balances)
 
 	def mergeAccount_abort(self, request_id, error):
-		print("Failed to re-sync account:", str(error), type(error))
+		log.error("Failed to re-sync account: %s", str(error))
 
 	def ping_callback(self):
 		pass
@@ -356,24 +368,32 @@ class DashboardTab(QtWidgets.QWidget):
 			balances = [ o ]
 		
 		table = self.ui.balanceTable
+		table.setRowCount(0)
 		table.setRowCount(len(balances))
 		#if self.single_user_mode:
 		#	self.clear_asset_names()
 		fc = self.ui.transferFeeAsset
 		fc.clear()
 		
+		uc = self.ui.upgradeFeeAsset
+		uc.clear()
+		
 		j = -1
+		icon = qicon(":/icons/images/token.png")
 		for o in balances:
 			j += 1
 			
 			try:
-				namt = str(self.iso.getAmount(o.amount, o.symbol)).split(" ")[0]
+				namt = self.iso.softAmountStr(o.amount, o.symbol)
 			except:
 				namt = str(o.amount)
 			table.setItem(j, 0, QtGui.QTableWidgetItem(namt))
-			table.item(j, 0).setIcon( qicon(":/icons/images/token.png") )
+			table.item(j, 0).setIcon( icon )
 			table.setItem(j, 1, QtGui.QTableWidgetItem(str(o.symbol)))
 			
 			fc.addItem(o.symbol)
+			uc.addItem(o.symbol)
 			#if self.single_user_mode:
 			#	self.add_asset_name(o.symbol)
+		
+		table.sortByColumn(1, QtCore.Qt.AscendingOrder)

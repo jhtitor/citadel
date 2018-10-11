@@ -31,6 +31,7 @@ class AccountWizard(QtWidgets.QWizard):
 		self.account_names = kwargs.pop('registrars', [ ])
 		self.activeAccount = kwargs.pop('active', None)
 		self.sweepMode = kwargs.pop('sweepMode', False)
+		self.importMode = kwargs.pop('importMode', False)
 		super(AccountWizard, self).__init__(*args, **kwargs)
 		self.ui = ui = Ui_accountWizard()
 		ui.setupUi(self)
@@ -45,6 +46,15 @@ class AccountWizard(QtWidgets.QWizard):
 			self.ui.accountName.setText(self.activeAccount["name"])
 			self.ui.oldAccount.setText(self.activeAccount["name"])
 			self.ui.inventAccount.setText(self.activeAccount["name"])
+		if self.importMode:
+			self.ui.line.setVisible(False)
+			self.ui.rNewBrain.setVisible(False)
+			self.ui.rNewPass.setVisible(False)
+			self.ui.oldAccount.setText(self.importMode)
+			self.ui.accountEdit.setText(self.importMode)
+			self.ui.oldAccount.setEnabled(False)
+			self.ui.accountEdit.setEnabled(False)
+			self.ui.rOldKeys.setChecked(True)
 
 		#self._curid = -1
 		#self.currentIdChanged.connect(self._cur_id)
@@ -55,19 +65,23 @@ class AccountWizard(QtWidgets.QWizard):
 		self.ui.generatePassword.clicked.connect(self.generate_password)
 
 		fb = self.ui.faucetBox
-		for name, url, refurl, factory in KnownFaucets:
-			fb.addItem(name, (url, refurl))
+		remotes = self.iso.store.remotesStorage.getRemotes(2)
+		for remote in remotes:
+			fb.addItem(remote['label'], (remote['url'], remote['refurl']))
 		
 		rb = self.ui.registrarBox
 		for name in self.account_names:
 			rb.addItem(name)
 		
+		self.ui.registrarRadio.toggled.connect(self.toggle_faucet_registrar)
+		self.ui.faucetRadio.toggled.connect(self.toggle_faucet_registrar)
+		
 		if len(self.account_names) > 0:
-			self.ui.faucetBox.hide()
-			self.ui.faucetLabel.hide()
+			self.ui.registrarRadio.setChecked(True)
 		else:
 			self.ui.registrarBox.hide()
-			self.ui.registrarLabel.hide()
+			self.ui.registrarRadio.hide()
+			self.ui.faucetRadio.setChecked(True)
 		
 	
 #	def _cur_id(self, id):
@@ -75,6 +89,14 @@ class AccountWizard(QtWidgets.QWizard):
 #	
 #	def currentId(self):
 #		return self._curid
+	
+	def toggle_faucet_registrar(self):
+		if self.ui.registrarRadio.isChecked():
+			self.ui.registrarBox.setEnabled(True)
+			self.ui.faucetBox.setEnabled(False)
+		else:
+			self.ui.registrarBox.setEnabled(False)
+			self.ui.faucetBox.setEnabled(True)
 	
 	def generate_password(self):
 		pw = generate_webwalletlike_password()
@@ -228,7 +250,7 @@ class AccountWizard(QtWidgets.QWizard):
 				return False
 			
 			
-			if self.ui.faucetBox.isVisible() == True:
+			if self.ui.faucetRadio.isChecked() == True:
 				#config = self.iso.store.configStorage
 				proxy = self.iso.get_proxy_config()
 				print("Faucet using proxy", proxy)
@@ -262,7 +284,7 @@ class AccountWizard(QtWidgets.QWizard):
 				print("REG:")
 				pprint(reg)
 			
-			if self.ui.registrarBox.isVisible() == True:
+			if self.ui.registrarRadio.isChecked() == True:
 				
 				selected = self.ui.registrarBox.currentText()
 				

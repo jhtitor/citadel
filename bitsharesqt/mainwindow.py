@@ -4,6 +4,7 @@ _translate = QtCore.QCoreApplication.translate
 import uidef.res_rc
 
 from PyQt5.QtWidgets import QTableWidgetItem
+from PyQt5.QtGui import QTextCursor
 
 from .isolator import BitsharesIsolator
 from bitsharesextra.storage import BitsharesStorageExtra, DataDir
@@ -20,6 +21,7 @@ from .history import HistoryTab
 from .ordertab import OrderTab
 from .market import MarketTab
 from .transactionbuilder import QTransactionBuilder
+from .contacts import WindowWithContacts
 from .assets import WindowWithAssets
 from .topmarkets import WindowWithMarkets
 from .gateway import WindowWithGateway
@@ -36,6 +38,7 @@ import logging
 log = logging.getLogger(__name__)
 
 class MainWindow(QtGui.QMainWindow,
+	WindowWithContacts,
 	WindowWithAssets,
 	WindowWithMarkets,
 	WindowWithGateway,
@@ -46,15 +49,16 @@ class MainWindow(QtGui.QMainWindow,
 	
 	background_update = QtCore.pyqtSignal(int, str, object)
 	
+	log_record = QtCore.pyqtSignal(object)
+	
 	def __init__(self, *args, **kwargs):
 		self.iso = kwargs.pop('iso', None)
 		super(MainWindow, self).__init__(*args, **kwargs)
 		
-#		
 		
 		self.ui = ui = Ui_MainWindow()
 		self.ui.setupUi(self)
-
+		
 		self.setupStatusBar()
 		
 		self.activeAccount = None
@@ -70,10 +74,12 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.gatewaySellAccount,
 			self.ui.gatewayBuyAccount,
 			self.ui.transferFromAccount,
-			self.ui.transferToAccount,
 			self.ui.sellerBox,
 			#self.ui.marketAccountBox,
 			self.ui.blindFromAccount,
+		]
+		self.contact_boxes = [
+			self.ui.transferToAccount,
 			self.ui.blindToAccount,
 		]
 		self.asset_boxes = [
@@ -134,10 +140,14 @@ class MainWindow(QtGui.QMainWindow,
 		ui.actionWipeResync_history.triggered.connect(self.evilDownloadHistory)
 		ui.actionResync_history.triggered.connect(self.massResync)
 		ui.actionResync_orders.triggered.connect(self.massResync)
+
+		self.log_record.connect(self.add_log_record)
+
 		#
 		self.setupRecentWalletsMenu()
 		#
 		self.account_names = set()
+		self.contact_names = set("")
 		self.open_accounts = set()
 		
 		self.stash = [ ]
@@ -149,6 +159,8 @@ class MainWindow(QtGui.QMainWindow,
 		self.init_markets()
 		
 		self.init_gateway()
+		
+		self.init_contacts()
 		
 		self.connector = RemoteFetch()
 		self.background_update.connect(self.on_connector_update)
@@ -189,7 +201,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		# tag tabs:
 		j = -1
-		for tag in [ "markets", "gateways", "blind", "ops", "console" ]:
+		for tag in [ "markets", "gateways", "blind", "ops", "console", "contacts" ]:
 			j += 1
 			tab = self.ui.tabWidget.widget(j)
 			tab._tags = [ "^" + tag ]
@@ -203,6 +215,12 @@ class MainWindow(QtGui.QMainWindow,
 		self.uiActionFrontLink(self.ui.actionBalances, DashboardTab)
 		self.uiActionFrontLink(self.ui.actionHistory, HistoryTab)
 		self.uiActionFrontLink(self.ui.actionOrders, OrderTab)
+		
+		self.uiSingletonActionLink(
+			gettab("^contacts"),
+			self.ui.actionContacts,
+			"ui_showcontacts",
+			False)
 		
 		self.uiSingletonActionLink(
 			gettab("^console"),
@@ -386,7 +404,7 @@ class MainWindow(QtGui.QMainWindow,
 		find_class = qact._linkedClass
 		tab = self.findTab(find_class, account.name)
 		if not tab:
-			print("Tab not found", find_class, account.name)
+			log.warn("Tab not found %s %s", find_class, account.name)
 			return
 		self.setTabVisible(tab, True)
 	
@@ -466,21 +484,7 @@ class MainWindow(QtGui.QMainWindow,
 		for symCombo in symCombos:
 			symCombo.clear()
 		
-		if hasattr(account, '_balances'):
-			balances = [ ]
-			for sym, val in account._balances.items():
-				b = lambda: None
-				b.symbol = sym
-				b.amount = val
-				balances.append( b ) #Amount(val, sym, blockchain_instance=self.iso.bts) )
-		
-		if not(self.iso.offline):
-			balances = self.iso.getBalances(account["id"])#.balances
-			blnc = { }
-			for b in balances:
-				blnc[b.symbol] = b.amount
-			self.iso.storeBalances(account.name, blnc)
-		
+		balances = self.iso.getBalances(account)
 		for b in balances:
 			for symCombo in symCombos:
 				symCombo.addItem(b.symbol)
@@ -500,12 +504,20 @@ class MainWindow(QtGui.QMainWindow,
 		try:
 			asset = self.iso.getAsset(token)
 		except Exception as error:
-			print("Unable to figure out asset %s" % (token))
+			log.error("Unable to figure out asset %s", token)
 			#showexc(error)
 			return
 		
 		amtSpin.setDecimals( int(asset['precision']) )
 		amtSpin.setMaximum( float(asset['options']['max_supply']) )
+	
+	def add_log_record(self, record):
+		msg = record.getMessage()
+		ce = self.ui.consoleEdit
+		tc = ce.textCursor()
+		tc.movePosition(QTextCursor.End)
+		tc.insertText(msg+"\n")
+		ce.setTextCursor(tc)
 	
 	def showAccountBar(self, on):
 		if on:
@@ -748,7 +760,7 @@ class MainWindow(QtGui.QMainWindow,
 			#print("Could not locally resolve account %s to perform sync" % (str(account_id)))
 			return None
 		
-		print("Update for account", account.name)
+		log.info("Update for account %s", account.name)
 		tab = self.findTab(HistoryTab, account.name)
 		
 		return tab
@@ -771,16 +783,16 @@ class MainWindow(QtGui.QMainWindow,
 		if not account:
 			#print("Could not locally resolve account %s to inject balance" % (str(account_id)))
 			return
-		print("New balance for account", account.name)
+		log.info("New balance for account %s", account.name)
 		
 		try:
 			asset = self.iso.getAsset(asset_id)
 		except Exception as error:
-			print("Failed to getAsset", asset_id, "aborting injection; error-", str(error))
+			log.error("Failed to getAsset %s, aborting injection; error %s", asset_id, str(error))
 			return
 		
 		account = self.iso.injectBalance(account_id, asset["symbol"], amount)
-		balances = self.iso.getBalances(account_id, force_remote=False)
+		balances = self.iso.getBalances(account, force_remote=False)
 		
 		dash = self.findTab(DashboardTab, account_id)
 		if dash:
@@ -799,6 +811,7 @@ class MainWindow(QtGui.QMainWindow,
 		win.exec_()
 		self.setupUIfromConfig()
 		self.perhaps_autoconnect()
+		self.gateways_populated = False
 		return True
 	
 	def open_network_settings(self):
@@ -973,7 +986,6 @@ class MainWindow(QtGui.QMainWindow,
 		if not box.currentIndex().isValid():
 			return
 		account_name = box.currentItem().text()
-		showerror(str(self.ui.accountsList.currentIndex()))
 		if not(askyesno("If you don't have some means to restore this account, you will permamentely lose access to it.\n\nAre you sure you want to remove account %s from this wallet?" % account_name)):
 			return
 		try:
@@ -1032,7 +1044,7 @@ class MainWindow(QtGui.QMainWindow,
 		if id != 0:
 			return
 		(data, error) = data_error
-		print("<", tag, ">")
+		log.info("<%s>", tag)
 		#print("OCU", id, tag, data)
 		ws = data
 		desc = tag
@@ -1058,12 +1070,12 @@ class MainWindow(QtGui.QMainWindow,
 			error_callback=self.connection_failed,
 			ping_callback=self.refreshUi_wallet,
 			description="Connecting")
-		print("* Connecting...")
+		log.info("* Connecting...")
 	
 	
 	def connection_established(self, uid, result):
 		self._connecting = False
-		print("* Connection established")
+		log.info("* Connection established")
 		
 		self.iso.offline = False
 		self.iso.subscribed_accounts = set()
@@ -1082,7 +1094,7 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def connection_failed(self, uid, error):
 		self._connecting = False
-		print("* Connection failed")
+		log.info("* Connection failed")
 		self.iso.offline = True
 		self.refreshUi_wallet()
 		self.abort_everything(disconnect=False, wait=True)
@@ -1091,14 +1103,14 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def connection_lost(self, uid):
 		self._connecting = False
-		print("* Connection lost")
+		log.info("* Connection lost")
 		self.iso.offline = True
 		self.refreshUi_wallet()
 		##Request.shutdown(timeout=10)
 		self.abort_everything(disconnect=True, wait=True)
 	
 	def disconnect_from_node(self):
-		print("* Disconnecting...")
+		log.info("* Disconnecting...")
 		self._connecting = False
 		self.refreshUi_wallet()
 		self.iso.disconnect()
@@ -1107,15 +1119,15 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def abort_everything(self, disconnect=True, wait=True):
 		app = QtGui.QApplication.instance()
-		print("1. Emit abort everything")
+		log.debug("1. Emit abort everything")
 		app.abort_everything.emit()
 		#
 		if self.iso and disconnect:
-			print("2. disconnect")
+			log.debug("2. disconnect")
 			self.iso.disconnect()
 		#
 		if wait:
-			print("3. shutdown threads")
+			log.debug("3. shutdown threads")
 			Request.shutdown(timeout=10)
 	
 	
@@ -1299,6 +1311,8 @@ class MainWindow(QtGui.QMainWindow,
 		self.uiExpireSliderLink(tab.ui.sellExpireEdit, tab.ui.sellExpireSlider)
 		self.late_inject_account_box(tab.ui.buyAccount)
 		self.late_inject_account_box(tab.ui.sellAccount)
+		set_combo(tab.ui.buyAccount, self.activeAccount["name"])
+		set_combo(tab.ui.sellAccount, self.activeAccount["name"])
 		self.late_inject_asset_box(tab.ui.buyFeeAsset)
 		self.late_inject_asset_box(tab.ui.sellFeeAsset)
 		self.late_inject_advanced_controls(
@@ -1406,6 +1420,9 @@ class MainWindow(QtGui.QMainWindow,
 				tab.ui.transferFeeAsset,
 				tab.ui.upgradeButton,
 			]
+		)
+		self.late_inject_contact_box(
+			tab.ui.transferToAccount
 		)
 		
 		tab.openAccount(self.iso, account)
@@ -1561,6 +1578,8 @@ class MainWindow(QtGui.QMainWindow,
 		n = self.loadAccounts()
 		
 		self.loadBlindAccounts()
+		
+		self.loadContacts()
 		
 		#print("Public keys in storage:")
 		#from pprint import pprint
@@ -1723,6 +1742,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.iso.setStorage(None)
 		
 		self.clear_account_names()
+		self.clear_contact_names()
 		self.clear_asset_names()
 		
 		self.refreshUi_wallet()
@@ -1783,6 +1803,11 @@ class MainWindow(QtGui.QMainWindow,
 			box.clear()
 		self.account_names = set()
 	
+	def clear_contact_names(self):
+		for box in self.contact_boxes:
+			box.clear()
+		self.contact_names = set()
+	
 	def add_account_name(self, name):
 		for box in self.account_boxes:
 			box.addItem(name)
@@ -1798,12 +1823,35 @@ class MainWindow(QtGui.QMainWindow,
 				box.takeItem(box.row(item))
 		self.account_names.remove(name)
 	
+	def add_contact_name(self, name):
+		for box in self.contact_boxes:
+			box.addItem(name)
+			set_combo(box, "")
+		self.contact_names.add(name)
+	
+	def remove_contact_name(self, name):
+		for box in self.contact_boxes:
+			if isinstance(box, QtGui.QComboBox):
+				item = box.findText(name, QtCore.Qt.MatchExactly)
+				box.removeItem(item)
+			else:
+				item = box.findItems(name, QtCore.Qt.MatchExactly)[0]
+				box.takeItem(box.row(item))
+		self.contact_names.remove(name)
+	
 	def late_inject_account_box(self, box):
 		box.clear()
 		for name in self.account_names:
 			box.addItem(name)
 		self.account_boxes.append(box)
-
+	
+	def late_inject_contact_box(self, box):
+		box.clear()
+		for name in self.contact_names:
+			box.addItem(name)
+		set_combo(box, "")
+		self.contact_boxes.append(box)
+	
 	def clear_asset_names(self):
 		for box in self.asset_boxes:
 			box.clear()
@@ -1880,7 +1928,6 @@ class MainWindow(QtGui.QMainWindow,
 		#pprint(r)
 		#print(win.ui.privkeysEdit.toPlainText())
 		
-
 		pks = win.collect_pks(quiet=False)
 		
 		for pk in pks:
@@ -1984,7 +2031,11 @@ class MainWindow(QtGui.QMainWindow,
 		#if not(memo is None):
 		#	win.ui.transferMemo.setPlainText(memo)
 		
-		if not(isinstance(asset, str)):
+		if asset is None:
+			asset = win._asset_name
+		if asset is None:
+			asset = "BTS"
+		elif not(isinstance(asset, str)):
 			asset = asset["symbol"]
 		
 		win.quick_transfer(asset, to, memo)

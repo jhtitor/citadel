@@ -25,9 +25,15 @@ except AttributeError:
 
 import pyqtgraph as pg
 import datetime
+
+PG_BACKGROUND = 'w'
+PG_FOREGROUND = 'k'
+PG_LINEPEN    = pg.mkPen('g', width=3)
+PG_CROSSHAIR  = 'y'
+
 ## Switch to using white background and black foreground
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
+pg.setConfigOption('background', PG_BACKGROUND)
+pg.setConfigOption('foreground', PG_FOREGROUND)
 
 class MarketTab(QtGui.QWidget):
 
@@ -43,6 +49,28 @@ class MarketTab(QtGui.QWidget):
 
 		replaceAxis(self.ui.marketPlot, "bottom", TimeAxisItem(orientation='bottom'))
 		replaceAxis(self.ui.marketPlot, "left", CoinAxisItem(precision=self.asset_b["precision"], orientation='left'))
+
+		self.ui.marketPlot.setMenuEnabled(False)
+
+		self.__vLine = pg.InfiniteLine(angle=90, movable=False, pen=PG_CROSSHAIR)
+		self.__hLine = pg.InfiniteLine(angle=0, movable=False, pen=PG_CROSSHAIR)
+		self.__textPrice = pg.TextItem('price')
+		view = self.ui.marketPlot.getViewBox()
+		view.addItem(self.__textPrice, ignoreBounds=True)
+		view.addItem(self.__vLine, ignoreBounds=True)
+		view.addItem(self.__hLine, ignoreBounds=True)
+		view.setLimits(
+#			yMin = 0, # price never goes below zero
+			xMin = datetime.datetime(2015, 1, 1).timestamp(), # ~BTS started
+			xMax = (datetime.datetime.now() + datetime.timedelta(weeks=52)).timestamp() # 1 year
+		)
+
+		self.start_time = None
+		self.stop_time = None
+		self.initfetch = 1
+		self.ui.marketPlot.sigXRangeChanged.connect(self.updateRange)
+
+		self.ui.marketPlot.scene().sigMouseMoved.connect(self.updateTooltip)
 #,
 #			axisItems={'bottom': TimeAxisItem(orientation='bottom')}
 
@@ -99,7 +127,10 @@ class MarketTab(QtGui.QWidget):
 		app().mainwin.closeMarket(self._pairtag)
 	
 	def swap_me(self):
-		app().mainwin.swapMarket(self._pairtag)
+		try:
+			app().mainwin.swapMarket(self._pairtag)
+		except Exception as error:
+			showexc(error)
 	
 	def close(self):
 		# TODO: unsubscribe from market!!!
@@ -111,6 +142,7 @@ class MarketTab(QtGui.QWidget):
 		form["altLabel"].setText(asset_b["symbol"])
 		
 		form["price"].valueChanged.connect(self.price_value_changed)
+		form["price"].setSuffix(" " + asset_b["symbol"])
 		form["price"].setDecimals(asset_b["precision"])
 		form["price"].setMaximum(asset_b["options"]["max_supply"] * pow(10, asset_b["precision"]))
 		form["mainAmt"].valueChanged.connect(self.main_amount_changed)
@@ -179,7 +211,9 @@ class MarketTab(QtGui.QWidget):
 		price = form["price"].value()
 		amt_a = form["mainAmt"].value()
 		amt_b = form["altAmt"].value()
-		if price == 0 and amt_a != 0:
+		if price == 0:
+			if amt_a == 0:
+				return
 			price = amt_b / amt_a
 			self._set_spin_value(form["price"], price)
 			return
@@ -192,9 +226,11 @@ class MarketTab(QtGui.QWidget):
 		price = form["price"].value()
 		amt_a = form["mainAmt"].value()
 		amt_b = form["altAmt"].value()
-		if price == 0 and amt_a != 0:
+		if price == 0:
+			if amt_a == 0:
+				return
 			price = amt_b / amt_a
-			form["price"].setValue(price)
+			#form["price"].setValue(price)
 			self._set_spin_value(form["price"], price)
 			return
 		
@@ -249,15 +285,12 @@ class MarketTab(QtGui.QWidget):
 	def resync(self):
 		self.updater.fetch(
 			self.mergeMarket_before, self.iso, (self.asset_a,self.asset_b), self._pairtag,
+			self.start_time, self.stop_time,
 			ready_callback=self.mergeMarket_after,
 			ping_callback=self.ping_callback,
-			description="Refreshing market")
+			description="Refreshing market " + self._pairtag)
 	
-	def mergeMarket_before(self, iso, pair, tag):
-		
-		#iso._wait_online(timeout=3) # will raise exception
-		#if not(iso.is_connected()):
-		#	raise Exception
+	def mergeMarket_before(self, iso, pair, tag, start, stop):
 		
 		asset_a = pair[0]
 		asset_b = pair[1]
@@ -270,10 +303,13 @@ class MarketTab(QtGui.QWidget):
 			self.subscribed = True
 		
 		from bitshares.market import Market
-		self.market = Market(tag, blockchain_instance=iso.bts)
+		self.market = Market(base=asset_b, quote=asset_a, blockchain_instance=iso.bts)
 		
 		orders = self.market.orderbook()
-		trades = self.market.trades(limit=100)
+		if self.initfetch:
+			trades = self.market.trades(limit=100, start=start, stop=stop)
+		else:
+			trades = iso.getMarketBuckets(self.market["base"], self.market["quote"], start=start, stop=stop)
 		
 		return (orders, trades,)
 	
@@ -293,7 +329,7 @@ class MarketTab(QtGui.QWidget):
 		for order in orders:
 			j += 1
 			
-			table.insertRow(j);
+			table.insertRow(j)
 			set_col(table, j, 0, price__repr(order, "base") )
 			set_col(table, j, 1, str(order["quote"]), color=color_a, align="right" )
 			set_col(table, j, 2, str(order["base"]), color=color_b, align="right" )
@@ -313,8 +349,55 @@ class MarketTab(QtGui.QWidget):
 		#x = np.random.normal(size=1000)
 		#y = np.random.normal(size=1000)
 		
+		self.ui.marketPlot.blockSignals(True)
 		self.ui.marketPlot.clear()
-		self.ui.marketPlot.plot(xs, ys)#, pen=None, symbol=None)
+		self.ui.marketPlot.plot(xs, ys, pen=PG_LINEPEN)#, pen=None, symbol=None)
+		obj = self.ui.marketPlot.getPlotItem()
+		axis = obj.axes["bottom"]['item']
+		axis._dayscale = False
+		if len(xs) > 1: # Hack: adjust X-axis display
+			if (xs[-1] - xs[0]) >= 3600 * 24: # >= 1 day
+				axis._dayscale = True
+		self.ui.marketPlot.blockSignals(False)
+		
+	def updateRange(self, view, rng):
+		if self.initfetch > 0:
+			self.initfetch -= 1
+			return
+		#price_low, price_high = rng[1] # (as integer)
+		sec_start, sec_end = rng#[0]
+		self.start_time = datetime.datetime.fromtimestamp(sec_start)
+		self.stop_time = datetime.datetime.fromtimestamp(sec_end)
+		self.resync()
+	
+	def updateTooltip(self, pos):
+		data = self.ui.marketPlot.getPlotItem().listDataItems()
+		if len(data) < 1: return
+		points = data[0].curve
+		act_pos = points.mapFromScene(pos)
+		xs, ys = points.getData()
+
+		x, j = snapTo(act_pos.x(), xs)
+		if j < 0:
+			self.__vLine.hide()
+			self.__hLine.hide()
+			self.__textPrice.hide()
+			return
+		y = ys[j]
+
+		#print("SNAP:", j, x, y)
+		self.__vLine.setPos(x)
+		self.__hLine.setPos(y)
+		self.__textPrice.setPos(x, y)
+
+		price = "{price:.{precision}f}".format(price=y,precision=self.asset_b["precision"])
+		self.__textPrice.setText(price)
+
+		self.__vLine.show()
+		self.__hLine.show()
+		self.__textPrice.show()
+
+
 
 class CoinAxisItem(pg.AxisItem):
 	def __init__(self, *args, **kwargs):
@@ -325,8 +408,12 @@ class CoinAxisItem(pg.AxisItem):
 class TimeAxisItem(pg.AxisItem):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
+		self._dayscale = False
 	def tickStrings(self, values, scale, spacing):
-		return [int2dt(value).strftime("%H:%M:%S") for value in values]
+		fmt = "%H:%M"
+		if self._dayscale:
+			fmt = "%d.%I.%Y"
+		return [int2dt(value).strftime(fmt) for value in values]
 import datetime
 def int2dt(ts, ts_mult=1e6):
 	return (datetime.datetime.utcfromtimestamp(ts))#float(ts)/ts_mult))
@@ -345,6 +432,9 @@ def replaceAxis(widget, k, axis):
 	obj.layout.addItem(axis, *pos)
 	axis.setZValue(-1000)
 	axis.setFlag(axis.ItemNegativeZStacksBehindParent)
+	
+	axis.setGrid(64)
+
 def unlinkFromView(axis):
 	oldView = axis.linkedView()
 	if oldView is None:
@@ -360,3 +450,22 @@ def price__repr(p, using="base"):
 		price=p["price"],
 		precision=(p[using]["asset"]["precision"])
 	)
+
+def snapTo(v, vals):
+	r = v
+	l = 0
+	j = -1
+	for _v in vals:
+		j += 1
+		if v >= _v:
+			r = _v
+		else:
+			diff1 = v - l
+			diff2 = _v - v
+			if diff2 < diff1:
+				r = _v
+			else:
+				j -= 1
+			break
+		l = _v
+	return r, j

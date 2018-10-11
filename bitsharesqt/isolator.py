@@ -78,6 +78,7 @@ class BitsharesIsolator(object):
 		self.subscribed_markets = set()
 		
 		self.minicache_accnames = {} # 1.2.ID to name
+		self.minicache_precision = {} # SYMBOL to precision
 		self.fave_coinnames = set() # semi-random
 		self.fave_markets = set() # same
 		
@@ -192,7 +193,7 @@ class BitsharesIsolator(object):
 		account = self.getAccount(account_id, force_remote=False)
 		asset = self.getAsset(asset_symbol)
 		value = int(amount) / pow(10, asset["precision"])
-		acc_blnc = iso.getBalances(account["id"])
+		acc_blnc = iso.getBalances(account)
 		blnc = { }
 		for o in acc_blnc:
 			blnc[o.symbol] = o.amount
@@ -244,6 +245,16 @@ class BitsharesIsolator(object):
 				names.add(account['name'])
 		
 		return list(names)
+	
+	def countStoredPrivateKeys(self, account_id, update=False):
+		accountStorage = self.store.accountStorage
+		keyStorage = self.store.keyStorage
+		account = self.getAccount(account_id)
+		pubs = self.getLocalAccountKeys(account_id)
+		nkeys = keyStorage.countPrivateKeys(pubs)
+		if update:
+			accountStorage.update(acc["name"], "keys", nkeys)
+		return nkeys
 	
 	def isCachedAccount(self, account_id):
 		accountStorage = self.store.accountStorage
@@ -386,6 +397,7 @@ class BitsharesIsolator(object):
 			forged_asset.asset = stored_asset["symbol"]
 			for k, v in stored_asset.items():
 				forged_asset[k] = v
+			self.minicache_precision[stored_asset["symbol"]] = stored_asset["precision"]
 			return forged_asset
 		
 		if self.offline:
@@ -404,7 +416,7 @@ class BitsharesIsolator(object):
 		
 		return remote_asset
 	
-	def storeAccount(self, account):
+	def storeAccount(self, account, keys=2):
 		iso = self
 		accountStore = iso.accountStorage
 		jsond =  { }
@@ -419,7 +431,7 @@ class BitsharesIsolator(object):
 			blnc[str(amount.symbol)] = float(amount)
 		
 		try:
-			accountStore.add(account['name'], account['id'])
+			accountStore.add(account['name'], account['id'], keys=keys)
 		except ValueError: # already exists
 			pass # it's ok
 		accountStore.update(account['name'], 'graphene_json', jsond)
@@ -432,6 +444,36 @@ class BitsharesIsolator(object):
 			store.update(asset['id'], asset)
 		else:
 			store.add(asset['id'], asset['symbol'], asset)
+	
+	def getBalance(self, amount, asset_id):
+		if asset_id.startswith('1.3.'):
+			store = self.assetStorage
+			if asset_id in store.ids_to_symbols:
+				sym = store.ids_to_symbols[asset_id]
+			else:
+				sym = None
+		else:
+			sym = asset_id
+		b = None
+		if not(sym in self.minicache_precision):
+			if sym: op = {"amount":amount, "asset": sym}
+			else: op = {"amount":amount, "asset_id": asset_id}
+			try:
+				b = self.getAmountOP(op)
+			except:
+				import traceback
+				traceback.print_exc()
+				pass
+		if b is None:
+			b = lambda: None
+			b.symbol = sym
+			b.amount = amount
+		return b
+	
+	def getBalanceOP(self, op_amount):
+		if 'asset' in op_amount:
+			return self.getBalance(float(op_amount['amount']), op_amount['asset'])
+		return self.getBalance(int(op_amount['amount']), op_amount['asset_id'])
 	
 	def getAmount(self, asset_amount, asset_id):
 		asset = self.getAsset(asset_id)
@@ -455,18 +497,16 @@ class BitsharesIsolator(object):
 		return self.getAmount(int(op_amount['amount']), op_amount['asset_id'])
 	
 	def getBalances(self, account_name_or_id, force_local=False, force_remote=False, cache=True):
-		account = self.getAccount(account_name_or_id)
+		if isinstance(account_name_or_id, str):
+			account = self.getAccount(account_name_or_id)
+		else:
+			account = account_name_or_id
 		balances = [ ]
 		if hasattr(account, '_balances') and not(force_remote):
-			for sym,val in account._balances.items():
-				try:
-					b = self.getAmountOP({"amount":val, "asset": sym})
-				except:
-					b = lambda: None
-					b.symbol = sym
-					b.amount = val
-				self.fave_coinnames.add(sym)
-				balances.append( b ) #Amount(val, sym, blockchain_instance=self.iso.bts) )
+			for sym, val in account._balances.items():
+				b = self.getBalance(val, sym)
+				self.fave_coinnames.add(b.symbol)
+				balances.append(b)
 			return balances
 		
 		if force_local:
@@ -475,7 +515,7 @@ class BitsharesIsolator(object):
 		rpc = self.bts.rpc
 		op_balances = rpc.get_account_balances(account["id"], [])
 		for op_amount in op_balances:
-			b = self.getAmountOP(op_amount)
+			b = self.getBalanceOP(op_amount)
 			self.fave_coinnames.add(b.symbol)
 			balances.append(b)
 		
@@ -588,6 +628,21 @@ class BitsharesIsolator(object):
 			return account["name"]
 		return account_id
 	
+	def softAmountStr(self, asset_amount, asset_id, delim=""):
+		precision = 8
+		if asset_id in self.minicache_precision:
+			precision = self.minicache_precision[asset_id]
+		#if not(type(asset_amount) == int):
+		#	t = str(asset_amount)
+		#	if not("e" in t):
+		#		return t # perfect as is
+		if type(asset_amount) == int:
+			asset_amount = int(asset_amount) / 10 ** precision
+		if not(type(asset_amount) == float):
+			asset_amount = float(asset_amount)
+		return ("{:"+delim+".{p}f}").format(asset_amount, p=precision)
+		return ("%0."+str(int(math.log10(precision)))+"f") % amount
+	
 	def bootstrap_wallet(self, wipe=False):
 		import bitsharesqt.bootstrap as bootstrap
 		store = self.store.remotesStorage
@@ -641,10 +696,12 @@ class BitsharesIsolator(object):
 			desc += str(amt_b)
 			desc += " paying "
 			desc += str(amt_a)
+			short = "Placed order for " + str(amt_b) + " paying " + str(amt_a)
 		if (op_id == 2):
 			desc = "Cancel order"
+			short = "Canceled order"
 		if (op_id == 4):
-			desc = "Traded"
+			desc = "Trade"
 			#who = Account(op_action['account_id'])
 			amt_a = iso.getAmountOP(op_action['pays'])
 			amt_b = iso.getAmountOP(op_action['receives'])
@@ -659,10 +716,12 @@ class BitsharesIsolator(object):
 			#dst_account = iso.getAccount(op_action['name'])
 			desc += " by " + accname(op_action['registrar']) #reg_account['name']
 			desc += " - " + accname(op_action['name']) #self.softAccountName(#dst_account['name']
+			short = "Registered account " + accname(op_action['name'])
 		if (op_id == 8):
 			desc = "Upgrade account"
 			#dst_account = iso.getAccount(op_action['account_to_upgrade'])
 			desc += " - " + accname(op_action['account_to_upgrade']) #self.softAccountName(#dst_account['name']
+			short = "Upgraded account " + accname(op_action['account_to_upgrade'])
 		if (op_id == 6):
 			desc = "Update account/votes"
 			#dst_account = iso.getAccount(op_action['account'])
@@ -725,6 +784,11 @@ class BitsharesIsolator(object):
 			if is_asset["issuer"] == op_action["payer"]:
 				plus = str(amt)
 			short = "Reserved by " + accname(op_action["payer"]) + " - " + str(amt)
+		if (op_id == 19):
+			desc = "Publish feed for asset"
+			f_asset = iso.getAsset(op_action['asset_id'])
+			desc += " " + f_asset["symbol"]
+			short = "Published feed for " + f_asset["symbol"]
 		if (op_id == 39):
 			desc = "Transfer to blind"
 			amt = iso.getAmountOP(op_action['amount'])
@@ -852,8 +916,26 @@ class BitsharesIsolator(object):
 			self.fave_markets.remove(tag)
 		self.fave_markets.add(retag)
 	
+	def download_topmarkets(self):
+		rpc = self.bts.rpc
+		mrs = rpc.get_top_markets(25)
+		markets = [ ]
+		for mr in mrs:
+			name = mr['base']+":"+mr['quote']
+			ticker = { "percent_change": 0., "latest": 0. }
+			ticker = rpc.get_ticker(mr['base'], mr['quote'])
+			vol = { "base": mr['base'],
+				"quote": mr['quote'],
+				"base_volume": mr['base_volume'],
+				"quote_volume": mr['quote_volume']
+				 }
+			markets.append( (name, ticker, vol) )
+#		ticker = rpc.get_ticker(a, b)
+		return markets
+
 	def download_markets(self, names):
 		if names is None:
+			return self.download_topmarkets()
 			names = self._marketMatrix()
 		rpc = self.bts.rpc
 		markets = [ ]
@@ -903,3 +985,39 @@ class BitsharesIsolator(object):
 	def getWorkers(self, only_active=False, lazy=False):
 		from bitshares.worker import Workers
 		return Workers(blockchain_instance=self.bts, lazy=lazy)
+	
+	def getMarketBuckets(self, asset_a, asset_b, start=None, stop=None, raw=False):
+		from datetime import datetime, timedelta
+		from bitshares.utils import formatTime
+		if not stop: stop = datetime.now()
+		if not start: start = stop - timedelta(hours=24)
+		interval = (stop - start).total_seconds()
+		bucket_len = interval / 200
+		bucket_sizes = self.bts.rpc.market_buckets
+		actual_bucket_len = bucket_sizes[-1]#60
+		#for b in bucket_sizes:
+		#	if bucket_len >= b:
+		#		actual_bucket_len = b
+		for b in reversed(bucket_sizes):
+			if bucket_len <= b:
+				actual_bucket_len = b
+		#stop = stop + timedelta(seconds=actual_bucket_len)
+		buckets = self.bts.rpc.get_market_history(
+			asset_a["id"],
+			asset_b["id"],
+			int(actual_bucket_len),
+			formatTime(start),
+			formatTime(stop),
+			api="history",
+		)
+		if raw:
+			return buckets
+		trades = [ ]
+		for o in buckets:
+			prec1 = self.softAmountStr(int(o["close_base"]), asset_a["symbol"], delim="")
+			prec2 = self.softAmountStr(int(o["close_quote"]), asset_b["symbol"], delim="")
+			price = float(prec1) / float(prec2)
+			t = { "date": o["key"]["open"], "price": price }
+			trades.append(t)
+		return trades
+	

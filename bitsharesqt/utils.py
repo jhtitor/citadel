@@ -69,32 +69,9 @@ import traceback
 def showexc(e, echo=False):
 	if echo or True:
 		traceback.print_exc()
-	showerror(e.__class__.__name__ + ' | ' + str(e), additional=e.__class__.__doc__);
+	showerror(e.__class__.__name__ + ' | ' + str(e), additional=e.__class__.__doc__)
 
-
-def showerror(message, title="Error", additional=None, details=None):
-	msg = QtGui.QMessageBox()
-	msg.setIcon( QtGui.QMessageBox.Critical )
-
-	msg.setText(message)
-	msg.setWindowTitle(title)
-	msg.setWindowIcon(app().mainwin.windowIcon())
-
-	if additional:
-		msg.setInformativeText(str(additional))
-
-	if details:
-		msg.setDetailedText(details)
-
-	msg.setStandardButtons( QtGui.QMessageBox.Ok )# |  QtGui.QMessageBox.Cancel)
-	#msg.buttonClicked.connect(msgbtn)
-
-	retval = msg.exec_()
-	#print("value of pressed message box button:", retval)
-	return retval
-
-
-def showdialog(message, title="Information", additional=None, details=None, min_width=None, icon=None):
+def showmb(message, title="Information", additional=None, details=None, min_width=None, icon=None):
 	msg = QtGui.QMessageBox()
 	msg.setIcon( QtGui.QMessageBox.Information )
 	
@@ -103,11 +80,15 @@ def showdialog(message, title="Information", additional=None, details=None, min_
 	msg.setWindowIcon(app().mainwin.windowIcon())
 	
 	if min_width:
-		msg.setStyleSheet("QLabel{min-width: "+str(min_width)+"px;}");
+		msg.setStyleSheet("QLabel{min-width: "+str(min_width)+"px;}")
 		msg.setIcon(QtGui.QMessageBox.NoIcon)
 	
-	if icon:
-		msg.setIconPixmap(QtGui.QPixmap(icon));
+	if icon == "error":
+		msg.setIcon( QtGui.QMessageBox.Critical )
+	elif icon == "warning":
+		msg.setIcon( QtGui.QMessageBox.Warning )
+	elif icon:
+		msg.setIconPixmap(QtGui.QPixmap(icon))
 
 	if additional:
 		msg.setInformativeText(str(additional))
@@ -115,11 +96,43 @@ def showdialog(message, title="Information", additional=None, details=None, min_
 	if details:
 		msg.setDetailedText(details)
 	
-	msg.setStandardButtons( QtGui.QMessageBox.Ok )# |  QtGui.QMessageBox.Cancel)
-	#msg.buttonClicked.connect(msgbtn)
+	msg.setStandardButtons( QtGui.QMessageBox.Ok )
 	
 	retval = msg.exec_()
-	#print("value of pressed message box button:", retval)
+	return retval
+
+
+def showwarning(message, title="Warning", additional=None, details=None):
+	return showmb(message, title, additional, details, icon="warning")
+
+def showerror(message, title="Error", additional=None, details=None):
+	return showmb(message, title, additional, details, icon="error")
+
+def showdialog(message, title="Information", additional=None, details=None, min_width=None, icon=None):
+	return showmb(message, title, additional, details, min_width, icon)
+	msg = QtGui.QMessageBox()
+	msg.setIcon( QtGui.QMessageBox.Information )
+	
+	msg.setText(message)
+	msg.setWindowTitle(title)
+	msg.setWindowIcon(app().mainwin.windowIcon())
+	
+	if min_width:
+		msg.setStyleSheet("QLabel{min-width: "+str(min_width)+"px;}")
+		msg.setIcon(QtGui.QMessageBox.NoIcon)
+	
+	if icon:
+		msg.setIconPixmap(QtGui.QPixmap(icon))
+
+	if additional:
+		msg.setInformativeText(str(additional))
+	
+	if details:
+		msg.setDetailedText(details)
+	
+	msg.setStandardButtons( QtGui.QMessageBox.Ok )
+	
+	retval = msg.exec_()
 	return retval
 
 # Aliases:
@@ -127,6 +140,11 @@ def showmessage(*args, **kwargs):
 	return showdialog(*args, **kwargs)
 def showmsg(*args, **kwargs):
 	return showdialog(*args, **kwargs)
+def showwarn(*args, **kwargs):
+	return showwarning(*args, **kwargs)
+def showerr(*args, **kwargs):
+	return showerror(*args, **kwargs)
+
 
 def askyesno(message):
 	#mb = QtGui.QMessageBox
@@ -155,8 +173,8 @@ def qmenu_exec(elem, menu, position):
 def qaction(qttr, menu, text, func):
 	act = QtGui.QAction(qttr.tr(text), menu)
 	act.triggered.connect(func)
-	#newAct->setShortcuts(QKeySequence::New);
-	#newAct->setStatusTip(tr("Create a new file"));
+	#newAct->setShortcuts(QKeySequence::New)
+	#newAct->setStatusTip(tr("Create a new file"))
 	menu.addAction(act)
 	return act
 
@@ -276,8 +294,8 @@ def stretch_table(table, col=None, hidehoriz=False):
 def stretch_tree(tree):
 	header = tree.header()
 	header.setResizeMode(0, QtGui.QHeaderView.ResizeToContents)
-	#_treeWidget->header()->setStretchLastSection(false);
-	#_treeWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	#_treeWidget->header()->setStretchLastSection(false)
+	#_treeWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents)
 	#header.setResizeMode(1, QtGui.QHeaderView.Stretch)
 	#table.verticalHeader().hide()
 
@@ -420,3 +438,10 @@ class StackLinker(QtCore.QObject):
 		self.stack.setCurrentIndex(ind)
 		self._index = self.stack.currentIndex()
 		self.highlightButtons()
+
+from logging import Handler
+class ConsoleLogger(Handler):
+	def emit(self, record):
+		msg = record.getMessage()
+		print(msg) # good old stdout
+		app().mainwin.log_record.emit(record)

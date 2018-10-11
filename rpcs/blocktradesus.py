@@ -4,12 +4,15 @@
     documented at https://blocktrades.us/api/v2/explorer/
 
 """
+import logging
+log = logging.getLogger(__name__)
+
 import requests
 import json
 
 API_ENDPOINT = "https://api.blocktrades.us/v2/"
 
-class BlockTradesUS_Exception(BaseException):
+class BlockTradesUS_Exception(Exception):
 	pass
 
 class BlockTradesUS(object):
@@ -17,6 +20,7 @@ class BlockTradesUS(object):
 	def __init__(self, endpoint=None, origin=None, proxyUrl='socks5h://localhost:9150'):
 		self.endpoint = endpoint or API_ENDPOINT
 		self.origin = origin or None
+		self.verify = True # SSL certificate checks
 		self.proxies = {
 			'http': proxyUrl,
 			'https': proxyUrl,
@@ -33,11 +37,12 @@ class BlockTradesUS(object):
 		return "/".join([ self.endpoint.strip('/') ] + _parts)
 
 	def get_request(self, urlp, params={ }):
-		#print("HTTP GET", self._make_url(urlp) )
+		log.debug("HTTP GET %s", self._make_url(urlp) )
 		response = requests.get(
 			self._make_url(urlp),
 			proxies = self.proxies,
 			headers = self.headers,
+			verify = self.verify,
 			params = params
 		)
 		#print(response.text)
@@ -48,11 +53,12 @@ class BlockTradesUS(object):
 		return response
 
 	def post_request(self, urlp, data={ }):
-		#print("HTTP POST", self._make_url(urlp) )
+		log.debug("HTTP POST %s", self._make_url(urlp) )
 		response = requests.post(
 			self._make_url(urlp),
 			proxies = self.proxies,
 			headers = self.headers,
+			verify = self.verify,
 			json = data
 		)
 		#print(response.text)
@@ -161,7 +167,7 @@ class BlockTradesUS(object):
 		"""
 
 	def estimate_input_amount(self, outputAmount, inputCoinType, outputCoinType):
-		return self.get_request(
+		r = self.get_request(
 			['estimate-input-amount'],
 			{
 				'outputAmount': outputAmount,
@@ -169,6 +175,14 @@ class BlockTradesUS(object):
 				'outputCoinType': outputCoinType.lower()
 			}
 		)
+		# Hack -- openledger can return "[]" instead of useful data
+		if isinstance(r, list) and len(r) == 0:
+			return {
+				"inputAmount": str(outputAmount),
+				"inputCoinType": inputCoinType.lower(),
+				"outputAmount": str(outputAmount), # 1:1
+				"outputCoinType": outputCoinType.lower(),
+			}
 		""" Response example:
 		{
 			'inputAmount': '0.00003241',
@@ -179,7 +193,7 @@ class BlockTradesUS(object):
 		"""
 
 	def estimate_output_amount(self, inputAmount, inputCoinType, outputCoinType):
-		return self.get_request(
+		r = self.get_request(
 			[ 'estimate-output-amount' ],
 			{
 				'inputAmount': inputAmount,
@@ -187,6 +201,14 @@ class BlockTradesUS(object):
 				'outputCoinType': outputCoinType.lower()
 			}
 		)
+		# Hack -- openledger can return "[]" instead of useful data
+		if isinstance(r, list) and len(r) == 0:
+			return {
+				"inputAmount": str(inputAmount),
+				"inputCoinType": inputCoinType.lower(),
+				"outputAmount": str(inputAmount), # 1:1
+				"outputCoinType": outputCoinType.lower(),
+			}
 		""" Response example:
 		{	'inputAmount': '1.00000000',
 			'inputCoinType': 'btc',
@@ -270,7 +292,7 @@ class BlockTradesUS(object):
 		if outputMemo:
 			arguments['outputMemo'] = outputMemo
 		
-		return self.post_request(['simple-api', 'initiate-trade'], arguments) 
+		return self.post_request(['simple-api', 'initiate-trade'], arguments)
 		""" Response example:
 		{
 			'inputAddress': "16vEbxHJKJ7JKm87m9aQMpoisdf7JK78zY",
