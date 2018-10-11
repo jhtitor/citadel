@@ -375,6 +375,9 @@ class DashboardTab(QtWidgets.QWidget):
 		fc = self.ui.transferFeeAsset
 		fc.clear()
 		
+		uc = self.ui.upgradeFeeAsset
+		uc.clear()
+		
 		j = -1
 		icon = qicon(":/icons/images/token.png")
 		for o in balances:
@@ -389,6 +392,7 @@ class DashboardTab(QtWidgets.QWidget):
 			table.setItem(j, 1, QtGui.QTableWidgetItem(str(o.symbol)))
 			
 			fc.addItem(o.symbol)
+			uc.addItem(o.symbol)
 			#if self.single_user_mode:
 			#	self.add_asset_name(o.symbol)
 		
