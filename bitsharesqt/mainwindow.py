@@ -165,6 +165,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.connector = RemoteFetch()
 		self.background_update.connect(self.on_connector_update)
 		self._connecting = False
+		self._user_intent = 0
 		
 		qmenu(self.ui.accountsList, self.show_account_submenu)
 		
@@ -1016,29 +1017,21 @@ class MainWindow(QtGui.QMainWindow,
 	def perhaps_autoconnect(self, ignore_state=False):
 		if not(self.need_autoconnect(ignore_state)):
 			return False
-		self.connect_to_node()
+		self.connect_to_node(auto=True)
 		return True
 	
-	def _connect(self, ping_callback=None):
-		config =  self.iso.bts.config
-		nodeUrl = config.get('node', None)
-		
-		proxyUrl = self.iso.get_proxy_config()
-		
-		if not nodeUrl:
-			showerror("No public node selected")
-			self.open_settings()
-			return
-		
+	def _connect(self, nodeUrl, proxyUrl, request_handler=None):
 		nodeUrl = str(nodeUrl)
 		
 		self._connecting = True
-		#self.background_update.emit(0, "connecting", None)
-		#print("node url:", nodeUrl)
-		self.iso.connect(nodeUrl, proxy=proxyUrl, num_retries=3, ping_callback=self._connect_event)
+		self.iso.connect(nodeUrl, proxy=proxyUrl, num_retries=3, request_handler=request_handler)
 	
-	def _connect_event(self, rpc, desc, error=None):
-		self.background_update.emit(0, desc, (rpc, error))
+	def _connect_event(self, uid, ps, data):
+	#	if type(data) is int:
+	#		return
+	#	ws, desc, error = data
+	#	self.background_update.emit(0, desc, (ws, error))
+		self.refreshUi_wallet()
 	
 	def on_connector_update(self, id, tag, data_error):
 		if id != 0:
@@ -1062,13 +1055,26 @@ class MainWindow(QtGui.QMainWindow,
 			self._connecting = False
 		self.refreshUi_wallet()
 	
-	def connect_to_node(self):
+	def connect_to_node(self, auto=True):
 		self._connecting = True
+		self._user_intent = int(bool(not auto))
+		config  = self.iso.bts.config
+		nodeUrl = config.get('node', None)
+		proxyUrl = self.iso.get_proxy_config()
+		
+		if not nodeUrl:
+			showerror("No public node selected")
+			self.open_network_settings()
+			return
+		
+		#self.abort_everything(disconnect=True)
 		#self._connect()
 		self.connector.fetch(self._connect,
-			#ready_callback=self.connection_established,
+			nodeUrl, proxyUrl,
+			ready_callback=self.connection_established,
 			error_callback=self.connection_failed,
-			ping_callback=self.refreshUi_wallet,
+		#	ping_callback=self.refreshUi_wallet,
+			ping_callback=self._connect_event,
 			description="Connecting")
 		log.info("* Connecting...")
 	
@@ -1094,12 +1100,14 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def connection_failed(self, uid, error):
 		self._connecting = False
-		log.info("* Connection failed")
+		log.info("* Connection failed %s", str(error))
 		self.iso.offline = True
 		self.refreshUi_wallet()
 		self.abort_everything(disconnect=False, wait=True)
-		if not(self.perhaps_autoconnect(ignore_state=True)):
+		if self._user_intent:
+			self._user_intent -= 1
 			showerror("Connection failed", additional=error)
+		self.perhaps_autoconnect(ignore_state=True)
 	
 	def connection_lost(self, uid):
 		self._connecting = False
@@ -1112,15 +1120,19 @@ class MainWindow(QtGui.QMainWindow,
 	def disconnect_from_node(self):
 		log.info("* Disconnecting...")
 		self._connecting = False
-		self.refreshUi_wallet()
-		self.iso.disconnect()
-		self.abort_everything(disconnect=False)
+		#self.refreshUi_wallet()
+		#self.iso.disconnect()
+		self.abort_everything(disconnect=True)
 		self.refreshUi_wallet()
 	
 	def abort_everything(self, disconnect=True, wait=True):
 		app = QtGui.QApplication.instance()
-		log.debug("1. Emit abort everything")
+		log.debug("1. emit abort_everything")
 		app.abort_everything.emit()
+		#
+		if disconnect or wait:
+			log.debug("( cancel threads )")
+			Request.cancel_all()
 		#
 		if self.iso and disconnect:
 			log.debug("2. disconnect")

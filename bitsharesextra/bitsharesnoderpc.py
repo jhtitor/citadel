@@ -9,7 +9,7 @@ import time
 import urllib
 import queue
 from itertools import cycle
-from grapheneapi.graphenewsrpc import GrapheneWebsocketRPC
+from grapheneapi.websocket import Websocket
 from bitsharesbase.chains import known_chains
 from bitsharesapi import exceptions
 import logging
@@ -94,15 +94,6 @@ class BitSharesNodeRPC(object):
         self.needed = False
         self.connecting = False
         self.connected = False
-        try:
-            if self.ws:
-                self.ws.close()
-        except:
-            pass
-        self.ws = None
-        self.connecting = False
-        self.connected = False
-        self.initialized = False
 
     def __forever(self):
         done_ev = "connected"
@@ -122,6 +113,8 @@ class BitSharesNodeRPC(object):
                 time.sleep(0.1)
                 try:
                     self.wsconnect()
+                    if not self.needed:
+                        break
                     tm = self.ws.sock.gettimeout()
                     log.debug("now login")
                     self.login(self.user, self.password, api_id=1, plan_b=True)
@@ -133,9 +126,7 @@ class BitSharesNodeRPC(object):
                     self.initialized = True
 
                 except Exception as error:
-                    print(error)
-                    self._ping_callback(self, fail_ev, error)
-                    fail_ev = "lost"
+                    #log.error(str(error))#, type(error))
                     self.handshake = False
                     if not(self.keep_connecting):
                         self.report(fail_ev, error)
@@ -160,8 +151,8 @@ class BitSharesNodeRPC(object):
             except queue.Empty:
                 pass
             except Exception as error:
-                import traceback
-                traceback.print_exc()
+                #import traceback
+                #traceback.print_exc()
                 self.connected = False
                 self.report("disconnected", error)
                 continue
@@ -218,7 +209,9 @@ class BitSharesNodeRPC(object):
                 pass
             self.ws = None
 
-        self._ping_callback(self, "done")
+        self.needed = False
+        self.connected = False
+        self.report("done")
 
     def flush_notes(self):
         notes = [ ]
@@ -349,24 +342,24 @@ class BitSharesNodeRPC(object):
 
         cnt = 1
         preid = None
+        error = None
         while True:
             if self.initialized and not(self.connected) and not(self.connecting):
                 raise TimedOut() #exceptions.NumRetriesReached
             #print("RPC-exec waiting for", call_id, payload['params'][1], payload['params'][2], "[", sleeptime, "]")
-            if (sleeptime <= 0) or not(self.needed):
-                raise TimedOut()
 
             try:
                 error = self.errors.get(block=False)
-                if error:
-                    raise error
             except KeyboardInterrupt:
                 raise
             except:
                 pass
 
-            #if self.connected and preid and self._preid != preid:
-            #    raise NumRetriesReached()
+            if (sleeptime <= 0) or not(self.needed):
+                self.connecting = False
+                if error:
+                    raise error
+                raise TimedOut()
 
             with self.replylock:
                 ret = self.replies.pop(call_id, None)
@@ -398,10 +391,10 @@ class BitSharesNodeRPC(object):
         self.connecting = True
         self.connected = False
         cnt = 0
-        while True:
+        while self.connecting:
             cnt += 1
             self.url = next(self.urls)
-            log.debug("Trying to connect to node %s" % self.url)
+            log.debug("Trying to connect to node %s", self.url)
             sslopt_ca_certs = None
 
             if self.url.startswith("wss://"):
@@ -420,19 +413,24 @@ class BitSharesNodeRPC(object):
                 self.connecting = False
                 raise
             except Exception as error:
-                self.errors.put( error )
                 if (self.num_retries >= 0 and cnt > self.num_retries):
                     self.connecting = False
-                    raise error#exceptions.NumRetriesReached()
+                    raise error #exceptions.NumRetriesReached()
+                else:
+                    self.errors.put( error )
 
-                sleeptime = (cnt - 1) * 2 if cnt < 10 else 10
-                if sleeptime:
+
+                sleeptime = min((cnt-1) * 2, 10)#*3
+                if sleeptime or True:
                     log.warning(
                         "Could not connect to node: %s (%d/%d) \n %s "
                         % (self.url, cnt, self.num_retries, str(error)) +
                         "Retrying in %d seconds" % sleeptime
                     )
                     time.sleep(sleeptime)
+
+        if not self.connecting:
+            self.ws.close()
 
         #self.connected = True
         self.connecting = False
