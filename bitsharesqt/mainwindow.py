@@ -876,7 +876,8 @@ class MainWindow(QtGui.QMainWindow,
 		qaction(self, menu, "Show Account", self.activate_account)
 		qaction(self, menu, "Hide Account", self.deactivate_account)
 		qaction(self, menu, "Remove Account...", self._remove_account)
-		#qaction(self, menu, "Export Private Keys...", self._export_account_keys)
+		menu.addSeparator()
+		qaction(self, menu, "Export Private Keys...", self._export_account_keys)
 		qaction(self, menu, "Show Private Keys", self._show_account_keys)
 		qaction(self, menu, "Sweep Private Keys...", self._sweep_account_keys)
 		qmenu_exec(self.sender(), menu, position)
@@ -926,7 +927,37 @@ class MainWindow(QtGui.QMainWindow,
 		self.hide_accounts()
 	
 	def _export_account_keys(self):
-		pass
+		box = self.ui.accountsList
+		if not box.currentIndex().isValid():
+			return
+		account_name = box.currentItem().text()
+		
+		path, _ = QtGui.QFileDialog.getSaveFileName(self, 'Export Private Keys', account_name + "_keys.json", "key dump (*.json)")
+		if not path:
+			return False
+		
+		try:
+			with self.iso.unlockedWallet(
+				reason='Export Private Keys for ' + account_name
+			) as w:
+				pubs = self.iso.getLocalAccountKeys(account_name)
+				priv = self.iso.getPrivateKeyForPublicKeys(pubs)
+		except WalletLocked:
+			return
+		except Exception as exc:
+			showexc(exc)
+			return
+		
+		array = [ ]
+		for i in range(0, len(pubs)):
+			array.append( [ pubs[i], priv[i] ] )
+		
+		import json
+		data = json.dumps(array)
+		with open(path, "w") as f:
+			f.write(data)
+		
+		return True
 	
 	def _show_account_keys(self):
 		box = self.ui.accountsList #sender()
