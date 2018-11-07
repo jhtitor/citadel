@@ -28,8 +28,8 @@ class BitSharesNodeRPC(object):
         self.user = user
         self.password = password
 
-        if "ping_callback" in kwargs:
-            self._ping_callback = kwargs.pop("ping_callback", None)
+        self._rh = kwargs.pop("request_handler", None)
+
         self._preid = 0
 
         self.rate_limit = kwargs.pop("rate_limit", 0.005)
@@ -82,8 +82,10 @@ class BitSharesNodeRPC(object):
         self._subscription_id += 1
         return self._subscription_id
 
-    def _ping_callback(self, obj, note, error=None):
-        pass
+    def report(self, note, error=None):
+        if not self._rh:
+            return
+        self._rh.ping(0, (self, note, error))
 
     def disconnect(self):
         self.close()
@@ -115,7 +117,7 @@ class BitSharesNodeRPC(object):
                     except:
                         pass
                     self.ws = None
-                self._ping_callback(self, doin_ev)
+                self.report(doin_ev)
                 doin_ev = "reconnecting"
                 time.sleep(0.1)
                 try:
@@ -136,11 +138,13 @@ class BitSharesNodeRPC(object):
                     fail_ev = "lost"
                     self.handshake = False
                     if not(self.keep_connecting):
+                        self.report(fail_ev, error)
+                        fail_ev = "lost"
                         break
                     continue
                 log.debug("now done")
                 self.connected = True
-                self._ping_callback(self, done_ev)
+                self.report(done_ev)
                 done_ev = "reconnected"
                 self._preid += 1
                 continue
@@ -159,7 +163,7 @@ class BitSharesNodeRPC(object):
                 import traceback
                 traceback.print_exc()
                 self.connected = False
-                self._ping_callback(self, "disconnected", error)
+                self.report("disconnected", error)
                 continue
 
             if not(self.needed):
@@ -177,12 +181,12 @@ class BitSharesNodeRPC(object):
                     continue
                 except Exception as error:
                     self.connected = False
-                    self._ping_callback(self, "disconnected", error)
+                    self.report("disconnected", error)
                     continue
             # yes ^ v - same code
             except Exception as error:
                 self.connected = False
-                self._ping_callback(self, "disconnected", error)
+                self.report("disconnected", error)
                 continue
 
             #log.debug("REPLY: %s", reply)

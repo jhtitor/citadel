@@ -285,6 +285,11 @@ class VotingWindow(QtWidgets.QDialog):
 		if r:
 			self.accept()
 	
+	def close(self):
+		self.updaterWS.cancel()
+		self.updaterCM.cancel()
+		self.updaterWR.cancel()
+
 	def resync(self):
 		self.updaterWS.fetch(
 			self.mergeWitness_before, self.iso, True,
@@ -307,9 +312,9 @@ class VotingWindow(QtWidgets.QDialog):
 			ping_callback=self.ping_callback,
 			description="Updating workers")
 
-	def mergeWitness_before(self, iso, passive):
+	def mergeWitness_before(self, iso, passive, request_handler=None):
 		
-		witnesses = iso.getWitnesses(passive, lazy=False)
+		witnesses = iso.getWitnesses(passive, lazy=False, request_handler=request_handler)
 		for w in witnesses:
 			w._account = w.account
 		
@@ -351,9 +356,9 @@ class VotingWindow(QtWidgets.QDialog):
 	def mergeWitness_abort(self, request_id, error):
 		print("Failed to get witnesses:", str(error), type(error))
 
-	def mergeCommittee_before(self, iso, passive):
+	def mergeCommittee_before(self, iso, passive, request_handler=None):
 		
-		members = iso.getCommittee(passive, lazy=False)
+		members = iso.getCommittee(passive, lazy=False, request_handler=request_handler)
 		for m in members:
 			m._account = m.account
 		
@@ -392,9 +397,9 @@ class VotingWindow(QtWidgets.QDialog):
 	def mergeCommittee_abort(self, request_id, error):
 		print("Failed to get committee:", str(error), type(error))
 
-	def mergeWorkers_before(self, iso, passive):
+	def mergeWorkers_before(self, iso, passive, request_handler=None):
 		
-		workers = iso.getWorkers(passive, lazy=False)
+		workers = iso.getWorkers(passive, lazy=False, request_handler=request_handler)
 		for w in workers:
 			w._account = w.account
 		
@@ -461,7 +466,7 @@ class VotingWindow(QtWidgets.QDialog):
 		from .work import Request
 		bgtop = Request.top()
 		for task in bgtop:
-			(cancelled, desc, c) = task
+			(cancelled, desc, c, p) = task
 			if cancelled or not(desc):
 				continue
 			if c in ['mergeWitness_before',

@@ -88,6 +88,16 @@ class Request(QtCore.QRunnable):
         # release all of the finished tasks
         Request.FINISHED = []
 
+        self.grabber = None
+
+    def updateStatus(self, uid, ping_type, ping_data):
+        self.status = ping_type
+
+    def ping(self, ping_type, ping_data):
+        if not self.grabber:
+            return
+        self.grabber.Ping.emit(self.uid, ping_type, ping_data)
+
     def run(self):
         """
         Method automatically called by Qt when the runnable is ready to run.
@@ -106,17 +116,20 @@ class Request(QtCore.QRunnable):
         # signal and slot behavior it needs to live in the thread that
         # we're running in, creating the object from within this thread
         # is an easy way to do that.
-        grabber = Requester()
+        self.grabber = grabber = Requester()
         grabber.Loaded.connect(self.dataReady, Qt.QueuedConnection)
         if self.dataError is not None:
             grabber.Error.connect(self.dataError, Qt.QueuedConnection)
         if self.dataPing is not None:
             grabber.Ping.connect(self.dataPing, Qt.QueuedConnection)
+        grabber.Ping.connect(self.updateStatus)
 
         try:
             grabber.Ping.emit(self.uid, Request.PT_STARTED, 0)
-            if has_kwarg(self.method, "ping_callback"):
-                result = self.method(*self.args, ping_callback=grabber.Ping)
+            if has_kwarg(self.method, "request_handler"):
+                result = self.method(*self.args, request_handler=self)
+            elif has_kwarg(self.method, "ping_callback"):
+                result = self.method(*self.args, ping_callback=self.ping)
             else:
                 result = self.method(*self.args)
 
@@ -145,12 +158,14 @@ class Request(QtCore.QRunnable):
         #self.cleanup()
 
     def cleanup(self, grabber=None):
+        self.grabber = None
         # remove references to any object or method for proper ref counting
         self.method = None
         self.args = None
         self.uid = None
         self.dataReady = None
         self.dataError = None
+        self.dataPing = None
         self.description = None
 
         if grabber is not None:
@@ -182,6 +197,11 @@ class Request(QtCore.QRunnable):
         Request.wait_join(timeout)
 
     @staticmethod
+    def cancel_all():
+        for inst in Request.INSTANCES:
+            inst.cancelled = True
+
+    @staticmethod
     def wait_join(timeout=10):
         while len(Request.INSTANCES) > 0:
             print("Waiting for", Request.top())
@@ -195,7 +215,7 @@ class Request(QtCore.QRunnable):
     def top():
         r = [ ]
         for inst in Request.INSTANCES:
-            r.append( (inst.cancelled, inst.description, inst.method.__name__ if inst.method else "") )
+            r.append( (inst.cancelled, inst.description, inst.method.__name__ if inst.method else "", inst.status) )
         return r
 
 class Requester(QtCore.QObject):

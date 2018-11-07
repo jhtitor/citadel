@@ -281,6 +281,7 @@ class DashboardTab(QtWidgets.QWidget):
 				isolator=self.iso
 			)
 			r = w.exec_()
+			w.close()
 		except Exception as error:
 			showexc(error)
 			return False

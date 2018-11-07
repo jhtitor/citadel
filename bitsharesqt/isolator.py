@@ -48,6 +48,8 @@ class TimeOut(Exception):
 class WalletLocked(Exception):
 	pass
 
+from .netloc import Cancelled
+
 class BitsharesIsolator(object):
 	enabled = False
 	@classmethod
@@ -838,7 +840,8 @@ class BitsharesIsolator(object):
 		return self.WalletGate( self.bts.wallet, reason )
 	
 	
-	def download_assets(self):
+	def download_assets(self, request_handler=None):
+		rh = request_handler
 		store = self.store.assetStorage
 		rpc = self.bts.rpc
 		
@@ -847,6 +850,8 @@ class BitsharesIsolator(object):
 		
 		done = False
 		while not done:
+			if rh and rh.cancelled:
+				raise Cancelled()
 			if self.offline:
 				raise ResourceUnavailableOffline("Asset batch")
 			batch = rpc.list_assets(lower_bound_symbol, limit)
@@ -916,11 +921,19 @@ class BitsharesIsolator(object):
 			self.fave_markets.remove(tag)
 		self.fave_markets.add(retag)
 	
-	def download_topmarkets(self):
+	def download_topmarkets(self, request_handler=None):
+		rh = request_handler
 		rpc = self.bts.rpc
+
+		total = 25
+		cnt = 0
+
 		mrs = rpc.get_top_markets(25)
 		markets = [ ]
 		for mr in mrs:
+			cnt += 1
+			if rh and rh.cancelled:
+				raise Cancelled()
 			name = mr['base']+":"+mr['quote']
 			ticker = { "percent_change": 0., "latest": 0. }
 			ticker = rpc.get_ticker(mr['base'], mr['quote'])
@@ -930,12 +943,14 @@ class BitsharesIsolator(object):
 				"quote_volume": mr['quote_volume']
 				 }
 			markets.append( (name, ticker, vol) )
+			prog = int(cnt / total * 100)
+			rh.ping(prog, None)
 #		ticker = rpc.get_ticker(a, b)
 		return markets
 
-	def download_markets(self, names):
+	def download_markets(self, names, request_handler=None):
 		if names is None:
-			return self.download_topmarkets()
+			return self.download_topmarkets(request_handler=request_handler)
 			names = self._marketMatrix()
 		rpc = self.bts.rpc
 		markets = [ ]
@@ -962,11 +977,12 @@ class BitsharesIsolator(object):
 			timeout -= 1
 			time.sleep(1)
 	
-	def getWitnesses(self, only_active=False, lazy=False):
+	def getWitnesses(self, only_active=False, lazy=False, request_handler=None):
 		from bitshares.witness import Witnesses
 		return Witnesses(blockchain_instance=self.bts, lazy=lazy)
 	
-	def getCommittee(self, only_active=False, lazy=False):
+	def getCommittee(self, only_active=False, lazy=False, request_handler=None):
+		rh = request_handler
 		from bitshares.committee import Committee
 		rpc = self.bts.rpc
 		last_name = ""
@@ -974,6 +990,8 @@ class BitsharesIsolator(object):
 		while True:
 			accs = rpc.lookup_committee_member_accounts(last_name, 100)
 			for name, identifier in accs:
+				if rh and rh.cancelled:
+					raise Cancelled()
 				member = Committee(identifier, lazy=True, blockchain_instance=self.bts)
 				member.refresh()
 				whole.append(member)
@@ -982,7 +1000,7 @@ class BitsharesIsolator(object):
 				break
 		return whole
 	
-	def getWorkers(self, only_active=False, lazy=False):
+	def getWorkers(self, only_active=False, lazy=False, request_handler=None):
 		from bitshares.worker import Workers
 		return Workers(blockchain_instance=self.bts, lazy=lazy)
 	

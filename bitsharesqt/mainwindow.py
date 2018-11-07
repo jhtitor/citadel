@@ -1619,7 +1619,7 @@ class MainWindow(QtGui.QMainWindow,
 		for task in bgtop:
 			j += 1
 			
-			(cancelled, desc, name) = task
+			(cancelled, desc, name, status) = task
 			#print(("C" if cancelled else " ") +
 			#	("%24s" % name) + " " + desc)
 			
@@ -1723,7 +1723,7 @@ class MainWindow(QtGui.QMainWindow,
 			from .work import Request
 			bgtop = Request.top()
 			for task in bgtop:
-				(cancelled, desc, c) = task
+				(cancelled, desc, c, s) = task
 				if cancelled or not(desc):
 					continue
 				self.ui.statusText.setText("" + desc)

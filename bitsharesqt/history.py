@@ -341,12 +341,14 @@ class HistoryTab(QtWidgets.QWidget):
 			description="Synchronizing history"
 		)
 	
-	def mergeHistory_before(self, iso, account):
+	def mergeHistory_before(self, iso, account, request_handler=None):
 		self.refreshing = True
 		
 		#iso._wait_online(timeout=3) # will raise exception
 		#if not(iso.is_connected()):
 		#	raise Exception
+		
+		rh = request_handler
 		
 		# subscribe
 		rpc = iso.bts.rpc
@@ -366,11 +368,16 @@ class HistoryTab(QtWidgets.QWidget):
 		history = list(account.history())
 		
 		# load full tx from net + generate description
+		total = len(history)
 		t = 0
 		for h in history:
+			if rh and rh.cancelled:
+				break
 			if (h['id'] == last_op_index):
 				break
 			t += 1
+			if rh:
+				rh.ping(int(t / total * 100), None)
 			#print("Get full tx for",
 			#	int(h['block_num']), int(h['trx_in_block']),
 			#	int(h['op_in_trx']), int(h["virtual_op"]))
