@@ -1714,7 +1714,7 @@ class MainWindow(QtGui.QMainWindow,
 			if self._connecting or (self.iso.bts.rpc and self.iso.bts.rpc.connecting):
 				self.ui.statusText.setText("Connecting...")
 				self.ui.statusNetwork.setToolTip("Connecting...")
-				self.ui.statusNetwork.setIcon(qicon(":/icons/images/old/yellow.png"))
+				self.ui.statusNetwork.setIcon(qicon(":/icons/images/yellow.png"))
 				connected = False
 			elif connected:
 				self.ui.statusText.setText("")
