@@ -34,20 +34,16 @@
     <file>../images/swap.png</file>
     <file>../images/limit_order.png</file>
     <file>../images/key.png</file>
-    <file>../images/old/yellow.png</file>
     <file>../images/tick.png</file>
     <file>../images/wait.png</file>
     <file>../images/crossout.png</file>
     <file>../images/coin.png</file>
     <file>../images/market.png</file>
-    <file>../images/old/wallet_empty.png</file>
-    <file>../images/old/wallet.png</file>
+    <file>../images/yellow.png</file>
     <file>../images/unlock.png</file>
     <file>../images/lock.png</file>
-    <file>../images/old/proxy32.png</file>
     <file>../images/red.png</file>
     <file>../images/green.png</file>
     <file>../images/onion.png</file>
-    <file>../images/old/onion.png</file>
   </qresource>
 </RCC>
