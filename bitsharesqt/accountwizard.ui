@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>574</width>
-    <height>360</height>
+    <width>540</width>
+    <height>334</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -15,6 +15,18 @@
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>540</width>
+    <height>334</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>540</width>
+    <height>334</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Account Wizard</string>
@@ -40,7 +52,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="basicPage">
      <widget class="QGroupBox" name="groupBox">
@@ -48,7 +60,7 @@
        <rect>
         <x>10</x>
         <y>0</y>
-        <width>551</width>
+        <width>521</width>
         <height>261</height>
        </rect>
       </property>
@@ -64,6 +76,10 @@
          <property name="text">
           <string>Create new account (brain key)</string>
          </property>
+         <property name="icon">
+          <iconset resource="res.qrc">
+           <normaloff>:/icons/images/brain.png</normaloff>:/icons/images/brain.png</iconset>
+         </property>
          <property name="checked">
           <bool>true</bool>
          </property>
@@ -73,6 +89,10 @@
         <widget class="QRadioButton" name="rNewPass">
          <property name="text">
           <string>Create new web-wallet account (password)</string>
+         </property>
+         <property name="icon">
+          <iconset resource="res.qrc">
+           <normaloff>:/icons/images/password.png</normaloff>:/icons/images/password.png</iconset>
          </property>
         </widget>
        </item>
@@ -88,6 +108,10 @@
          <property name="text">
           <string>Import existing account (brain key)</string>
          </property>
+         <property name="icon">
+          <iconset resource="res.qrc">
+           <normaloff>:/icons/images/brain.png</normaloff>:/icons/images/brain.png</iconset>
+         </property>
         </widget>
        </item>
        <item>
@@ -95,12 +119,20 @@
          <property name="text">
           <string>Import existing web-wallet account (password)</string>
          </property>
+         <property name="icon">
+          <iconset resource="res.qrc">
+           <normaloff>:/icons/images/password.png</normaloff>:/icons/images/password.png</iconset>
+         </property>
         </widget>
        </item>
        <item>
         <widget class="QRadioButton" name="rOldKeys">
          <property name="text">
           <string>Import existing account (private keys)</string>
+         </property>
+         <property name="icon">
+          <iconset resource="res.qrc">
+           <normaloff>:/icons/images/key.png</normaloff>:/icons/images/key.png</iconset>
          </property>
         </widget>
        </item>
@@ -113,7 +145,7 @@
        <rect>
         <x>10</x>
         <y>0</y>
-        <width>551</width>
+        <width>511</width>
         <height>161</height>
        </rect>
       </property>
@@ -160,7 +192,7 @@
       <x>10</x>
       <y>10</y>
       <width>521</width>
-      <height>161</height>
+      <height>181</height>
      </rect>
     </property>
     <layout class="QFormLayout" name="formLayout">
@@ -183,17 +215,17 @@
      <item row="0" column="1">
       <widget class="QLineEdit" name="inventAccount"/>
      </item>
-     <item row="1" column="1">
-      <widget class="QLineEdit" name="inventPassword">
-       <property name="readOnly">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
      <item row="1" column="0">
       <widget class="QLabel" name="label_6">
        <property name="text">
         <string>Password</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLineEdit" name="inventPassword">
+       <property name="readOnly">
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -219,23 +251,23 @@
      </item>
     </layout>
    </widget>
-   <widget class="QLabel" name="label_16">
+   <widget class="QLabel" name="imageWebkeys">
     <property name="geometry">
      <rect>
-      <x>-50</x>
-      <y>70</y>
-      <width>193</width>
-      <height>256</height>
+      <x>-70</x>
+      <y>100</y>
+      <width>241</width>
+      <height>251</height>
      </rect>
     </property>
     <property name="text">
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap resource="res.qrc">:/images/images/old/padlock.png</pixmap>
+     <pixmap resource="res.qrc">:/images/images/web_keychain.png</pixmap>
     </property>
    </widget>
-   <zorder>label_16</zorder>
+   <zorder>imageWebkeys</zorder>
    <zorder>formLayoutWidget</zorder>
   </widget>
   <widget class="QWizardPage" name="passwordPage2">
@@ -245,7 +277,7 @@
       <x>10</x>
       <y>10</y>
       <width>511</width>
-      <height>231</height>
+      <height>111</height>
      </rect>
     </property>
     <layout class="QFormLayout" name="formLayout_2">
@@ -287,12 +319,12 @@
      </item>
     </layout>
    </widget>
-   <widget class="QLabel" name="label_15">
+   <widget class="QLabel" name="imageWebkeys2">
     <property name="geometry">
      <rect>
-      <x>-10</x>
+      <x>-50</x>
       <y>80</y>
-      <width>193</width>
+      <width>221</width>
       <height>256</height>
      </rect>
     </property>
@@ -300,34 +332,34 @@
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap resource="res.qrc">:/images/images/old/padlock.png</pixmap>
+     <pixmap resource="res.qrc">:/images/images/web_keychain.png</pixmap>
     </property>
    </widget>
-   <zorder>label_15</zorder>
+   <zorder>imageWebkeys2</zorder>
    <zorder>formLayoutWidget_2</zorder>
   </widget>
   <widget class="QWizardPage" name="brainPage1">
-   <widget class="QLabel" name="label">
+   <widget class="QLabel" name="imageBrainkeys">
     <property name="geometry">
      <rect>
-      <x>380</x>
-      <y>-60</y>
-      <width>211</width>
-      <height>261</height>
+      <x>280</x>
+      <y>0</y>
+      <width>251</width>
+      <height>131</height>
      </rect>
     </property>
     <property name="text">
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap resource="res.qrc">:/images/images/old/images.png</pixmap>
+     <pixmap resource="res.qrc">:/images/images/brainkey.png</pixmap>
     </property>
    </widget>
    <widget class="QPlainTextEdit" name="brainkeyView">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>80</y>
+      <y>110</y>
       <width>521</width>
       <height>161</height>
      </rect>
@@ -352,13 +384,16 @@
      <bool>true</bool>
     </property>
    </widget>
+   <zorder>brainkeyView</zorder>
+   <zorder>label_3</zorder>
+   <zorder>imageBrainkeys</zorder>
   </widget>
   <widget class="QWizardPage" name="brainPage2">
    <widget class="QBrainKeyEdit" name="brainkeyEdit">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>80</y>
+      <y>110</y>
       <width>521</width>
       <height>161</height>
      </rect>
@@ -367,20 +402,20 @@
      <set>Qt::ImhLatinOnly|Qt::ImhMultiLine|Qt::ImhUppercaseOnly</set>
     </property>
    </widget>
-   <widget class="QLabel" name="label_2">
+   <widget class="QLabel" name="imageBrainkeys2">
     <property name="geometry">
      <rect>
-      <x>380</x>
-      <y>-60</y>
-      <width>211</width>
-      <height>261</height>
+      <x>280</x>
+      <y>0</y>
+      <width>251</width>
+      <height>131</height>
      </rect>
     </property>
     <property name="text">
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap resource="res.qrc">:/images/images/old/images.png</pixmap>
+     <pixmap resource="res.qrc">:/images/images/brainkey.png</pixmap>
     </property>
    </widget>
    <widget class="QLabel" name="label_4">
@@ -399,9 +434,9 @@
      <bool>true</bool>
     </property>
    </widget>
-   <zorder>label_2</zorder>
    <zorder>brainkeyEdit</zorder>
    <zorder>label_4</zorder>
+   <zorder>imageBrainkeys2</zorder>
   </widget>
   <widget class="QWizardPage" name="registerPage">
    <widget class="QWidget" name="layoutWidget">
@@ -409,8 +444,8 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>511</width>
-      <height>291</height>
+      <width>521</width>
+      <height>281</height>
      </rect>
     </property>
     <layout class="QFormLayout" name="formLayout_4">
@@ -429,50 +464,55 @@
      <item row="1" column="1">
       <widget class="QComboBox" name="registrarBox"/>
      </item>
-     <item row="2" column="0">
+     <item row="3" column="0">
       <widget class="QLabel" name="label_12">
        <property name="text">
         <string>Account Name</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
+     <item row="3" column="1">
       <widget class="QLineEdit" name="accountName"/>
      </item>
-     <item row="3" column="0">
+     <item row="4" column="0">
       <widget class="QLabel" name="label_27">
        <property name="text">
         <string>Owner Key</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
-      <widget class="QLineEdit" name="pubkeyOwner"/>
+     <item row="4" column="1">
+      <widget class="QLineEdit" name="pubkeyOwner">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
-     <item row="4" column="0">
+     <item row="5" column="0">
       <widget class="QLabel" name="label_17">
        <property name="text">
         <string>Active Key</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="1">
-      <widget class="QLineEdit" name="pubkeyActive"/>
+     <item row="5" column="1">
+      <widget class="QLineEdit" name="pubkeyActive">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
-     <item row="5" column="0">
+     <item row="6" column="0">
       <widget class="QLabel" name="label_20">
        <property name="text">
         <string>Memo Key</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
-      <widget class="QLineEdit" name="pubkeyMemo"/>
-     </item>
      <item row="6" column="1">
-      <widget class="QLabel" name="faucetComment">
-       <property name="text">
-        <string>...</string>
+      <widget class="QLineEdit" name="pubkeyMemo">
+       <property name="readOnly">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -493,6 +533,13 @@
        </property>
       </widget>
      </item>
+     <item row="2" column="1">
+      <widget class="QLabel" name="faucetComment">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
   </widget>
@@ -502,7 +549,7 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>561</width>
+      <width>521</width>
       <height>201</height>
      </rect>
     </property>
@@ -525,6 +572,7 @@
        <property name="font">
         <font>
          <family>Monospace</family>
+         <pointsize>8</pointsize>
         </font>
        </property>
        <property name="plainText">

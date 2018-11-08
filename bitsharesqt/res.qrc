@@ -2,8 +2,8 @@
   <qresource prefix="images">
     <file>../images/logo.png</file>
     <file>../images/bitshares_logo.png</file>
-    <file>../images/old/padlock.png</file>
-    <file>../images/old/images.png</file>
+    <file>../images/brainkey.png</file>
+    <file>../images/web_keychain.png</file>
   </qresource>
   <qresource prefix="op">
     <file>../images/op/blind_transfer.png</file>
@@ -23,14 +23,17 @@
   <qresource prefix="icons">
     <file>../images/wallet.png</file>
     <file>../images/folder_open.png</file>
+    <file>../images/password.png</file>
     <file>../images/account.png</file>
     <file>../images/account_suit.png</file>
     <file>../images/unsigned.png</file>
     <file>../images/signed.png</file>
     <file>../images/memo.png</file>
+    <file>../images/brain.png</file>
     <file>../images/token.png</file>
     <file>../images/swap.png</file>
     <file>../images/limit_order.png</file>
+    <file>../images/key.png</file>
     <file>../images/old/yellow.png</file>
     <file>../images/tick.png</file>
     <file>../images/wait.png</file>
