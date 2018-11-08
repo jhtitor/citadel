@@ -1354,8 +1354,9 @@ class MainWindow(QtGui.QMainWindow,
 		self.uiExpireSliderLink(tab.ui.sellExpireEdit, tab.ui.sellExpireSlider)
 		self.late_inject_account_box(tab.ui.buyAccount)
 		self.late_inject_account_box(tab.ui.sellAccount)
-		set_combo(tab.ui.buyAccount, self.activeAccount["name"])
-		set_combo(tab.ui.sellAccount, self.activeAccount["name"])
+		if self.activeAccount:
+			set_combo(tab.ui.buyAccount, self.activeAccount["name"])
+			set_combo(tab.ui.sellAccount, self.activeAccount["name"])
 		self.late_inject_asset_box(tab.ui.buyFeeAsset)
 		self.late_inject_asset_box(tab.ui.sellFeeAsset)
 		self.late_inject_advanced_controls(

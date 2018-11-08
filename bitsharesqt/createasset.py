@@ -84,7 +84,8 @@ class AssetWindow(QtWidgets.QDialog):
 		
 		self.ui.totalEdit.setMaximum(GRAPHENE_MAX_SHARE_SUPPLY)
 		
-		set_combo(self.ui.accountBox, self.activeAccount["name"])
+		if self.activeAccount:
+			set_combo(self.ui.accountBox, self.activeAccount["name"])
 		
 		if self.asset:
 			self.setupAsset(self.asset)
