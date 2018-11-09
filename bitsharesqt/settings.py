@@ -4,11 +4,15 @@ from uidef.settings import Ui_SettingsWindow
 from .remotes import RemotesEditor
 
 from .utils import *
-
 import json
 
 import logging
 log = logging.getLogger(__name__)
+
+def upstr(val):
+	return str(val).upper()
+def downstr(val):
+	return str(val).lower()
 
 class SettingsWindow(QtWidgets.QDialog):
 
@@ -27,32 +31,34 @@ class SettingsWindow(QtWidgets.QDialog):
 		self.ui.editgatewaysButton.clicked.connect(self.edit_gateways)
 		self.ui.editfaucetsButton.clicked.connect(self.edit_faucets)
 		
-		#fb = self.ui.faucetBox
-		#for name, url, refurl, factory in KnownFaucets:
-		#	fb.addItem(name, (url, refurl))
+		self.linked_elements = [ ]
 		
 		self._link_settingc(self.ui.sellFOK, 'order-fillorkill')
 		self._link_setting(self.ui.sellExpireEdit, 'order-expiration', deltainterval, 3600*24, deltasec)
 		app().mainwin.uiExpireSliderLink(self.ui.sellExpireEdit, self.ui.sellExpireSlider, emit=True)
 		self._link_settingc(self.ui.advancedmodeEnabled, 'ui_advancedmode')
 		
-		config = self.iso.bts.config
+		self._update_static()
 		
-		self.ui.nodeLabel.setText(str(config["node"]))
-		#self.ui.autoConnect.setChecked(True if config["proxy_enabled"] else False)
-		
-		self._link_settingc(self.ui.autoConnect, 'autoconnect')
+		self._link_settingc(self.ui.autoConnect, 'autoconnect', bool, True)
+		self._link_settingc(self.ui.cycleNodes, 'cyclenodes', bool, True)
 		
 		self._link_settingc(self.ui.proxyEnabled, 'proxy_enabled')
-		self._link_settingb(self.ui.proxyType, 'proxy_type')
+		self._link_settingc(self.ui.proxyAuth, 'proxy_auth_enabled')
+		self._link_setting(self.ui.proxyType, 'proxy_type', cons=upstr, decons=downstr)
 		self._link_setting(self.ui.proxyHost, 'proxy_host')
-		self._link_setting(self.ui.proxyPort, 'proxy_port', int, "")
+		self._link_setting(self.ui.proxyPort, 'proxy_port', int, "", int)
+		self._link_setting(self.ui.proxyUser, 'proxy_user')
+		self._link_setting(self.ui.proxyPass, 'proxy_pass')
 		
+		self.ui.proxyAuth.stateChanged.connect(self.display_proxy_settings)
+		self.display_proxy_settings(self.ui.proxyAuth.checkState())
 		
 		self.ui.serverList.itemSelectionChanged.connect(self.select_node)
 		stretch_table(self.ui.serverList)
 		self.relist_nodes()
-
+		
+	
 	def setPage(self, page):
 		self.ui.tabWidget.setCurrentIndex(page)
 
@@ -63,53 +69,66 @@ class SettingsWindow(QtWidgets.QDialog):
 			config = self.iso.bts.config
 			config.wipe()
 			self.iso.bootstrap_wallet(wipe=True)
-
-	def _link_settingc(self, elem, name, cons=bool, defl=False):
+			self._update_linked()
+			self._update_static()
+			self.relist_nodes()
+	
+	def display_proxy_settings(self, cs):
+		ws = [ self.ui.proxyUser, self.ui.proxyPass,
+			self.ui.proxyUserLabel, self.ui.proxyPassLabel ]
+		for widget in ws:
+			widget.setVisible(bool(cs))
+	
+	def _update_static(self):
 		config = self.iso.bts.config
-		if config[name]:
-			val = cons(config[name])
-		else:
-			val = defl
-		elem.setChecked(val)
-		elem._pyUserData = name, bool
+		self.ui.nodeLabel.setText(str(config["node"]))
+	
+	def _update_elem(self, elem):
+		config = self.iso.bts.config
+		name, cons, decons, defl = elem._pyUserData
+		val = defl
+		try:
+			if not(config[name] is None):
+				val = cons(config[name])
+		except:
+			log.exception("Could not read config %s" % name)
+		#print("Updating elem", elem.objectName(), "setting value", val)
+		set_value(elem, val)
+
+	def _update_linked(self):
+		for elem in self.linked_elements:
+			self._update_elem(elem)
+
+	def _link_settingc(self, elem, name, cons=bool, defl=False, decons=int):
+		elem._pyUserData = name, cons, decons, defl
+		self._update_elem(elem)
 		elem.stateChanged.connect(self._setting_updatec)
-
-	def _link_settingb(self, elem, name, cons=str, defl=""):
-		config = self.iso.bts.config
-		val = cons(config[name])
-		if not config[name]:
-			val = defl
-		set_combo(elem, val.upper())
-		elem._pyUserData = name, str
-		elem.currentIndexChanged.connect(self._setting_updateb)
+		self.linked_elements.append(elem)
 
 	def _link_setting(self, elem, name, cons=str, defl="", decons=str):
-		config = self.iso.bts.config
-		if not config[name]:
-			val = defl
-		else:
-			val = cons(config[name])
-		elem.setText(str(val))
-		elem._pyUserData = name, decons
-		elem.editingFinished.connect(self._setting_update)
+		elem._pyUserData = name, cons, decons, defl
+		self._update_elem(elem)
+		any_change(elem, self._setting_update, progress=False)
+		self.linked_elements.append(elem)
 
 	def _setting_update(self):
 		config = self.iso.bts.config
 		elem = self.sender()
-		name, decons = elem._pyUserData
-		config[name] = decons( elem.text() )
+		name, cons, decons, defl = elem._pyUserData
+		try:
+			val = decons( any_value(elem) )
+			config[name] = val
+			#print("Wrote config", name, val, type(val))
+		except:
+			log.exception("Could not write config %s" % name)
 
 	def _setting_updatec(self, cs):
 		config = self.iso.bts.config
 		elem = self.sender()
-		name, decons = elem._pyUserData
-		config[name] = bool(cs)
-
-	def _setting_updateb(self, cs):
-		config = self.iso.bts.config
-		elem = self.sender()
-		name, decons = elem._pyUserData
-		config[name] = elem.currentText().lower()
+		name, cons, decons, defl = elem._pyUserData
+		val = decons( cs )
+		config[name] = val
+		#print("Wrote config", name, val, type(val))
 
 	def select_node(self):
 		config = self.iso.bts.config
@@ -120,9 +139,6 @@ class SettingsWindow(QtWidgets.QDialog):
 			return
 		
 		item = items[1]
-		id = item.data(99)
-		
-		#entry = store.getEntry(id)
 		
 		config["node"] = str(item.text())
 		self.ui.nodeLabel.setText(str(config["node"]))
@@ -154,18 +170,8 @@ class SettingsWindow(QtWidgets.QDialog):
 			j = table.rowCount()
 			table.insertRow(j)
 			
-			table.setItem(j, 0, QtGui.QTableWidgetItem( str(remote['label']) ))
-			table.setItem(j, 1, QtGui.QTableWidgetItem( str(remote['url']) ))
-
-			c1 = table.item(j, 0)
-			if not c1:
-				print("Inserted nothing?!", j, remote)
-				continue
-			c2 = table.item(j, 1)
-			c1.setData(99, remote['id'])
-			c2.setData(99, remote['id'])
-			
+			set_col(table, j, 0, str(remote['label']), data=remote['id'])
+			set_col(table, j, 1, str(remote['url']), data=remote['id'] )
+		
 		table.blockSignals(False)
-
-	#def generate_password(self):
-	#	pass
+	
