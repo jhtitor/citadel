@@ -1044,7 +1044,31 @@ class MainWindow(QtGui.QMainWindow,
 		if self.iso.is_connecting():
 			return False
 		return True
-
+	
+	def perhaps_cyclenode(self):
+		config = self.iso.bts.config
+		nodeUrl = config.get('node', None)
+		doit = config.get('cyclenodes', False)
+		if not doit:
+			return
+		store = self.iso.store.remotesStorage
+		remotes = store.getRemotes(store.RTYPE_BTS_NODE)
+		if len(remotes) == 0:
+			return False
+		use_next = False
+		for remote in remotes:
+			if use_next:
+				nodeUrl = remote["url"]
+				use_next = False
+				break
+			if remote["url"] == str(nodeUrl):
+				use_next = True
+		if use_next or not nodeUrl:
+			nodeUrl = remotes[0]["url"] # first one!
+		config['node'] = nodeUrl
+		log.info("Cycled to node %s", nodeUrl)
+		return nodeUrl
+	
 	def perhaps_autoconnect(self, ignore_state=False):
 		if not(self.need_autoconnect(ignore_state)):
 			return False
@@ -1138,6 +1162,7 @@ class MainWindow(QtGui.QMainWindow,
 		if self._user_intent:
 			self._user_intent -= 1
 			showerror("Connection failed", additional=error)
+		self.perhaps_cyclenode()
 		self.perhaps_autoconnect(ignore_state=True)
 	
 	def connection_lost(self, uid):
