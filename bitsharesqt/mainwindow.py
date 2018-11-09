@@ -810,7 +810,7 @@ class MainWindow(QtGui.QMainWindow,
 		win = SettingsWindow(isolator=self.iso)
 		win.setPage(page)
 		win.exec_()
-		self.setupUIfromConfig()
+		self.updateUIfromConfig()
 		self.perhaps_autoconnect()
 		self.gateways_populated = False
 		return True
@@ -1559,6 +1559,11 @@ class MainWindow(QtGui.QMainWindow,
 		
 		self.ui.sellexpireEdit.setText(deltainterval(expire_seconds))
 		self.ui.fokCheckbox.setChecked(expire_fok)
+	
+	def updateUIfromConfig(self):
+		config =  self.iso.bts.config
+		adv_mode = bool( config.get('ui_advancedmode', False) )
+		self.setAdvancedMode(adv_mode)
 	
 	def _try_open_wallet(self, path, echo=False):
 		try:
