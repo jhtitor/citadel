@@ -819,7 +819,11 @@ class MainWindow(QtGui.QMainWindow,
 		return self.open_settings(1)
 	
 	def open_memowindow(self):
-		win = MemoWindow(isolator=self.iso)
+		win = MemoWindow(isolator=self.iso,
+			accounts=self.account_names,
+			contacts=self.contact_names,
+			activeAccount=self.activeAccount,
+		)
 		win.exec_()
 	
 	def open_createassetwindow(self):

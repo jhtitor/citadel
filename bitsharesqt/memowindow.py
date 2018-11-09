@@ -1,6 +1,8 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.memowindow import Ui_MemoWindow
 
+from .isolator import WalletLocked
+
 from .utils import *
 import json
 
@@ -11,6 +13,9 @@ class MemoWindow(QtWidgets.QDialog):
 
 	def __init__(self, *args, **kwargs):
 		self.iso = kwargs.pop('isolator', None)
+		accounts = kwargs.pop('accounts', [ ])
+		contacts = kwargs.pop('contacts', [ ])
+		activeAccount = kwargs.pop('activeAccount', None)
 		super(MemoWindow, self).__init__(*args, **kwargs)
 		self.ui = ui = Ui_MemoWindow()
 		
@@ -21,6 +26,12 @@ class MemoWindow(QtWidgets.QDialog):
 		self.ui.readButton.clicked.connect(self.read_memo)
 		self.ui.signButton.clicked.connect(self.sign_memo)
 		
+		for acc in accounts:
+			self.ui.accountFrom.addItem(acc)
+		for acc in contacts:
+			self.ui.accountTo.addItem(acc)
+		if activeAccount:
+			set_combo(self.ui.accountFrom, activeAccount["name"])
 	
 	@classmethod
 	def QReadMemo(self, iso, memo_data, source_account=None, target_account=None):
@@ -51,30 +62,48 @@ class MemoWindow(QtWidgets.QDialog):
 		self.ui.readButton.setEnabled(False)
 	
 	def sign_memo(self):
-		source_name = self.ui.accountFrom.currentText()
-		target_name = self.ui.accountTo.currentText()
+		source_name = self.ui.accountFrom.currentText().strip()
+		target_name = self.ui.accountTo.currentText().strip()
 		clear_message = self.ui.clearMessage.toPlainText()
 		
-		with self.iso.unlockedWallet() as w:
-			cipher = self.iso.getMemo(
-				source_name,
-				target_name,
-				text=clear_message,
-				data=None)
+		if not len(source_name):
+			self.ui.accountFrom.setFocus()
+			return
+		if not len(target_name):
+			self.ui.accountTo.setFocus()
+			return
+		
+		try:
+			with self.iso.unlockedWallet() as w:
+				cipher = self.iso.getMemo(
+					source_name,
+					target_name,
+					text=clear_message,
+					data=None)
 			
-			self.ui.cipherMessage.setPlainText(json.dumps(cipher))
+				self.ui.cipherMessage.setPlainText(json.dumps(cipher))
+		except WalletLocked:
+			pass
+		except Exception as e:
+			showexc(e)
 	
 	def read_memo(self):
 		cipher_message = self.ui.cipherMessage.toPlainText()
-		data = json.loads(cipher_message)
-		#showerror(str(data))
 		
-		with self.iso.unlockedWallet() as w:
-			clear = self.iso.getMemo(None, None, data=data)
+		if not len(cipher_message):
+			self.ui.cipherMessage.setFocus()
+			return
 		
-			set_combo(self.ui.accountFrom, clear["from"])
-			set_combo(self.ui.accountTo, clear["to"])
-			self.ui.clearMessage.setPlainText(clear["message"])
+		try:
+			data = json.loads(cipher_message)
+			with self.iso.unlockedWallet() as w:
+				clear = self.iso.getMemo(None, None, data=data)
+		
+				set_combo(self.ui.accountFrom, clear["from"])
+				set_combo(self.ui.accountTo, clear["to"])
+				self.ui.clearMessage.setPlainText(clear["message"])
+		except WalletLocked:
+			pass
+		except Exception as e:
+			showexc(e)
 	
-	#def generate_password(self):
-	#	pass
