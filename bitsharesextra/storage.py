@@ -522,6 +522,10 @@ class Remotes(DataDir):
     __tablename__ = 'remotes'
     __columns__ = [ 'id', 'label', 'url', 'refurl', 'rtype', 'ctype' ]
 
+    RTYPE_BTS_NODE = 0
+    RTYPE_BTS_GATEWAY = 1
+    RTYPE_BTS_FAUCET = 2
+
     def __init__(self, *args, **kwargs):
         super(Remotes, self).__init__(*args, **kwargs)
 

@@ -144,17 +144,17 @@ class SettingsWindow(QtWidgets.QDialog):
 		self.ui.nodeLabel.setText(str(config["node"]))
 
 	def edit_nodes(self):
-		win = RemotesEditor(rtype=0, isolator=self.iso)
+		win = RemotesEditor(rtype=RemotesEditor.RTYPE_BTS_NODE, isolator=self.iso)
 		win.exec_()
 		self.relist_nodes()
 
 	def edit_gateways(self):
-		win = RemotesEditor(rtype=1, isolator=self.iso)
-		win.exec_() 
+		win = RemotesEditor(rtype=RemotesEditor.RTYPE_BTS_GATEWAY, isolator=self.iso)
+		win.exec_()
 
 	def edit_faucets(self):
-		win = RemotesEditor(rtype=2, isolator=self.iso)
-		win.exec_() 
+		win = RemotesEditor(rtype=RemotesEditor.RTYPE_BTS_FAUCET, isolator=self.iso)
+		win.exec_()
 
 
 	def relist_nodes(self):
@@ -164,7 +164,7 @@ class SettingsWindow(QtWidgets.QDialog):
 		table.blockSignals(True)
 		table.setRowCount(0)
 		
-		remotes = store.getRemotes(0)
+		remotes = store.getRemotes(store.RTYPE_BTS_NODE)
 		for remote in remotes:
 			
 			j = table.rowCount()
