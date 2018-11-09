@@ -231,17 +231,15 @@ class BitSharesNodeRPC(object):
     def prepare_proxy(self, options):
         proxy_url = options.pop("proxy", None)
         if proxy_url:
-            url = urllib.parse.urlparse(proxy_url)
-            self.proxy_host = url.hostname
-            self.proxy_port = url.port
-            self.proxy_type = url.scheme.lower()
-            self.proxy_user = url.username
-            self.proxy_pass = url.password
-            self.proxy_rdns = True
-            if not(url.scheme.endswith('h')):
-                self.proxy_rdns = False
-            #else:
-            #    self.proxy_type = self.proxy_type[0:len(self.proxy_type)-1]
+            try:
+                url = urllib.parse.urlparse(proxy_url)
+                self.proxy_host = url.hostname
+                self.proxy_port = url.port
+                self.proxy_type = url.scheme.lower()
+                self.proxy_user = url.username
+                self.proxy_pass = url.password
+            except Exception as e:
+                raise ValueError("Can not parse proxy URL %s -- %s" % (proxy_url, str(e)))
         else:
             # Defaults (tweakable)
             self.proxy_host = options.pop("proxy_host", None)
@@ -249,7 +247,13 @@ class BitSharesNodeRPC(object):
             self.proxy_type = options.pop("proxy_type", 'http')
             self.proxy_user = options.pop("proxy_user", None)
             self.proxy_pass = options.pop("proxy_pass", None)
+        self.proxy_rdns = True
+        if not(self.proxy_type.endswith('h')):
             self.proxy_rdns = False
+        #else:
+        #    self.proxy_type = self.proxy_type[0:len(self.proxy_type)-1]
+        if self.proxy_port is None:
+            self.proxy_port = 80
 
         log.info("Using proxy %s:%d %s" % (self.proxy_host, self.proxy_port, self.proxy_type))
 
@@ -406,7 +410,11 @@ class BitSharesNodeRPC(object):
                 self.ws.connect(self.url,
                     http_proxy_host = self.proxy_host,
                     http_proxy_port = self.proxy_port,
-                    proxy_type = self.proxy_type
+                    proxy_type = self.proxy_type,
+                    http_proxy_auth = (
+                        (self.proxy_user, self.proxy_pass)
+                        if (self.proxy_user or self.proxy_pass) else None
+                    )
                 )
                 break
             except KeyboardInterrupt:

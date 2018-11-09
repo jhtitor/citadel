@@ -146,13 +146,21 @@ class BitsharesIsolator(object):
 	def get_proxy_config(self):
 		config = self.bts.config
 		proxyOn = config.get('proxy_enabled', False)
+		if not proxyOn:
+			return None
+		proxyAuth = config.get('proxy_auth_enabled', False)
 		proxyHost = config.get('proxy_host', None)
 		proxyPort = config.get('proxy_port', 9150)
 		proxyType = config.get('proxy_type', "socks5")
+		proxyUser = config.get('proxy_user', None)
+		proxyPass = config.get('proxy_pass', None)
+		authUrl = ""
+		if proxyAuth and (proxyUser or proxyPass):
+			authUrl = ((proxyUser if proxyUser else "") + ":" +
+				    (proxyPass if proxyPass else "")) + "@"
 		proxyUrl = None
-		if proxyOn and proxyHost:
-			proxyUrl = str(proxyType) + "://" + str(proxyHost) + ":" + str(proxyPort)
-		
+		if proxyHost:
+			proxyUrl = str(proxyType) + "://" + authUrl + str(proxyHost) + ":" + str(proxyPort)
 		return proxyUrl
 	
 	def setWallet(self, wallet):
