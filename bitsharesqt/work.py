@@ -232,32 +232,25 @@ class Requester(QtCore.QObject):
     """
     Emitted during request lifetime
 
-    :param str uid: an id to identify this request
+    :param int uid: an id to identify this request
     :param int ping_type:
-    :param int ping_data:
+    :param object ping_data:
     """
 
     Error = QtCore.pyqtSignal(int, object)
     """
     Emitted if the fetch fails for any reason
 
-    :param str uid: an id to identify this request
-    :param str error: the error message
+    :param int uid: an id to identify this request
+    :param object error: exception object
     """
 
     Loaded = QtCore.pyqtSignal(int, object)
     """
     Emitted whenever data comes back successfully
 
-    :param str uid: an id to identify this request
-    :param list data: the json list returned from the GET
-    """
-
-    NetworkConnectionError = QtCore.pyqtSignal(str)
-    """
-    Emitted when the task fails due to a network connection error
-
-    :param str message: network connection error message
+    :param int uid: an id to identify this request
+    :param object data: result of the work
     """
 
     def __init__(self, parent=None):
