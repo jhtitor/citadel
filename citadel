@@ -42,13 +42,23 @@ class BitsharesQT(QtGui.QApplication):
 		self.install_logger()
 
 	def reopen(self, newpath):
+		self.mainwin.hide()
+		new_mainwin = MainWindow()
+		try:
+			new_mainwin.open_wallet(newpath)
+			new_mainwin.show()
+		except Exception as e:
+			showexc(e)
+			del new_mainwin
+			self.mainwin.show()
+			return
+		
 		self.mainwin.close_wallet()
 		self.mainwin.abort_everything()
 		self.mainwin.hide()
 		del self.mainwin
-		self.mainwin = mainwin = MainWindow()
-		mainwin.show()
-		mainwin.open_wallet(newpath)
+		
+		self.mainwin = new_mainwin
 	
 	def install_logger(app):
 		for n in [__name__, 'bitsharesqt', 'bitsharesextra', 'rpcs']:
