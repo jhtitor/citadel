@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 from pprint import pprint
 import json
 
+from .isolator import ResourceUnavailableOffline, WalletLocked
 #from bitshares import BitShares
 #from bitshares.account import Account
 #from bitsharesbase.account import PasswordKey
@@ -21,7 +22,9 @@ class WindowWithBlind(QtCore.QObject):
 		self._activeBlindAccount = None
 		
 		self.ui.viewBlindCreate.clicked.connect(self.ba_page_create)
+		self.ui.viewBlindContact.clicked.connect(self.ba_page_contact)
 		self.ui.blindAccountCancel.clicked.connect(self.ba_page_balances)
+		self.ui.blindContactCancel.clicked.connect(self.ba_page_balances)
 		
 		self.ui.viewBlindFrom.clicked.connect(self.bt_page_from)
 		self.ui.viewBlindTo.clicked.connect(self.bt_page_to)
@@ -45,6 +48,7 @@ class WindowWithBlind(QtCore.QObject):
 		
 		self.ui.blindAccountGenerate.clicked.connect(self.generate_blind_brainkey)
 		self.ui.blindAccountCreate.clicked.connect(self.create_blind_account)
+		self.ui.blindContactCreate.clicked.connect(self.create_blind_contact)
 		
 		self.ui.blindFromTransfer.clicked.connect(self.transfer_to_blind)
 		self.ui.blindToTransfer.clicked.connect(self.transfer_from_blind)
@@ -77,6 +81,7 @@ class WindowWithBlind(QtCore.QObject):
 		symCombos = accCombo._linkedAssets
 		blind_label_or_key = accCombo.currentText().strip()
 		if not len(blind_label_or_key):
+			accCombo.setFocus()
 			return
 		
 		account = self._get_blind_account(blind_label_or_key)
@@ -96,6 +101,9 @@ class WindowWithBlind(QtCore.QObject):
 		menu = QtGui.QMenu()
 		qaction(self, menu, "Copy Public Key", self._blacc_copy_pubkey)
 		menu.addSeparator()
+		qaction(self, menu, "Remove", self._blacc_remove)
+		menu.addSeparator()
+		qaction(self, menu, "Show Private Key", self._blacc_show_privkey)
 		qmenu_exec(self.ui.blindAccounts, menu, position)
 	
 	def show_blindbalances_submenu(self, position):
@@ -115,10 +123,48 @@ class WindowWithBlind(QtCore.QObject):
 	
 	def _blacc_copy_pubkey(self):
 		j = table_selrow(self.ui.blindAccounts)
-		if j <= -1:
-			return
+		if j <= -1: return
 		pubkey = self.ui.blindAccounts.item(j, 1).text()
 		qclip(pubkey)
+	
+	def _blacc_remove(self):
+		table = self.ui.blindAccounts
+		j = table_selrow(table)
+		if j <= -1: return
+		label = table.item(j, 0).text()
+		pubkey = table.item(j, 1).text()
+		nkeys = self.iso.store.countPrivateKeys([pubkey])
+		if nkeys > 0:
+			if not(askyesno("Really delete blind account " + label + " ?")):
+				return
+			self.iso.bts.wallet.removePrivateKeyFromPublicKey(pubkey)
+			self.iso.store.blindAccountStorage.update(pubkey, 'keys', 0)
+			table.item(j, 0).setIcon(qicon(":/op/images/op/blind_transfer.png"))
+		else:
+			self.iso.store.blindAccountStorage.delete(pubkey)
+			table.removeRow(j)
+	
+	def _blacc_show_privkey(self):
+		j = table_selrow(self.ui.blindAccounts)
+		if j <= -1: return
+		label =  self.ui.blindAccounts.item(j, 0).text()
+		pubkey = self.ui.blindAccounts.item(j, 1).text()
+		
+		try:
+			with self.iso.unlockedWallet(
+				reason='View Private Keys for ' + label
+			) as w:
+				priv = self.iso.getPrivateKeyForPublicKeys([pubkey])[0]
+		except WalletLocked:
+			return
+		except Exception as exc:
+			showexc(exc)
+			return
+		
+		showdialog("Private key for blind account",
+			additional=label,
+			details=priv, min_width=240)
+
 	
 	def _blbal_transfer(self):
 		j = table_selrow(self.ui.blindBalances)
@@ -177,34 +223,35 @@ class WindowWithBlind(QtCore.QObject):
 	
 	def _blhist_copy_receipt(self):
 		j = table_selrow(self.ui.blindHistory)
-		if j <= -1:
-			return
+		if j <= -1: return
 		balance = self.ui.blindHistory.item(j, 0).data(99)
 		qclip(balance["receipt"])
 	
 	def activate_blind_account(self):
 		table = self.ui.blindAccounts
 		j = table_selrow(table)
-		if j < 0:
-			return
+		if j <= -1: return
 		
 		label = table.item(j, 0).text()
 		public_key = table.item(j, 1).text()
+		nkeys = table_coldata(table, j, 0)
 		
 		value = label if label and len(label) else public_key
 		self._activeBlindAccount = value
 		
 		set_combo(self.ui.blindFromDestination, value)
 		set_combo(self.ui.blindToSource, value)
-		set_combo(self.ui.blindSource, value)
+		if nkeys:
+			set_combo(self.ui.blindSource, value)
+		else:
+			set_combo(self.ui.blindDestination, value)
 		
 		self.refresh_blind_account()
 	
 	def refresh_blind_account(self):
 		table = self.ui.blindAccounts
 		j = table_selrow(table)
-		if j < 0:
-			return
+		if j <= -1: return
 		
 		public_key = table.item(j, 1).text()
 		
@@ -220,7 +267,11 @@ class WindowWithBlind(QtCore.QObject):
 		label = table.item(j, 0).text()
 		public_key = table.item(j, 1).text()
 		
-		store.update(public_key, "label", label )
+		old_label = store.getByPublicKey(public_key)["label"]
+		if old_label == label:
+			return
+		
+		store.update(public_key, "label", label)
 	
 	def edit_blind_history(self, item):
 		store = self.iso.store.blindStorage
@@ -244,6 +295,9 @@ class WindowWithBlind(QtCore.QObject):
 		if len(generated) == 0:
 			self.ui.blindBrainkeyPlain.setFocus()
 			return
+		if len(label) == 0:
+			self.ui.blindLabel.setFocus()
+			return
 		bk = BrainKey(generated)
 		
 		bk.sequence = 0
@@ -254,40 +308,95 @@ class WindowWithBlind(QtCore.QObject):
 		private_wif = str(private_key)
 		public_key = str(private_key.pubkey)
 		
-		self.iso.store.blindAccountStorage.add(
-			public_key,
-			label
-		)
-		self.iso.store.keyStorage.add(
-			private_wif,
-			public_key
-		)
+		try:
+			with self.iso.unlockedWallet(
+				reason='Add new blind account'
+			) as w:
+				self.iso.store.blindAccountStorage.add(
+					public_key,
+					label
+				)
+				self.iso.store.keyStorage.add(
+					private_wif,
+					public_key
+			)
+		except WalletLocked:
+			return
+		except Exception as exc:
+			showexc(exc)
+			return
+		
 		table = self.ui.blindAccounts
 		n = table.rowCount()
 		
-		self._insert_blind_account_row(n, label, public_key)
+		self._insert_blind_account_row(n, label, public_key, 1)
 		
 		self.ui.blindLabel.setText("")
 		self.ui.blindBrainkeyPlain.setPlainText("")
 		self.ba_page_balances()
 	
+	def create_blind_contact(self):
+		label = self.ui.blindContactLabel.text().strip()
+		public_key = self.ui.blindContactPubkey.text().strip()
+		if len(public_key) == 0:
+			self.ui.blindContactPubkey.setFocus()
+			return
+		if len(label) == 0:
+			self.ui.blindContactLabel.setFocus()
+			return
+		
+		from bitsharesbase.account import PublicKey
+		try:
+			test = PublicKey(public_key)
+		except Exception as e:
+			showerror("Not a valid Public Key: " + str(e))
+			return
+		try:
+			self.iso.store.blindAccountStorage.add(
+				public_key,
+				label,
+				keys = 0
+			)
+		except Exception as e:
+			showexc(e)
+			return
+		
+		table = self.ui.blindAccounts
+		n = table.rowCount()
+		
+		self._insert_blind_account_row(n, label, public_key, 0)
+		
+		self.ui.blindContactLabel.setText("")
+		self.ui.blindContactPubkey.setText("")
+		self.ba_page_balances()
+	
+
+
+
+
 	def loadBlindAccounts(self):
 		table = self.ui.blindAccounts
 		accounts = self.iso.store.blindAccountStorage.getAccounts()
+		contacts = self.iso.store.blindAccountStorage.getContacts()
 		
 		j = table.rowCount() - 1
-		for label, public_key in accounts:
+		for a in contacts:
 			j += 1
 			
-			self._insert_blind_account_row(j, label, public_key)
+			self._insert_blind_account_row(j, a["label"], a["pub"], a["keys"])
 	
-	def _insert_blind_account_row(self, j, label, public_key):
+	def _insert_blind_account_row(self, j, label, public_key, keys):
 		table = self.ui.blindAccounts
 		table.blockSignals(True)
 		table.insertRow(j)
 		
-		set_col(table, j, 0, label, editable=True)
-		set_col(table, j, 1, public_key, editable=False)
+		if not keys:
+			icon = qicon(":/op/images/op/blind_transfer.png")
+		else:
+			icon = qicon(":/icons/images/account_suit.png")
+		
+		set_col(table, j, 0, label, editable=True, icon=icon, data=keys)
+		set_col(table, j, 1, public_key, editable=False, data=keys)
 		
 		table.blockSignals(False)
 	
@@ -545,11 +654,17 @@ class WindowWithBlind(QtCore.QObject):
 	def ba_page_balances(self):
 		self.ui.blindStack2.setCurrentIndex(0)
 		self.ui.viewBlindCreate.setVisible(True)
+		self.ui.viewBlindContact.setVisible(True)
 	
 	def ba_page_create(self):
 		self.ui.blindStack2.setCurrentIndex(1)
 		self.ui.viewBlindCreate.setVisible(False)
+		self.ui.viewBlindContact.setVisible(False)
 	
+	def ba_page_contact(self):
+		self.ui.blindStack2.setCurrentIndex(2)
+		self.ui.viewBlindCreate.setVisible(False)
+		self.ui.viewBlindContact.setVisible(False)
 	
 	def bt_page_none(self):
 		self.ui.blindStack.setVisible(False)
