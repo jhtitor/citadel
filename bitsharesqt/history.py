@@ -250,6 +250,8 @@ class HistoryTab(QtWidgets.QWidget):
 			ftx = json.loads(entry["trxfull"])
 			hl = int(entry["op_in_trx"])
 			ftx["id"] = entry["trxid"]
+			if not "operations" in ftx: # Could happen with old history sync code + buggy cancel order
+				ftx["operations"] = [ ]
 			QTransactionBuilder.QViewTransaction(ftx, hl, isolator=self._last_iso)
 			return
 		
@@ -383,11 +385,17 @@ class HistoryTab(QtWidgets.QWidget):
 			try:
 				ftx = iso.bts.rpc.get_transaction(int(h['block_num']), int(h['trx_in_block']))
 			except Exception as error:
+				log.error("Failed to get transaction %d in block %d: %s", int(h['trx_in_block']), int(h['block_num']), str(error))
 				#print(str(error))
 				ftx = { }
 			#print(ftx)
-			h['_fulltx_dict'] = ftx
 			h['_fulltx_obj' ] = Signed_Transaction(**ftx) if ftx else None
+			if not "operations" in ftx and h["op"][0] == 2: # cancel order
+				ftx = {
+					"operations": [ h["op"] ],
+					"operation_results": [ h["result"] ]
+				}
+			h['_fulltx_dict'] = ftx
 			h['_fulltx'] = json.dumps(ftx)
 			
 			h['_memo'] = 0
