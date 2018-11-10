@@ -27,11 +27,16 @@ class VotingWindow(QtWidgets.QDialog):
 		stretch_table(self.ui.committeeTable, 2)
 		stretch_table(self.ui.workersTable, 2)
 		
+		qmenu(self.ui.witnessTable, self.show_vote_submenu)
+		qmenu(self.ui.committeeTable, self.show_vote_submenu)
+		qmenu(self.ui.workersTable, self.show_vote_submenu)
+		
 		self.updaterWS = RemoteFetch()
 		self.updaterCM = RemoteFetch()
 		self.updaterWR = RemoteFetch()
 		self.resync()
 		self.proxy_toggle()
+		self.refreshUi(1) # disable OK/Proxy buttons
 		
 		for account_name in self.accounts:
 			if account_name == self.activeAccount["name"]:
@@ -455,9 +460,9 @@ class VotingWindow(QtWidgets.QDialog):
 		from .work import Request
 		mod = 0
 		if (o == Request.PT_FINISHED) or (o == Request.PT_CANCELLED):
-			mod = 1
+			mod = -1
 		# so we cheat add subtract 1 from busy count
-		self.refreshUi(mod)
+		self.refreshUi(0)#mod)
 	
 	def refreshUi(self, mod=0):
 		text = delim = ""
@@ -477,7 +482,7 @@ class VotingWindow(QtWidgets.QDialog):
 				continue
 			text = text + delim + desc
 			delim = " | "
-		#busy -= mod
+		busy += mod
 		if busy:
 			text = text + delim + " Please wait..."
 		else:
@@ -490,6 +495,43 @@ class VotingWindow(QtWidgets.QDialog):
 		self.ui.accountProxy.setEnabled(not(busy))
 		#if busy:
 		#	self.ui.updateButton.setEnabled(False)
-		#e#lse:
+		#else:
 		#	self.ui.updateButton.setEnabled(True)
 		
+	def _get_table(self):
+		page = self.ui.tabWidget.currentIndex()
+		table = None
+		if page == 1:
+			table = self.ui.witnessTable
+		if page == 2:
+			table = self.ui.committeeTable
+		if page == 3:
+			table = self.ui.workersTable
+		return table
+	
+	def show_vote_submenu(self, position):
+		menu = QtGui.QMenu()
+		qaction(self, menu, "Copy URL", self._copy_url)
+		qaction(self, menu, "Copy Name", self._copy_name)
+		table = self._get_table()
+		qmenu_exec(table, menu, position)
+		
+	
+	def _copy_url(self):
+		table = self._get_table()
+		j = table_selrow(table)
+		if j <= -1: return
+		url = table.item(j, 2).text()
+		if not len(url.strip()):
+			return
+		qclip(url)
+	
+	def _copy_name(self):
+		table = self._get_table()
+		j = table_selrow(table)
+		if j <= -1: return
+		name = table.item(j, 1).text()
+		if not len(name.strip()):
+			return
+		qclip(name)
+	
