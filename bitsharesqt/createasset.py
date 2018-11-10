@@ -2,9 +2,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.createasset import Ui_CreateAsset
 
 from .utils import *
+import json
 import logging
 log = logging.getLogger(__name__)
-import json
 
 from .transactionbuilder import QTransactionBuilder
 from bitsharesbase.asset_permissions import asset_permissions

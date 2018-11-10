@@ -3,7 +3,6 @@ from uidef.mainwindow import Ui_MainWindow
 _translate = QtCore.QCoreApplication.translate
 import uidef.res_rc
 
-from PyQt5.QtWidgets import QTableWidgetItem
 from PyQt5.QtGui import QTextCursor
 
 from .isolator import BitsharesIsolator
@@ -35,6 +34,7 @@ from .isolator import ResourceUnavailableOffline, WalletLocked
 from .netloc import RemoteFetch
 from .work import Request
 from .utils import *
+import json
 import logging
 log = logging.getLogger(__name__)
 
@@ -960,7 +960,6 @@ class MainWindow(QtGui.QMainWindow,
 		for i in range(0, len(pubs)):
 			array.append( [ pubs[i], priv[i] ] )
 		
-		import json
 		data = json.dumps(array)
 		with open(path, "w") as f:
 			f.write(data)
@@ -1707,9 +1706,9 @@ class MainWindow(QtGui.QMainWindow,
 			#	("%24s" % name) + " " + desc)
 			
 			table.insertRow(j)
-			table.setItem(j, 0, QTableWidgetItem( ("cancelled" if cancelled else " ") ))
-			table.setItem(j, 1, QTableWidgetItem( name ))
-			table.setItem(j, 2, QTableWidgetItem( desc ))
+			set_col(table, j, 0, ("cancelled" if cancelled else " ") )
+			set_col(table, j, 1, ( name ))
+			set_col(table, j, 2, ( desc + (" " + str(status) + "%" if status > 1 else "")))
 		#print("")
 	
 	def refreshUi_ping(self):
@@ -1779,7 +1778,7 @@ class MainWindow(QtGui.QMainWindow,
 			proxy_host = self.iso.bts.rpc.proxy_host
 			proxy_port = int(self.iso.bts.rpc.proxy_port)
 			if proxy_host:
-				base_desc = proxy_type.upper() + "proxy"
+				base_desc = proxy_type.upper() + " proxy"
 				if (proxy_type == "socks5h" or proxy_type == "socks5") and\
 					(proxy_host == "localhost" or proxy_host == "127.0.0.1") and\
 					(proxy_port==9150 or proxy_port==9050):

@@ -421,7 +421,7 @@ class BitsharesIsolator(object):
 	def storeAccount(self, account, keys=2):
 		iso = self
 		accountStore = iso.accountStorage
-		jsond =  { }
+		jsond = { }
 		for key, val in account.items():
 			jsond[key] = val
 		
@@ -429,12 +429,13 @@ class BitsharesIsolator(object):
 			jsond.pop("balances")
 		
 		blnc = { }
-		for amount in self.getBalances(account['id'], force_local = True):#.balances:
+		for amount in self.getBalances(account['id'], force_local=True):
 			blnc[str(amount.symbol)] = float(amount)
 		
 		try:
 			accountStore.add(account['name'], account['id'], keys=keys)
 		except ValueError: # already exists
+			#accountStore.update(account['name'], 'keys', keys)
 			pass # it's ok
 		accountStore.update(account['name'], 'graphene_json', jsond)
 		accountStore.update(account['name'], 'balances_json', blnc)
@@ -843,6 +844,7 @@ class BitsharesIsolator(object):
 	def download_assets(self, request_handler=None):
 		rh = request_handler
 		store = self.store.assetStorage
+		save = [ ]
 		rpc = self.bts.rpc
 		
 		lower_bound_symbol = ""
@@ -878,11 +880,13 @@ class BitsharesIsolator(object):
 				batch[j]["dynamic_asset_data"] = reply
 			for asset in batch:
 				self.saveAsset(asset)
+				#save.append(asset)
 			if len(batch) < limit:
 				break
 			last = batch[-1]
 			lower_bound_symbol = last['symbol']
-	
+		return save
+
 	def download_asset(self, symbol):
 		rpc = self.bts.rpc
 		

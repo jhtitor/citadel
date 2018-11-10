@@ -147,8 +147,9 @@ class WindowWithAssets(QtCore.QObject):
 		showexc(error)
 	
 	def download_assets_after(self, uid, args):
-		#(assets, ) = args
-		pass
+		(assets) = args
+		#for asset in assets:
+		#	self.iso.saveAsset(asset) # done in thread
 	
 	def download_asset_after(self, uid, args):
 		(asset) = args
@@ -158,6 +159,7 @@ class WindowWithAssets(QtCore.QObject):
 			else:
 				showerror("Asset not found")
 			return
+		#self.iso.saveAsset(asset) # done in thread
 		current = self.ui.assetFilter.text().upper()
 		if current and current == asset["symbol"]:
 			self.refilter_assets()

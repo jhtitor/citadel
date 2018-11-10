@@ -398,3 +398,4 @@ class DashboardTab(QtWidgets.QWidget):
 			#	self.add_asset_name(o.symbol)
 		
 		table.sortByColumn(1, QtCore.Qt.AscendingOrder)
+	

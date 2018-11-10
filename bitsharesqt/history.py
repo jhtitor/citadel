@@ -271,8 +271,6 @@ class HistoryTab(QtWidgets.QWidget):
 		
 		self._account_name = account.name
 		self._account_id = account.id
-		#table.setRowCount(0)#len(account.history())) #wtf
-		#table.setColumnCount(2)
 		
 		self.place_entries(entries)
 		self.resync()
@@ -405,10 +403,7 @@ class HistoryTab(QtWidgets.QWidget):
 			except bitshares.exceptions.WalletLocked:
 				h['_memo'] = 1
 			except Exception as e:
-				#import traceback
-				#print(h['op'][1], "failed to metch memo-data")
-				#traceback.print_exc()
-				pass
+				log.error("Could not decode memo in op %s: %s", h['id'], str(e))
 			
 			#print("Get description for", h)
 			h['_details'] = iso.historyDescription(h, account)
