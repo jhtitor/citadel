@@ -278,13 +278,13 @@ class OrderTab(QtWidgets.QWidget):
 		
 		table.setRowCount(0)
 		
+		icon = qicon(":/icons/images/limit_order.png")
 		j = -1
 		for order in added:
 			j += 1
 			
 			table.insertRow(j)
-			table.setItem(j, 0, QTableWidgetItem( str(order['id'] )))
-			table.item(j, 0).setIcon(qicon(":/icons/images/limit_order.png"))
+			set_col(table, j, 0, str(order["id"]), icon=icon)
 			set_col(table, j, 1, str(order["quote"]), color=COLOR_GREEN )
 			set_col(table, j, 2, str(order["base"]), color=COLOR_RED )
 			set_col(table, j, 3, str(order["price"]) )
