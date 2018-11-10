@@ -263,6 +263,7 @@ class ExampleObject(QtCore.QObject):
         self.uid = 0
         self.request = None
         self.description = ""
+        self.progress_bar = None # QProgressBar instance
 
     def ready_callback(self, uid, result):
         if uid != self.uid:
@@ -273,6 +274,12 @@ class ExampleObject(QtCore.QObject):
         if uid != self.uid:
             return
         print( "Data error from %s: %s" % (uid, error))
+
+    def ping_callback(self, uid, pt, pc):
+        if uid != self.uid:
+            return
+        if self.progress_bar:
+            self.progress_bar.setValue(pt)
 
     def fetch(self):
         if self.request is not None:
@@ -287,15 +294,19 @@ class ExampleObject(QtCore.QObject):
                              self.ping_callback,
                              self.description)
 
-
-def slow_method(arg1, arg2):
-    print( "Starting slow method")
-    time.sleep(1)
+def slow_method(arg1, arg2, request_handler=None):
+    rh = request_handler # short alias
+    print("Starting slow method")
+    for i in range(0, 100):
+        if rh:
+            rh.ping(i, None)
+        time.sleep(0.01)
     return arg1 + arg2
 
 
 if __name__ == "__main__":
     import sys
+    from PyQt5 import QtWidgets as QtGui
     app = QtGui.QApplication(sys.argv)
 
     obj = ExampleObject()
@@ -304,10 +315,12 @@ if __name__ == "__main__":
     layout = QtGui.QVBoxLayout(dialog)
     button = QtGui.QPushButton("Generate", dialog)
     progress = QtGui.QProgressBar(dialog)
-    progress.setRange(0, 0)
+    progress.setRange(0, 100)
+    progress.setValue(0)
     layout.addWidget(button)
     layout.addWidget(progress)
     button.clicked.connect(obj.fetch)
+    obj.progress_bar = progress
     dialog.show()
 
     app.exec_()

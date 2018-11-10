@@ -95,19 +95,20 @@ class RemoteFetch(QtCore.QObject):
 				self.ping_callback,
 				description or "")
 	
-	def do_fetch(self):
-		
-		self.fetch(slow_method, "arg1","arg2")
-		
 
 
 
 if __name__ == "__main__":
-    def slow_method(arg1, arg2):
-        print( "Starting slow method")
-        time.sleep(3)
+    def slow_method(arg1, arg2, request_handler=None):
+        rh = request_handler # short alias
+        print("Starting slow method")
+        for i in range(0, 100):
+            if rh:
+                rh.ping(i, None)
+            time.sleep(0.01)
         return arg1 + arg2
 
+    from PyQt5 import QtWidgets as QtGui
     import sys
     app = QtGui.QApplication(sys.argv)
 
@@ -117,10 +118,18 @@ if __name__ == "__main__":
     layout = QtGui.QVBoxLayout(dialog)
     button = QtGui.QPushButton("Generate", dialog)
     progress = QtGui.QProgressBar(dialog)
-    progress.setRange(0, 0)
+    progress.setRange(0, 100)
+    progress.setValue(0)
     layout.addWidget(button)
     layout.addWidget(progress)
-    button.clicked.connect(obj.do_fetch)
+
+    def on_click():
+        obj.fetch(slow_method, "arg1","arg2", ping_callback=on_ping)
+
+    def on_ping(uid=None, ct=None, cd=None):
+        progress.setValue(ct)
+
+    button.clicked.connect(on_click)
     dialog.show()
 
     app.exec_()
