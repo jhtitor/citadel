@@ -28,6 +28,9 @@ ui:
 	pyuic5 $(UISRC)/keyswindow.ui -o uidef/keyswindow.py --from-imports
 	pyrcc5 $(UISRC)/res.qrc -o uidef/res_rc.py
 
+sdist:
+	python3 setup.py sdist
+
 app: $(ICNS_FILE)
 	rm -f version.txt
 	pyinstaller -y build.spec

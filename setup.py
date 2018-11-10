@@ -23,6 +23,7 @@ setup(
         "bitsharesqt",
         "grapheneapi",
         "graphenebase",
+        "graphenestorage",
         "websocket",
         "pytimeparse",
         "rpcs",
