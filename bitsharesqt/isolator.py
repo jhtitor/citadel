@@ -87,28 +87,20 @@ class BitsharesIsolator(object):
 		#from bitsharesapi.bitsharesnoderpc import BitSharesNodeRPC
 	
 	def disconnect(self):
-		return self.close()
+		return self.close(force=True)
 		
 	def close(self, force=False):
 		if self.offline and not(force):
 			return True
-		
 		try:
 			if self.bts.rpc:
 				self.bts.rpc.close()
-		except:
-			pass
-		try:
-			self.bts.rpc.ws.close()
 		except:
 			pass
 		self.bts.rpc = None
 		self.offline = True
 		
 	def connect(self, *args, **kwargs):
-		if not self.offline:
-			return True
-		
 		self.close(force=True)
 		
 		#import bitshares
