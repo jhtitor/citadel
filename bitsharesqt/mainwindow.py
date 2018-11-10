@@ -1708,7 +1708,7 @@ class MainWindow(QtGui.QMainWindow,
 			table.insertRow(j)
 			set_col(table, j, 0, ("cancelled" if cancelled else " ") )
 			set_col(table, j, 1, ( name ))
-			set_col(table, j, 2, ( desc + (" " + str(status) + "%" if status > 1 else "")))
+			set_col(table, j, 2, ( desc + (" " + str(status) + "%" if status and status > 1 else "")))
 		#print("")
 	
 	def refreshUi_ping(self):

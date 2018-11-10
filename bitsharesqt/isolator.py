@@ -189,16 +189,16 @@ class BitsharesIsolator(object):
 		#store.updateRawJSON(account_name, json.dumps(blnc))
 		store.update(account_name, 'balances_json', blnc)
 	
-	def injectBalance(self, account_id, asset_symbol, amount):
+	def injectBalance(self, account_id, asset_symbol, amount_int):
 		iso = self
 		store = self.store.accountStorage
 		account = self.getAccount(account_id, force_remote=False)
 		asset = self.getAsset(asset_symbol)
-		value = int(amount) / pow(10, asset["precision"])
+		value = int(amount_int) / pow(10, asset["precision"])
 		acc_blnc = iso.getBalances(account)
 		blnc = { }
 		for o in acc_blnc:
-			blnc[o.symbol] = o.amount
+			blnc[o.symbol] = str(o).split(" ")[0]
 		blnc[asset_symbol] = value
 		#print("Post-inject", blnc)
 		self.storeBalances(account["name"], blnc)
@@ -376,7 +376,7 @@ class BitsharesIsolator(object):
 		
 		return account
 	
-	def getAsset(self, asset_id, cache=True, force_remote=False):
+	def getAsset(self, asset_id, cache=True, force_remote=False, force_local=False):
 		from bitshares.asset import Asset
 		
 		if not(force_remote):
@@ -402,7 +402,7 @@ class BitsharesIsolator(object):
 			self.minicache_precision[stored_asset["symbol"]] = stored_asset["precision"]
 			return forged_asset
 		
-		if self.offline:
+		if self.offline or force_local: # Can't or Won't fetch remote asset
 			raise ResourceUnavailableOffline("Asset %s" % str(asset_id))
 		
 		from bitshares.exceptions import AssetDoesNotExistsException
@@ -430,7 +430,7 @@ class BitsharesIsolator(object):
 		
 		blnc = { }
 		for amount in self.getBalances(account['id'], force_local=True):
-			blnc[str(amount.symbol)] = float(amount)
+			blnc[str(amount.symbol)] = str(amount).split(" ")[0]
 		
 		try:
 			accountStore.add(account['name'], account['id'], keys=keys)
@@ -448,7 +448,43 @@ class BitsharesIsolator(object):
 		else:
 			store.add(asset['id'], asset['symbol'], asset)
 	
-	def getBalance(self, amount, asset_id):
+	class QAmount():
+		def __init__(self, asset, amount, precision=None, delim=","):
+			if type(amount) == int:
+				pass
+			if type(amount) == float and precision is None:
+				amount = str(amount)
+			if type(amount) == str:
+				if precision is None:
+					if "." in amount:
+						precision = len(amount) - amount.rindex(".") - 1
+					else:
+						precision = 0
+				amount = float(amount.replace(",", ""))
+			if precision is None:
+				raise ValueError("precision must be specified")
+			if type(amount) == float:
+				amount = int(amount * (10 ** precision))
+			self.symbol = asset
+			self.amount = amount # int!
+			self.precision = precision
+			self.delim = delim
+		def __float__(self):
+			return self.amount / pow(10, self.precision)
+		def __int__(self):
+			return int(self.amount)
+		def fmt(self, delim=None):
+			if delim is None: delim = self.delim
+			return ("{:"+delim+".{prec}f}").format(
+				float(self),
+				prec=self.precision
+			)
+		def __str__(self):
+			return self.fmt() + " " + self.symbol
+		def __repr__(self):
+			return "<QAmount " + str(self) + ">"
+
+	def getBalance(self, amount, asset_id, force_remote=False, force_local=False):
 		if asset_id.startswith('1.3.'):
 			store = self.assetStorage
 			if asset_id in store.ids_to_symbols:
@@ -458,19 +494,35 @@ class BitsharesIsolator(object):
 		else:
 			sym = asset_id
 		b = None
-		if not(sym in self.minicache_precision):
-			if sym: op = {"amount":amount, "asset": sym}
-			else: op = {"amount":amount, "asset_id": asset_id}
+		# local
+		if not(force_remote):
 			try:
-				b = self.getAmountOP(op)
+				prec = self.minicache_precision.get(sym, None)
+				if not prec or not sym:
+					if not sym: sym = asset_id
+					try:
+						a = self.getAsset(asset_id, force_local=force_local)
+						prec = int(a["precision"])
+						sym = a["symbol"]
+						asset_id = a["id"]
+					except:
+						prec = 0
+						if not sym.startswith("?"):
+							sym = "?" + sym
+				b = self.QAmount(sym, amount, prec, delim="")
+				return b
 			except:
+				if (force_local):
+					raise
 				import traceback
 				traceback.print_exc()
 				pass
-		if b is None:
-			b = lambda: None
-			b.symbol = sym
-			b.amount = amount
+		
+		# remote
+		if sym: op = {"amount":str(amount).replace(",",""), "asset": sym}
+		else: op = {"amount":amount, "asset_id": asset_id}
+		
+		b = self.getAmountOP(op, force_local=force_local)
 		return b
 	
 	def getBalanceOP(self, op_amount):
@@ -478,8 +530,8 @@ class BitsharesIsolator(object):
 			return self.getBalance(float(op_amount['amount']), op_amount['asset'])
 		return self.getBalance(int(op_amount['amount']), op_amount['asset_id'])
 	
-	def getAmount(self, asset_amount, asset_id):
-		asset = self.getAsset(asset_id)
+	def getAmount(self, asset_amount, asset_id, force_local=False):
+		asset = self.getAsset(asset_id, force_local=force_local)
 		
 		#if type(asset_amount) == str:
 		#	asset_amount = float(asset_amount)
@@ -492,12 +544,12 @@ class BitsharesIsolator(object):
 		from bitshares.amount import Amount
 		return Amount(asset_amount, asset, blockchain_instance=self.bts)
 	
-	def getAmountOP(self, op_amount):
+	def getAmountOP(self, op_amount, force_local=False):
 		#from pprint import pprint
 		#pprint(op_amount)
 		if 'asset' in op_amount:
-			return self.getAmount(float(op_amount['amount']), op_amount['asset'])
-		return self.getAmount(int(op_amount['amount']), op_amount['asset_id'])
+			return self.getAmount(float(op_amount['amount']), op_amount['asset'], force_local=force_local)
+		return self.getAmount(int(op_amount['amount']), op_amount['asset_id'], force_local=force_local)
 	
 	def getBalances(self, account_name_or_id, force_local=False, force_remote=False, cache=True):
 		if isinstance(account_name_or_id, str):
@@ -507,7 +559,7 @@ class BitsharesIsolator(object):
 		balances = [ ]
 		if hasattr(account, '_balances') and not(force_remote):
 			for sym, val in account._balances.items():
-				b = self.getBalance(val, sym)
+				b = self.getBalance(val, sym, force_local=force_local)
 				self.fave_coinnames.add(b.symbol)
 				balances.append(b)
 			return balances
@@ -525,7 +577,7 @@ class BitsharesIsolator(object):
 		if cache:
 			blnc = { }
 			for b in balances:
-				blnc[b.symbol] = b.amount
+				blnc[b.symbol] = str(b).split(" ")[0]
 			self.storeBalances(account["name"], blnc)
 		
 		return balances
@@ -632,9 +684,8 @@ class BitsharesIsolator(object):
 		return account_id
 	
 	def softAmountStr(self, asset_amount, asset_id, delim=""):
-		precision = 8
-		if asset_id in self.minicache_precision:
-			precision = self.minicache_precision[asset_id]
+		precision = self.minicache_precision.get(asset_id, 0)
+		return self.QAmount(asset_id, asset_amount, precision, delim).fmt()
 		#if not(type(asset_amount) == int):
 		#	t = str(asset_amount)
 		#	if not("e" in t):

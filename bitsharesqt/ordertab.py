@@ -98,10 +98,7 @@ class OrderTab(QtWidgets.QWidget):
 	
 	def refresh_balances(self, balances):
 		if (len(balances) == 0): # fake balance
-			o = lambda: None
-			o.symbol = "BTS"
-			o.amount = "0.00000"
-			balances = [ o ]
+			balances = [ self._iso.QAmount("BTS", "0.00000") ]
 		
 		elems = [
 			self.ui.sellAssetCombo,

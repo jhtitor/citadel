@@ -361,12 +361,8 @@ class DashboardTab(QtWidgets.QWidget):
 		self.ui.upgradeFeeAsset.setEnabled(up)
 		
 	def refresh_balances(self, balances):
-		
 		if (len(balances) == 0): # fake balance
-			o = lambda: None
-			o.symbol = "BTS"
-			o.amount = "0.00000"
-			balances = [ o ]
+			balances = [ self.iso.QAmount("BTS", "0.00000") ]
 		
 		table = self.ui.balanceTable
 		table.setRowCount(0)
@@ -384,13 +380,10 @@ class DashboardTab(QtWidgets.QWidget):
 		for o in balances:
 			j += 1
 			
-			try:
-				namt = self.iso.softAmountStr(o.amount, o.symbol)
-			except:
-				namt = str(o.amount)
-			table.setItem(j, 0, QtGui.QTableWidgetItem(namt))
-			table.item(j, 0).setIcon( icon )
-			table.setItem(j, 1, QtGui.QTableWidgetItem(str(o.symbol)))
+			amt = str(o).split(" ")[0]
+			
+			set_col(table, j, 0, str(amt), icon=icon)
+			set_col(table, j, 1, str(o.symbol))
 			
 			fc.addItem(o.symbol)
 			uc.addItem(o.symbol)
