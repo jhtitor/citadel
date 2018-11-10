@@ -181,18 +181,6 @@ class VotingWindow(QtWidgets.QDialog):
 		if item.checkState():
 			rel_item.setCheckState(0)
 	
-	def collect_flags(self, elem):
-		d = { }
-		n = elem.count()
-		for i in range(0, n):
-			item = elem.item(i)
-			name = item.data(33)
-			if item.checkState():
-				d[name] = True
-			else:
-				d[name] = False
-		return d
-	
 	def collect_witness_votes(self, votes):
 		table = self.ui.witnessTable
 		cnt = 0
@@ -359,7 +347,7 @@ class VotingWindow(QtWidgets.QDialog):
 		#self.refreshUi()
 	
 	def mergeWitness_abort(self, request_id, error):
-		print("Failed to get witnesses:", str(error), type(error))
+		log.error("Failed to get witnesses: %s", str(error))
 
 	def mergeCommittee_before(self, iso, passive, request_handler=None):
 		
@@ -400,7 +388,7 @@ class VotingWindow(QtWidgets.QDialog):
 		#self.refreshUi()
 	
 	def mergeCommittee_abort(self, request_id, error):
-		print("Failed to get committee:", str(error), type(error))
+		log.error("Failed to get committee: %s", str(error))
 
 	def mergeWorkers_before(self, iso, passive, request_handler=None):
 		
@@ -452,7 +440,7 @@ class VotingWindow(QtWidgets.QDialog):
 		#self.refreshUi()
 	
 	def mergeWorkers_abort(self, request_id, error):
-		print("Failed to get workers:", str(error), type(error))
+		log.error("Failed to get workers: %s", str(error))
 	
 	def ping_callback(self, request_id, o):
 		# refreshUi is going to count active processes
