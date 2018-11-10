@@ -173,9 +173,10 @@ class MarketTab(QtGui.QWidget):
 		expire_fok = form["expireFOK"].isChecked()
 		
 		fee_asset = anyvalvis(form["fee"], None)#.currentText()
+		buffer = app().mainwin.buffering()
 		
 		try:
-			trx = QTransactionBuilder.QSellAsset(
+			v = QTransactionBuilder.VSellAsset(
 				account_from,
 				sell_asset_name,
 				sell_asset_amount,
@@ -185,8 +186,14 @@ class MarketTab(QtGui.QWidget):
 				fill_or_kill=expire_fok,
 				fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+			if buffer:
+				app().mainwin._txAppend(*v)
+			else:
+				QTransactionBuilder._QExec(self.iso, v)
+		except Exception as error:
 			showexc(error)
+			return False
+		return True
 
 	def _set_spin_value(self, elem, value):
 		elem.blockSignals(True)
