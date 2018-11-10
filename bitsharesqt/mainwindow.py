@@ -1888,8 +1888,9 @@ class MainWindow(QtGui.QMainWindow,
 		self.contact_names = set()
 	
 	def add_account_name(self, name):
+		icon = qicon(":/icons/images/account.png")
 		for box in self.account_boxes:
-			box.addItem(name)
+			add_item(box, name, icon=icon)
 		self.account_names.add(name)
 	
 	def remove_account_name(self, name):
@@ -1902,9 +1903,13 @@ class MainWindow(QtGui.QMainWindow,
 				box.takeItem(box.row(item))
 		self.account_names.remove(name)
 	
-	def add_contact_name(self, name):
+	def add_contact_name(self, name, keys=0):
+		if keys:
+			icon = qicon(":/op/images/op/account_update_key.png")
+		else:
+			icon = qicon(":/icons/images/account.png")
 		for box in self.contact_boxes:
-			box.addItem(name)
+			box.addItem(icon, name)
 			set_combo(box, "")
 		self.contact_names.add(name)
 	
@@ -1920,8 +1925,9 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def late_inject_account_box(self, box):
 		box.clear()
+		icon = qicon(":/icons/images/account.png")
 		for name in self.account_names:
-			box.addItem(name)
+			add_item(box, name, icon=icon)
 		self.account_boxes.append(box)
 	
 	def late_inject_contact_box(self, box):

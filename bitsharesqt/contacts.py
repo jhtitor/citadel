@@ -125,7 +125,7 @@ class WindowWithContacts(QtCore.QObject):
 		[ self._insertContactRow(h) for h in entries ]
 	
 	def _insertContactRow(self, acc):
-		self.add_contact_name(acc["name"])
+		self.add_contact_name(acc["name"], acc["keys"])
 		
 		if acc["keys"] > 0:
 			return
@@ -133,9 +133,11 @@ class WindowWithContacts(QtCore.QObject):
 		table = self.ui.contactTable
 		j = table.rowCount()
 		
+		icon = qicon(":/icons/images/account.png")
+		
 		table.blockSignals(True)
 		table.insertRow(j)
-		set_col(table, j, 0, acc["name"], data=acc['id'], editable=False)
+		set_col(table, j, 0, acc["name"], data=acc['id'], editable=False, icon=icon)
 		set_col(table, j, 1, acc["comment"] if acc["comment"] else "", editable=True)
 		table.blockSignals(False)
 		
