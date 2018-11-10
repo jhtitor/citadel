@@ -16,6 +16,7 @@ from .walletwizard import WalletWizard, RecentWallets
 from .memowindow import MemoWindow
 from .createasset import AssetWindow
 from .settings import SettingsWindow
+from .keyswindow import KeysWindow
 from .dashboard import DashboardTab
 from .history import HistoryTab
 from .ordertab import OrderTab
@@ -310,6 +311,9 @@ class MainWindow(QtGui.QMainWindow,
 			qaction(self, menu, "Lock", self.lock_wallet) )
 		self.ui.actionUnlock_wallet_2 = (
 			qaction(self, menu, "Unlock", self.unlock_wallet) )
+		menu.addSeparator()
+		self.ui.actionPrivate_keys_2 = (
+			qaction(self, menu, "Private Keys...", self.open_keys_window) )
 		self.ui.minimenuNetowrk = menu = QtGui.QMenu()
 		self.ui.actionConnect_2 = (
 		qaction(self, menu, "Connect", self.connect_to_node) )
@@ -2210,3 +2214,19 @@ class MainWindow(QtGui.QMainWindow,
 		
 		self.tagToFront("^blind")
 		self.bt_page_to()
+	
+	def open_keys_window(self):
+		try:
+			with self.iso.unlockedWallet(
+				reason='View/Manage Private Keys'
+			) as w:
+				win = KeysWindow(isolator=self.iso)
+				win.exec_()
+				n = win._ret
+				if n > 0:
+					self.mergeAccounts()
+		except WalletLocked:
+			return
+		except Exception as exc:
+			showexc(exc)
+	
