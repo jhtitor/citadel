@@ -71,7 +71,7 @@ class BitsharesIsolator(object):
 		self.conn_rpcpassword = kwargs.pop('rpcpassword', "")
 		
 		#self.bts = lambda: 0 #bitshares.BitShares(*args, offline=True, **kwargs)
-		self.bts = bitshares.BitShares(*args, offline=True, wallet=None, store=None, **kwargs)
+		self.bts = bitshares.BitShares(*args, offline=True, wallet=None, config_store=None, **kwargs)
 		self.bts.rpc = None
 		self.store = None
 		self.offline = True
@@ -261,7 +261,7 @@ class BitsharesIsolator(object):
 		keyStorage = self.store.keyStorage
 		account = self.getAccount(account_id)
 		pubs = self.getLocalAccountKeys(account_id)
-		nkeys = keyStorage.countPrivateKeys(pubs)
+		nkeys = self.store.countPrivateKeys(pubs)
 		if update:
 			accountStorage.update(acc["name"], "keys", nkeys)
 		return nkeys

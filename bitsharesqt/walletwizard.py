@@ -208,8 +208,9 @@ class WalletWizard(QtWidgets.QWizard):
 			from bitshares.wallet import Wallet
 			try:
 				store = BitsharesStorageExtra(path, create=True)
-				wallet = Wallet(rpc=None, storage=store)
-				wallet.newWallet(password)
+				wallet = Wallet(rpc=None, key_store=store.keyStorage, blind_store=store.blindStorage)
+				wallet.newWallet(password) # BROKEN in latest bitshares
+				store.keyStorage.unlock(password) # this actually sets the new master password...
 				iso = BitsharesIsolator(node=None) # hacky, only used for
 				iso.wallet = wallet                # bootstrap
 				iso.store = store                  # TODO: move it here

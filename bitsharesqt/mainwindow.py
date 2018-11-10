@@ -1641,7 +1641,8 @@ class MainWindow(QtGui.QMainWindow,
 		wallet = Wallet(
 			blockchain_instance=self.iso.bts,
 			rpc=self.iso.bts.rpc,
-			storage=store)
+			key_store=store.keyStorage,
+			blind_store=store.blindStorage)
 		
 		self.iso.setWallet(wallet)
 		self.iso.setStorage(store)

@@ -66,8 +66,7 @@ class SettingsWindow(QtWidgets.QDialog):
 	def restore_defaults(self):
 		ok = askyesno("Restore default settings?")
 		if ok:
-			config = self.iso.bts.config
-			config.wipe()
+			self.iso.store.wipeConfig()
 			self.iso.bootstrap_wallet(wipe=True)
 			self._update_linked()
 			self._update_static()
