@@ -1818,7 +1818,9 @@ class MainWindow(QtGui.QMainWindow,
 		if not(self.iso):
 			return
 		
+		Request.cancel_all()
 		self.iso.disconnect()
+		Request.shutdown(timeout=10)
 		
 		self.iso.setWallet(None)
 		self.iso.setStorage(None)
