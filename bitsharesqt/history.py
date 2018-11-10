@@ -249,6 +249,7 @@ class HistoryTab(QtWidgets.QWidget):
 		if entry["trxfull"]:
 			ftx = json.loads(entry["trxfull"])
 			hl = int(entry["op_in_trx"])
+			ftx["id"] = entry["trxid"]
 			QTransactionBuilder.QViewTransaction(ftx, hl, isolator=self._last_iso)
 			return
 		

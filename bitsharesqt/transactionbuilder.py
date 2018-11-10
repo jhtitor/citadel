@@ -214,6 +214,9 @@ class QTransactionBuilder(QtWidgets.QDialog):
 				table.setItem(j, 0, QTableWidgetItem( sig ))
 				table.item(j, 0).setIcon(icon_s)
 		
+		if "id" in trx: # HACK -- this could be set by history window
+			self.setWindowTitle("Transaction " + trx["id"])
+		
 		if trx._is_signed():
 			self.ui.signedCheckbox.setChecked(True)
 			self.ui.broadcastButton.setEnabled(True)
