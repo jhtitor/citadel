@@ -57,6 +57,9 @@ class WindowWithMarkets(QtCore.QObject):
 		self.download_markets(self._intr)
 
 	def refilter_markets(self):
+		if not self.iso.store: # HACK -- closed already
+			return
+		
 		iso = self.iso
 		store = iso.store.assetStorage
 		table = self.ui.marketList

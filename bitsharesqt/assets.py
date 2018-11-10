@@ -71,7 +71,10 @@ class WindowWithAssets(QtCore.QObject):
 	
 	def refilter_assets(self):
 		iso = self.iso
-		store = iso.store.assetStorage
+		try:
+			store = iso.store.assetStorage
+		except: # storage closed
+			return
 		
 		name = self.ui.assetFilter.text().upper()
 		if ":" in name:
