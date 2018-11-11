@@ -941,15 +941,10 @@ class BitsharesIsolator(object):
 	def download_asset(self, symbol):
 		rpc = self.bts.rpc
 		
-		try:
-			asset = rpc.get_asset(symbol)
-			if "bitasset_data_id" in asset and asset["bitasset_data_id"]:
-				asset["bitasset_data"] = rpc.get_object(asset["bitasset_data_id"])
-			asset["dynamic_asset_data"] = rpc.get_object(asset["dynamic_asset_data_id"])
-		except:
-			asset = None
-		if not asset:
-			return None
+		asset = rpc.get_asset(symbol)
+		if "bitasset_data_id" in asset and asset["bitasset_data_id"]:
+			asset["bitasset_data"] = rpc.get_object(asset["bitasset_data_id"])
+		asset["dynamic_asset_data"] = rpc.get_object(asset["dynamic_asset_data_id"])
 		
 		self.saveAsset(asset)
 		
