@@ -1,4 +1,5 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import pyqtSlot
 from uidef.settings import Ui_SettingsWindow
 
 from .remotes import RemotesEditor
@@ -110,6 +111,13 @@ class SettingsWindow(QtWidgets.QDialog):
 		any_change(elem, self._setting_update, progress=False)
 		self.linked_elements.append(elem)
 
+	# HACK: This signal might get called when a window is closed, then
+	# `self.sender()` returns originating widget and not the one
+	# this signal is bound to. However, if we decorate this method
+	# with @pyqtSlot, it makes `self.sender()` give expected results.
+	# (looks like a PyQt5 quirk)
+	
+	@pyqtSlot()
 	def _setting_update(self):
 		config = self.iso.bts.config
 		elem = self.sender()
