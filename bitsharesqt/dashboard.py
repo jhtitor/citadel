@@ -126,6 +126,7 @@ class DashboardTab(QtWidgets.QWidget):
 			asset = self.iso.getAsset(symbol, force_remote=False)
 		except Exception as error:
 			showexc(error)
+			return
 		app().mainwin.OTransfer(
 			from_=self._account["name"],
 			asset=asset["symbol"]
@@ -162,10 +163,13 @@ class DashboardTab(QtWidgets.QWidget):
 	
 	def _dash_openmarket_asset(self):
 		j = table_selrow(self.ui.balanceTable)
-		if j <= -1:
-			return
+		if j <= -1: return
 		symbol = self.ui.balanceTable.item(j, 1).text()
-		asset = self.iso.getAsset(symbol)
+		try:
+			asset = self.iso.getAsset(symbol)
+		except Exception as error:
+			showexc(error)
+			return
 		desc = asset["options"]["description"]
 		market = None
 		try:
@@ -176,8 +180,8 @@ class DashboardTab(QtWidgets.QWidget):
 			market = "BTS"
 		try:
 			app().mainwin.openMarket(symbol, market)
-		except Exception as err:
-			showexc(err)
+		except Exception as error:
+			showexc(error)
 	
 	def _dash_blind_asset(self):
 		j = table_selrow(self.ui.balanceTable)
@@ -193,20 +197,14 @@ class DashboardTab(QtWidgets.QWidget):
 	
 	def _dash_burn_asset(self):
 		j = table_selrow(self.ui.balanceTable)
-		if j <= -1:
-			return
+		if j <= -1: return
 		amount = float( self.ui.balanceTable.item(j, 0).text() )
 		symbol = self.ui.balanceTable.item(j, 1).text()
-		#app().mainwin.OBlind(
-		#	account     = self._account["name"],
-		#	asset  = symbol,
-		#	amount = amount,
-		#)
-		asset_name = symbol
-		if not asset_name:
+		try:
+			asset = self.iso.getAsset(symbol)
+		except Exception as error:
+			showexc(error)
 			return
-		asset = self.iso.getAsset(asset_name)
-
 		win = AssetWindow(isolator=self.iso, mode="reserve",
 			asset=asset,
 			accounts=app().mainwin.account_names,
@@ -225,6 +223,7 @@ class DashboardTab(QtWidgets.QWidget):
 			app().mainwin.display_asset(symbol, force_remote=False)
 		except Exception as error:
 			showexc(error)
+			return
 		app().mainwin.tagToFront("^markets")
 	
 	def make_upgrade(self):
@@ -235,7 +234,7 @@ class DashboardTab(QtWidgets.QWidget):
 				account_name,
 				fee_asset=fee_asset,
 				isolator=self._iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 	
 	def make_transfer(self):
@@ -265,7 +264,7 @@ class DashboardTab(QtWidgets.QWidget):
 				app().mainwin._txAppend(*v)
 			else:
 				QTransactionBuilder._QExec(self.iso, v)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		return True
@@ -281,6 +280,7 @@ class DashboardTab(QtWidgets.QWidget):
 				isolator=self.iso
 			)
 			r = w.exec_()
+			w.close()
 		except Exception as error:
 			showexc(error)
 			return False
@@ -360,12 +360,8 @@ class DashboardTab(QtWidgets.QWidget):
 		self.ui.upgradeFeeAsset.setEnabled(up)
 		
 	def refresh_balances(self, balances):
-		
 		if (len(balances) == 0): # fake balance
-			o = lambda: None
-			o.symbol = "BTS"
-			o.amount = "0.00000"
-			balances = [ o ]
+			balances = [ self.iso.QAmount("BTS", "0.00000") ]
 		
 		table = self.ui.balanceTable
 		table.setRowCount(0)
@@ -383,13 +379,10 @@ class DashboardTab(QtWidgets.QWidget):
 		for o in balances:
 			j += 1
 			
-			try:
-				namt = self.iso.softAmountStr(o.amount, o.symbol)
-			except:
-				namt = str(o.amount)
-			table.setItem(j, 0, QtGui.QTableWidgetItem(namt))
-			table.item(j, 0).setIcon( icon )
-			table.setItem(j, 1, QtGui.QTableWidgetItem(str(o.symbol)))
+			amt = str(o).split(" ")[0]
+			
+			set_col(table, j, 0, str(amt), icon=icon)
+			set_col(table, j, 1, str(o.symbol))
 			
 			fc.addItem(o.symbol)
 			uc.addItem(o.symbol)
@@ -397,3 +390,4 @@ class DashboardTab(QtWidgets.QWidget):
 			#	self.add_asset_name(o.symbol)
 		
 		table.sortByColumn(1, QtCore.Qt.AscendingOrder)
+	

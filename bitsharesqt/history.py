@@ -249,6 +249,9 @@ class HistoryTab(QtWidgets.QWidget):
 		if entry["trxfull"]:
 			ftx = json.loads(entry["trxfull"])
 			hl = int(entry["op_in_trx"])
+			ftx["id"] = entry["trxid"]
+			if not "operations" in ftx: # Could happen with old history sync code + buggy cancel order
+				ftx["operations"] = [ ]
 			QTransactionBuilder.QViewTransaction(ftx, hl, isolator=self._last_iso)
 			return
 		
@@ -270,8 +273,6 @@ class HistoryTab(QtWidgets.QWidget):
 		
 		self._account_name = account.name
 		self._account_id = account.id
-		#table.setRowCount(0)#len(account.history())) #wtf
-		#table.setColumnCount(2)
 		
 		self.place_entries(entries)
 		self.resync()
@@ -341,12 +342,14 @@ class HistoryTab(QtWidgets.QWidget):
 			description="Synchronizing history"
 		)
 	
-	def mergeHistory_before(self, iso, account):
+	def mergeHistory_before(self, iso, account, request_handler=None):
 		self.refreshing = True
 		
 		#iso._wait_online(timeout=3) # will raise exception
 		#if not(iso.is_connected()):
 		#	raise Exception
+		
+		rh = request_handler
 		
 		# subscribe
 		rpc = iso.bts.rpc
@@ -366,22 +369,33 @@ class HistoryTab(QtWidgets.QWidget):
 		history = list(account.history())
 		
 		# load full tx from net + generate description
+		total = len(history)
 		t = 0
 		for h in history:
+			if rh and rh.cancelled:
+				break
 			if (h['id'] == last_op_index):
 				break
 			t += 1
+			if rh:
+				rh.ping(int(t / total * 100), None)
 			#print("Get full tx for",
 			#	int(h['block_num']), int(h['trx_in_block']),
 			#	int(h['op_in_trx']), int(h["virtual_op"]))
 			try:
 				ftx = iso.bts.rpc.get_transaction(int(h['block_num']), int(h['trx_in_block']))
 			except Exception as error:
+				log.error("Failed to get transaction %d in block %d: %s", int(h['trx_in_block']), int(h['block_num']), str(error))
 				#print(str(error))
 				ftx = { }
 			#print(ftx)
-			h['_fulltx_dict'] = ftx
 			h['_fulltx_obj' ] = Signed_Transaction(**ftx) if ftx else None
+			if not "operations" in ftx and h["op"][0] == 2: # cancel order
+				ftx = {
+					"operations": [ h["op"] ],
+					"operation_results": [ h["result"] ]
+				}
+			h['_fulltx_dict'] = ftx
 			h['_fulltx'] = json.dumps(ftx)
 			
 			h['_memo'] = 0
@@ -397,10 +411,7 @@ class HistoryTab(QtWidgets.QWidget):
 			except bitshares.exceptions.WalletLocked:
 				h['_memo'] = 1
 			except Exception as e:
-				#import traceback
-				#print(h['op'][1], "failed to metch memo-data")
-				#traceback.print_exc()
-				pass
+				log.error("Could not decode memo in op %s: %s", h['id'], str(e))
 			
 			#print("Get description for", h)
 			h['_details'] = iso.historyDescription(h, account)

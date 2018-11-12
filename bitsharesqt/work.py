@@ -88,6 +88,16 @@ class Request(QtCore.QRunnable):
         # release all of the finished tasks
         Request.FINISHED = []
 
+        self.grabber = None
+
+    def updateStatus(self, uid, ping_type, ping_data):
+        self.status = ping_type
+
+    def ping(self, ping_type, ping_data):
+        if not self.grabber:
+            return
+        self.grabber.Ping.emit(self.uid, ping_type, ping_data)
+
     def run(self):
         """
         Method automatically called by Qt when the runnable is ready to run.
@@ -106,17 +116,20 @@ class Request(QtCore.QRunnable):
         # signal and slot behavior it needs to live in the thread that
         # we're running in, creating the object from within this thread
         # is an easy way to do that.
-        grabber = Requester()
+        self.grabber = grabber = Requester()
         grabber.Loaded.connect(self.dataReady, Qt.QueuedConnection)
         if self.dataError is not None:
             grabber.Error.connect(self.dataError, Qt.QueuedConnection)
         if self.dataPing is not None:
             grabber.Ping.connect(self.dataPing, Qt.QueuedConnection)
+        grabber.Ping.connect(self.updateStatus)
 
         try:
             grabber.Ping.emit(self.uid, Request.PT_STARTED, 0)
-            if has_kwarg(self.method, "ping_callback"):
-                result = self.method(*self.args, ping_callback=grabber.Ping)
+            if has_kwarg(self.method, "request_handler"):
+                result = self.method(*self.args, request_handler=self)
+            elif has_kwarg(self.method, "ping_callback"):
+                result = self.method(*self.args, ping_callback=self.ping)
             else:
                 result = self.method(*self.args)
 
@@ -145,12 +158,14 @@ class Request(QtCore.QRunnable):
         #self.cleanup()
 
     def cleanup(self, grabber=None):
+        self.grabber = None
         # remove references to any object or method for proper ref counting
         self.method = None
         self.args = None
         self.uid = None
         self.dataReady = None
         self.dataError = None
+        self.dataPing = None
         self.description = None
 
         if grabber is not None:
@@ -182,6 +197,11 @@ class Request(QtCore.QRunnable):
         Request.wait_join(timeout)
 
     @staticmethod
+    def cancel_all():
+        for inst in Request.INSTANCES:
+            inst.cancelled = True
+
+    @staticmethod
     def wait_join(timeout=10):
         while len(Request.INSTANCES) > 0:
             print("Waiting for", Request.top())
@@ -195,7 +215,7 @@ class Request(QtCore.QRunnable):
     def top():
         r = [ ]
         for inst in Request.INSTANCES:
-            r.append( (inst.cancelled, inst.description, inst.method.__name__ if inst.method else "") )
+            r.append( (inst.cancelled, inst.description, inst.method.__name__ if inst.method else "", inst.status) )
         return r
 
 class Requester(QtCore.QObject):
@@ -212,32 +232,25 @@ class Requester(QtCore.QObject):
     """
     Emitted during request lifetime
 
-    :param str uid: an id to identify this request
+    :param int uid: an id to identify this request
     :param int ping_type:
-    :param int ping_data:
+    :param object ping_data:
     """
 
     Error = QtCore.pyqtSignal(int, object)
     """
     Emitted if the fetch fails for any reason
 
-    :param str uid: an id to identify this request
-    :param str error: the error message
+    :param int uid: an id to identify this request
+    :param object error: exception object
     """
 
     Loaded = QtCore.pyqtSignal(int, object)
     """
     Emitted whenever data comes back successfully
 
-    :param str uid: an id to identify this request
-    :param list data: the json list returned from the GET
-    """
-
-    NetworkConnectionError = QtCore.pyqtSignal(str)
-    """
-    Emitted when the task fails due to a network connection error
-
-    :param str message: network connection error message
+    :param int uid: an id to identify this request
+    :param object data: result of the work
     """
 
     def __init__(self, parent=None):
@@ -250,6 +263,7 @@ class ExampleObject(QtCore.QObject):
         self.uid = 0
         self.request = None
         self.description = ""
+        self.progress_bar = None # QProgressBar instance
 
     def ready_callback(self, uid, result):
         if uid != self.uid:
@@ -260,6 +274,12 @@ class ExampleObject(QtCore.QObject):
         if uid != self.uid:
             return
         print( "Data error from %s: %s" % (uid, error))
+
+    def ping_callback(self, uid, pt, pc):
+        if uid != self.uid:
+            return
+        if self.progress_bar:
+            self.progress_bar.setValue(pt)
 
     def fetch(self):
         if self.request is not None:
@@ -274,15 +294,19 @@ class ExampleObject(QtCore.QObject):
                              self.ping_callback,
                              self.description)
 
-
-def slow_method(arg1, arg2):
-    print( "Starting slow method")
-    time.sleep(1)
+def slow_method(arg1, arg2, request_handler=None):
+    rh = request_handler # short alias
+    print("Starting slow method")
+    for i in range(0, 100):
+        if rh:
+            rh.ping(i, None)
+        time.sleep(0.01)
     return arg1 + arg2
 
 
 if __name__ == "__main__":
     import sys
+    from PyQt5 import QtWidgets as QtGui
     app = QtGui.QApplication(sys.argv)
 
     obj = ExampleObject()
@@ -291,10 +315,12 @@ if __name__ == "__main__":
     layout = QtGui.QVBoxLayout(dialog)
     button = QtGui.QPushButton("Generate", dialog)
     progress = QtGui.QProgressBar(dialog)
-    progress.setRange(0, 0)
+    progress.setRange(0, 100)
+    progress.setValue(0)
     layout.addWidget(button)
     layout.addWidget(progress)
     button.clicked.connect(obj.fetch)
+    obj.progress_bar = progress
     dialog.show()
 
     app.exec_()

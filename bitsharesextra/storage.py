@@ -1,4 +1,8 @@
-from bitshares.storage import DataDir as BTSDataDir
+from bitshares.storage import SQLiteExtendedStore
+from bitshares.storage import SqliteBlindHistoryStore
+from graphenestorage import SQLiteCommon, SQLiteFile
+from graphenestorage import SqliteEncryptedKeyStore
+from graphenestorage import SqliteConfigurationStore
 from appdirs import user_data_dir, system
 import json
 
@@ -6,11 +10,28 @@ import os
 import logging
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
-log.addHandler(logging.StreamHandler())
+#log.addHandler(logging.StreamHandler())
 
 timeformat = "%Y%m%d-%H%M%S"
 
-class DataDir(BTSDataDir):
+# sqlite3 is supposed to be thread-safe (unless you share single
+# database connections, which we don't do), however it's possible
+# to compile sqlite3 without this feature.
+
+from PyQt5.QtCore import QMutex
+main_mutex = QMutex()
+muties = { }
+def get_mutex(p : SQLiteExtendedStore, mod=""):
+    k = p.sqlDataBaseFile + mod
+    main_mutex.lock()
+    m = muties.get(k, None)
+    if not m:
+        m = QMutex()
+        muties[k] = m
+    main_mutex.unlock()
+    return m
+
+class DataDir(SQLiteExtendedStore):
     """ This class ensures that the user's data is stored in its OS
         preotected user directory:
 
@@ -59,15 +80,50 @@ class DataDir(BTSDataDir):
         query = ("ALTER TABLE %s ADD COLUMN %s %s" % (self.__tablename__, colname, sqltype), )
         self.sql_execute(query)
 
-    def upgrade_table(self):
-        pass
+    def poke(self):
+        m = get_mutex(self)
+        m.lock()
+        try:
+            r = SQLiteFile.poke(self)
+        finally:
+            m.unlock()
+        return r
 
-    def init_table(self, create=False):
-        if self.exists_table():
-            self.upgrade_table()
-        elif create:
-            self.create_table()
+    def sql_fetchone(self, query):
+        m = get_mutex(self)
+        m.lock()
+        try:
+            r = SQLiteCommon.sql_fetchone(self, query)
+        finally:
+            m.unlock()
+        return r
 
+    def sql_fetchall(self, query):
+        m = get_mutex(self)
+        m.lock()
+        try:
+            r = SQLiteCommon.sql_fetchall(self, query)
+        finally:
+            m.unlock()
+        return r
+
+    def sql_execute(self, *args, **kwargs):
+        m = get_mutex(self)
+        m.lock()
+        try:
+            r = SQLiteCommon.sql_execute(self, *args, **kwargs)
+        finally:
+            m.unlock()
+        return r
+
+# Since those classed do not inherit DataDir, monkey-patch them.
+# NOTE: it is very important that this happens before any of those classes
+#  gets initialized.
+for r in [ SqliteBlindHistoryStore, SqliteEncryptedKeyStore, SqliteConfigurationStore]:
+    r.sql_fetchone = DataDir.sql_fetchone
+    r.sql_fetchall = DataDir.sql_fetchall
+    r.sql_execute = DataDir.sql_execute
+    r.poke = DataDir.poke
 
 class Accounts(DataDir):
     """ This is the account storage that stores account names,
@@ -80,7 +136,7 @@ class Accounts(DataDir):
     def __init__(self, *args, **kwargs):
         super(Accounts, self).__init__(*args, **kwargs)
 
-    def create_table(self):
+    def create(self):
         """ Create the new table in the SQLite database
         """
         query = ('CREATE TABLE %s (' % self.__tablename__ +
@@ -94,7 +150,7 @@ class Accounts(DataDir):
                  ')',)
         self.sql_execute(query)
 
-    def upgrade_table(self):
+    def upgrade(self):
         self.add_column('comment', 'STRING(256)')
 
 
@@ -202,7 +258,7 @@ class Label(DataDir):
     def __init__(self, *args, **kwargs):
         super(Label, self).__init__(*args, **kwargs)
 
-    def create_table(self):
+    def create(self):
         """ Create the new table in the SQLite database
         """
         query = ('CREATE TABLE %s (' % self.__tablename__ +
@@ -268,7 +324,7 @@ class History(DataDir):
     def __init__(self, *args, **kwargs):
         super(History, self).__init__(*args, **kwargs)
 
-    def create_table(self):
+    def create(self):
         """ Create the new table in the SQLite database
         """
         query = ('CREATE TABLE %s (' % self.__tablename__ +
@@ -400,7 +456,7 @@ class ExternalHistory(DataDir):
     def __init__(self, *args, **kwargs):
         super(ExternalHistory, self).__init__(*args, **kwargs)
 
-    def create_table(self):
+    def create(self):
         """ Create the new table in the SQLite database
         """
         query = ('CREATE TABLE %s (' % self.__tablename__ +
@@ -522,10 +578,14 @@ class Remotes(DataDir):
     __tablename__ = 'remotes'
     __columns__ = [ 'id', 'label', 'url', 'refurl', 'rtype', 'ctype' ]
 
+    RTYPE_BTS_NODE = 0
+    RTYPE_BTS_GATEWAY = 1
+    RTYPE_BTS_FAUCET = 2
+
     def __init__(self, *args, **kwargs):
         super(Remotes, self).__init__(*args, **kwargs)
 
-    def create_table(self):
+    def create(self):
         """ Create the new table in the SQLite database
         """
         query = ('CREATE TABLE %s (' % self.__tablename__ +
@@ -538,13 +598,13 @@ class Remotes(DataDir):
                  ')', )
         self.sql_execute(query)
 
-    def upgrade_table(self):
+    def upgrade(self):
         """ You must check if `table_exists()` before calling this. """
         if self.column_exists('refurl'): return
 
         query = ("DROP TABLE %s" % (self.__tablename__), ())
         self.sql_execute(query)
-        self.create_table()
+        self.create()
         import bitsharesqt.bootstrap as bootstrap
         for n in bootstrap.KnownFaucets:
             self.add(2, n[0], n[1], n[2], n[3].__name__)
@@ -623,6 +683,8 @@ class Assets(DataDir):
         in the `assets` table in the SQLite3 database.
     """
     __tablename__ = 'assets'
+    __columns__ = [ 'id', 'symbol', 'asset_id', 'issuer_id',
+        'graphene_json', 'favourite' ]
 
     def __init__(self, *args, **kwargs):
         super(Assets, self).__init__(*args, **kwargs)
@@ -630,7 +692,7 @@ class Assets(DataDir):
         self.ids_to_symbols = { }
         self.loaded_assets = { }
 
-    def create_table(self):
+    def create(self):
         """ Create the new table in the SQLite database
         """
         query = ('CREATE TABLE %s (' % self.__tablename__ +
@@ -643,7 +705,7 @@ class Assets(DataDir):
                  ')', )
         self.sql_execute(query)
 
-    def upgrade_table(self):
+    def upgrade(self):
         self.add_column('favourite','INTEGER DEFAULT 0')
 
     def getAssets(self, invert_keys=None, favourite=None):
@@ -746,9 +808,7 @@ class Assets(DataDir):
         self.sql_execute(query)
 
     def countEntries(self):
-        query = (("SELECT COUNT(id) from %s " % self.__tablename__),)
-        op = self.sql_fetchone(query)
-        return int(op[0])
+        return len(self) # invoke __len__
 
     def update(self, asset_id, graphene_json):
         """ Update an asset
@@ -804,40 +864,181 @@ class Assets(DataDir):
         self.sql_execute(query)
         self.loaded_assets = { }
 
-from bitshares.storage import BlindAccounts, BlindHistory
-from bitshares.storage import CommonStorage
+class BlindAccounts(DataDir):
+    """
+    """
+    __tablename__ = 'blindaccounts'
+    __columns__ = [ 'id', 'label', 'pub', 'graphene_json', 'balances_json',
+         'keys' ]
 
-class BitsharesStorageExtra(CommonStorage):
+    def __init__(self, *args, **kwargs):
+        super(BlindAccounts, self).__init__(*args, **kwargs)
+
+    def create(self):
+        """ Create the new table in the SQLite database
+        """
+        query = ('CREATE TABLE %s (' % self.__tablename__ +
+                 'id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+                 'label STRING(256),' +
+                 'pub STRING(256),' +
+                 'graphene_json TEXT,' +
+                 'balances_json TEXT,' +
+                 'keys INTEGER'
+                 ')', )
+        self.sql_execute(query)
+
+    def upgrade(self):
+        self.add_column('keys','INTEGER DEFAULT 1')
+
+    def getAccounts(self):
+        """ Returns all blind accounts stored in the database
+        """
+        query = ("SELECT label, pub from %s WHERE keys > 0" % (self.__tablename__), )
+        results = self.sql_fetchall(query)
+        return results
+
+    def getContacts(self):
+        """ Returns ALL blind accounts (and contacts)
+        """
+        query = ("SELECT label, pub, keys from %s" % (self.__tablename__), )
+        rows = self.sql_fetchall(query)
+        return self.sql_todict(['label','pub','keys'], rows)
+
+    def getBy(self, key, some_id):
+        """
+        """
+        if key not in ['label', 'pub']:
+            raise KeyError("'key' must be label or pub")
+        query = ("SELECT graphene_json, balances_json, label, pub from %s " % (self.__tablename__) +
+                 "WHERE %s=?" % (key),
+                 (some_id, ))
+        row = self.sql_fetchone(query)
+        if not row:
+            return None
+
+        query = ("SELECT " +
+            (",".join(self.__columns__)) +
+            (" FROM %s " % self.__tablename__)
+            ,
+        )
+
+        body = json.loads(row[0]) if row[0] else { }
+        body['balances'] = json.loads(row[1]) if row[1] else { }
+        body['label'] = row[2]
+        body['pub'] = row[3]
+        return body
+
+    def getByPublicKey(self, pub):
+        return self.getBy('pub', str(pub))
+
+    def getByLabel(self, label):
+        return self.getBy('label', label)
+
+    def update(self, pub, key, val):
+        """ Update blind account identified by `pub`lic key
+
+           :param str pub: Public key
+           :param str key: label, graphene_json or balances_json
+           :param val: value to set
+        """
+        if not(key in ['label', 'graphene_json', 'balances_json', 'keys']):
+            raise ValueError("'key' must be graphene_json, balances_json, label or keys")
+        if key.endswith('_json'):
+           val = json.dumps(val)
+        if key == 'keys':
+           val = int(val)
+        if key == 'label':
+           val = str(val)
+           if not val.strip():
+               raise ValueError("Label can not be empty")
+           if val.startswith("BTS"):
+               raise ValueError("Label can not begin with letters 'BTS'")
+           if self.getByLabel(val):
+               raise ValueError("Label already in use")
+
+        query = ("UPDATE %s " % self.__tablename__ +
+                 ("SET %s=? WHERE pub=?" % key),
+                 (val, pub))
+        self.sql_execute(query)
+
+    def add(self, pub, label, keys=1):
+        """ Add a blind account
+
+           :param str pub: Public key
+           :param str label: Account name
+           :param int keys: Number of keys
+        """
+        if not label.strip():
+            raise ValueError("Label can not be empty")
+        if label.startswith("BTS"):
+            raise ValueError("Label can not begin with letters 'BTS'")
+        if self.getByLabel(label):
+            raise ValueError("Label already in use")
+        if self.getByPublicKey(pub):
+            raise ValueError("Account already in storage")
+
+        query = ('INSERT INTO %s (pub, label, keys) ' % self.__tablename__ +
+                 'VALUES (?, ?, ?)',
+                 (pub, label, keys))
+        self.sql_execute(query)
+
+    def delete(self, pub):
+        """ Delete the record identified by `pub`lic key
+
+           :param str pub: Public key
+        """
+        query = ("DELETE FROM %s " % (self.__tablename__) +
+                 "WHERE pub=?",
+                 (pub,))
+        self.sql_execute(query)
+
+
+
+#from bitshares.storage import BlindAccounts, BlindHistory
+#from bitshares.storage import CommonStorage
+
+class BitsharesStorageExtra():#CommonStorage):
 
     def __init__(self, path, create=True, **kwargs):
         log.info("Initializing storage %s create: %s" %(path, str(create)))
-        super(BitsharesStorageExtra, self).__init__(path=path, create=create, **kwargs)
+        #super(BitsharesStorageExtra, self).__init__(path=path, create=create, **kwargs)
+
+        # Bitshares
+        self.configStorage = SqliteConfigurationStore(path=path, create=create)
+        self.keyStorage = SqliteEncryptedKeyStore(config=self.configStorage, path=path, create=create)
+        self.blindStorage = SqliteBlindHistoryStore(path=path, create=create)
 
         # Extra storages
-        self.accountStorage = Accounts(path, mustexist=not(create))
-        self.accountStorage.init_table(create)
-
-        #self.labelStorage = Label(path)
-        #if create:
-        #    self.labelStorage.init_table()
-
-        self.assetStorage = Assets(path, mustexist=not(create))
-        self.assetStorage.init_table(create)
-
-        self.historyStorage = History(path, mustexist=not(create))
-        self.historyStorage.init_table(create)
-
-        self.remotesStorage = Remotes(path, mustexist=not(create))
-        self.remotesStorage.init_table(create)
-
-        self.gatewayStorage = ExternalHistory(path)
-        self.gatewayStorage.init_table(create)
-
-        # Additional tables
-        #self.blindAccountStorage = BlindAccounts(path)
-        #self.blindAccountStorage.create_table()
-        #self.blindStorage = BlindHistory(path)
-        #self.blindStorage.create_table()
+        self.accountStorage = Accounts(path=path, create=create)
+        self.blindAccountStorage = BlindAccounts(path=path, create=create)
+        #self.labelStorage = Label(path, create=create)
+        self.assetStorage = Assets(path=path, create=create)
+        self.historyStorage = History(path=path, create=create)
+        self.remotesStorage = Remotes(path=path, create=create)
+        self.gatewayStorage = ExternalHistory(path=path, create=create)
 
         # Set latest db version
-        self.configStorage["db_version"] = "3"
+        #self.configStorage["db_version"] = "3"
+
+    def wipeConfig(self):
+        config = self.configStorage
+        masterPwd = self.keyStorage
+        """ Wipe the store (different from `super().wipe()`)
+        """
+        query = ("DELETE FROM {} WHERE key <> ?".format(config.__tablename__),
+            (masterPwd.config_key, )
+        )
+        config.sql_execute(query)
+
+    def privateKeyExists(self, pub):
+        keys = self.keyStorage
+        query = ("SELECT COUNT(id) FROM {} WHERE pub = ?".format(keys.__tablename__),
+            (pub, )
+        )
+        return int(keys.sql_fetchone(query)[0])
+
+    def countPrivateKeys(self, pubs):
+        total = 0
+        for pub in pubs:
+            total += self.privateKeyExists(pub)
+        return total

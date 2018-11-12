@@ -59,6 +59,9 @@ class WindowWithAssets(QtCore.QObject):
 			self.ui.assetissuerLine.setText( asset['issuer'] )
 		from pprint import pprint
 		pprint(asset)
+		if not "dynamic_asset_data" in asset:
+			self.download_asset(asset["symbol"])
+			return False
 		self.ui.assetMaxSupply.setText( str(int(asset['options']['max_supply']) / pow(10, asset['precision'])) )
 		self.ui.assetCurrentSupply.setText( str(int(asset['dynamic_asset_data'][ "current_supply"]) / pow(10, asset['precision'])) )
 		self.ui.assetBlindSupply.setText( str(int(asset['dynamic_asset_data'][ "confidential_supply"]) / pow(10, asset['precision'])) )
@@ -68,7 +71,10 @@ class WindowWithAssets(QtCore.QObject):
 	
 	def refilter_assets(self):
 		iso = self.iso
-		store = iso.store.assetStorage
+		try:
+			store = iso.store.assetStorage
+		except: # storage closed
+			return
 		
 		name = self.ui.assetFilter.text().upper()
 		if ":" in name:
@@ -141,8 +147,9 @@ class WindowWithAssets(QtCore.QObject):
 		showexc(error)
 	
 	def download_assets_after(self, uid, args):
-		#(assets, ) = args
-		pass
+		(assets) = args
+		#for asset in assets:
+		#	self.iso.saveAsset(asset) # done in thread
 	
 	def download_asset_after(self, uid, args):
 		(asset) = args
@@ -152,9 +159,24 @@ class WindowWithAssets(QtCore.QObject):
 			else:
 				showerror("Asset not found")
 			return
+		#self.iso.saveAsset(asset) # done in thread
 		current = self.ui.assetFilter.text().upper()
 		if current and current == asset["symbol"]:
 			self.refilter_assets()
+		# currently selected
+		symbol = self.ui.assetsymbolLine.text().upper().strip()
+		if symbol == asset["symbol"]:
+			self.display_asset(force_symbol=symbol, force_remote=False)
+	
+	def download_asset(self, symbol):
+		self.asset_downloader.fetch(
+			self.iso.download_asset,
+			symbol,
+			ready_callback=self.download_asset_after,
+			error_callback=self._download_error,
+			ping_callback=self.refreshUi_ping,
+			description="Searching for asset " + symbol,
+		)
 	
 	def find_asset(self):
 		symbol = self.ui.assetFilter.text().upper()
@@ -164,14 +186,7 @@ class WindowWithAssets(QtCore.QObject):
 		if not symbol:
 			return
 		
-		self.asset_downloader.fetch(
-			self.iso.download_asset,
-			symbol,
-			ready_callback=self.download_asset_after,
-			error_callback=self._download_error,
-			ping_callback=self.refreshUi_ping,
-			description="Searching for asset " + symbol,
-		)
+		self.download_asset(symbol)
 	
 	def show_asset_submenu(self, position):
 		send = self.sender()

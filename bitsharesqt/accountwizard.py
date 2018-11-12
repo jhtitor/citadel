@@ -65,7 +65,8 @@ class AccountWizard(QtWidgets.QWizard):
 		self.ui.generatePassword.clicked.connect(self.generate_password)
 
 		fb = self.ui.faucetBox
-		remotes = self.iso.store.remotesStorage.getRemotes(2)
+		store = self.iso.store.remotesStorage
+		remotes = store.getRemotes(store.RTYPE_BTS_FAUCET)
 		for remote in remotes:
 			fb.addItem(remote['label'], (remote['url'], remote['refurl']))
 		
@@ -174,9 +175,13 @@ class AccountWizard(QtWidgets.QWizard):
 			self.ui.privateKeys.setPlainText(privs)
 		
 		if (c == AccountWizard.PAGE_NEW_PASS):
-			account_name= self.ui.inventAccount.text()
-			password = self.ui.inventPassword.text()
-			if not(account_name) or not(password):
+			account_name = self.ui.inventAccount.text().strip()
+			password = self.ui.inventPassword.text().strip()
+			if not(account_name):
+				showerror("Enter account name")
+				return False
+			if not(password):
+				showerror("Enter password")
 				return False
 			
 			if len(password) < 12:
@@ -188,9 +193,13 @@ class AccountWizard(QtWidgets.QWizard):
 			self.ui.passwordConfirm.setText("Confirm your password")
 		
 		if (c == AccountWizard.PAGE_OLD_PASS):
-			account_name= self.ui.oldAccount.text()
-			password = self.ui.oldPassword.text()
-			if not(account_name) or not(password):
+			account_name = self.ui.oldAccount.text().strip()
+			password = self.ui.oldPassword.text().strip()
+			if not(account_name):
+				showerror("Enter account name")
+				return False
+			if not(password):
+				showerror("Enter password")
 				return False
 			
 			old_password = self.ui.inventPassword.text()
@@ -230,30 +239,30 @@ class AccountWizard(QtWidgets.QWizard):
 			self.ui.privateKeys.setPlainText(privs)
 		
 		if (c == AccountWizard.PAGE_REGISTER):
-			account_name = self.ui.accountName.text()
+			account_name = self.ui.accountName.text().strip()
 			
 			self.ui.accountEdit.setText(account_name)
 			
 			#pubkeys = self.ui.publicKeys.toPlainText()
 			#privkeys = self.ui.privateKeys.toPlainText()
 			
-			owner_key = self.ui.pubkeyOwner.text()
-			active_key = self.ui.pubkeyActive.text()
-			memo_key = self.ui.pubkeyMemo.text()
+			owner_key = self.ui.pubkeyOwner.text().strip()
+			active_key = self.ui.pubkeyActive.text().strip()
+			memo_key = self.ui.pubkeyMemo.text().strip()
 			
 			if not account_name:
-				showerror("Please enter account name", account_name)
+				showerror("Enter account name", account_name)
 				return False
 			
 			if not owner_key or not active_key or not memo_key:
-				showerror("Please enter all three (owner, active, memo) keys")
+				showerror("Enter all three (owner, active, memo) keys")
 				return False
 			
 			
 			if self.ui.faucetRadio.isChecked() == True:
 				#config = self.iso.store.configStorage
 				proxy = self.iso.get_proxy_config()
-				print("Faucet using proxy", proxy)
+				log.info("Faucet using proxy %s", proxy)
 				selected = self.ui.faucetBox.currentText()
 				faucet = None
 				for name, url, refurl, factory in KnownFaucets:

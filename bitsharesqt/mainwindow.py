@@ -3,7 +3,6 @@ from uidef.mainwindow import Ui_MainWindow
 _translate = QtCore.QCoreApplication.translate
 import uidef.res_rc
 
-from PyQt5.QtWidgets import QTableWidgetItem
 from PyQt5.QtGui import QTextCursor
 
 from .isolator import BitsharesIsolator
@@ -16,6 +15,7 @@ from .walletwizard import WalletWizard, RecentWallets
 from .memowindow import MemoWindow
 from .createasset import AssetWindow
 from .settings import SettingsWindow
+from .keyswindow import KeysWindow
 from .dashboard import DashboardTab
 from .history import HistoryTab
 from .ordertab import OrderTab
@@ -34,6 +34,7 @@ from .isolator import ResourceUnavailableOffline, WalletLocked
 from .netloc import RemoteFetch
 from .work import Request
 from .utils import *
+import json
 import logging
 log = logging.getLogger(__name__)
 
@@ -165,6 +166,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.connector = RemoteFetch()
 		self.background_update.connect(self.on_connector_update)
 		self._connecting = False
+		self._user_intent = 0
 		
 		qmenu(self.ui.accountsList, self.show_account_submenu)
 		
@@ -309,6 +311,9 @@ class MainWindow(QtGui.QMainWindow,
 			qaction(self, menu, "Lock", self.lock_wallet) )
 		self.ui.actionUnlock_wallet_2 = (
 			qaction(self, menu, "Unlock", self.unlock_wallet) )
+		menu.addSeparator()
+		self.ui.actionPrivate_keys_2 = (
+			qaction(self, menu, "Private Keys...", self.open_keys_window) )
 		self.ui.minimenuNetowrk = menu = QtGui.QMenu()
 		self.ui.actionConnect_2 = (
 		qaction(self, menu, "Connect", self.connect_to_node) )
@@ -809,7 +814,7 @@ class MainWindow(QtGui.QMainWindow,
 		win = SettingsWindow(isolator=self.iso)
 		win.setPage(page)
 		win.exec_()
-		self.setupUIfromConfig()
+		self.updateUIfromConfig()
 		self.perhaps_autoconnect()
 		self.gateways_populated = False
 		return True
@@ -818,7 +823,11 @@ class MainWindow(QtGui.QMainWindow,
 		return self.open_settings(1)
 	
 	def open_memowindow(self):
-		win = MemoWindow(isolator=self.iso)
+		win = MemoWindow(isolator=self.iso,
+			accounts=self.account_names,
+			contacts=self.contact_names,
+			activeAccount=self.activeAccount,
+		)
 		win.exec_()
 	
 	def open_createassetwindow(self):
@@ -875,7 +884,8 @@ class MainWindow(QtGui.QMainWindow,
 		qaction(self, menu, "Show Account", self.activate_account)
 		qaction(self, menu, "Hide Account", self.deactivate_account)
 		qaction(self, menu, "Remove Account...", self._remove_account)
-		#qaction(self, menu, "Export Private Keys...", self._export_account_keys)
+		menu.addSeparator()
+		qaction(self, menu, "Export Private Keys...", self._export_account_keys)
 		qaction(self, menu, "Show Private Keys", self._show_account_keys)
 		qaction(self, menu, "Sweep Private Keys...", self._sweep_account_keys)
 		qmenu_exec(self.sender(), menu, position)
@@ -925,7 +935,36 @@ class MainWindow(QtGui.QMainWindow,
 		self.hide_accounts()
 	
 	def _export_account_keys(self):
-		pass
+		box = self.ui.accountsList
+		if not box.currentIndex().isValid():
+			return
+		account_name = box.currentItem().text()
+		
+		path, _ = QtGui.QFileDialog.getSaveFileName(self, 'Export Private Keys', account_name + "_keys.json", "key dump (*.json)")
+		if not path:
+			return False
+		
+		try:
+			with self.iso.unlockedWallet(
+				reason='Export Private Keys for ' + account_name
+			) as w:
+				pubs = self.iso.getLocalAccountKeys(account_name)
+				priv = self.iso.getPrivateKeyForPublicKeys(pubs)
+		except WalletLocked:
+			return
+		except Exception as exc:
+			showexc(exc)
+			return
+		
+		array = [ ]
+		for i in range(0, len(pubs)):
+			array.append( [ pubs[i], priv[i] ] )
+		
+		data = json.dumps(array)
+		with open(path, "w") as f:
+			f.write(data)
+		
+		return True
 	
 	def _show_account_keys(self):
 		box = self.ui.accountsList #sender()
@@ -1012,33 +1051,49 @@ class MainWindow(QtGui.QMainWindow,
 		if self.iso.is_connecting():
 			return False
 		return True
-
+	
+	def perhaps_cyclenode(self):
+		config = self.iso.bts.config
+		nodeUrl = config.get('node', None)
+		doit = config.get('cyclenodes', False)
+		if not doit:
+			return
+		store = self.iso.store.remotesStorage
+		remotes = store.getRemotes(store.RTYPE_BTS_NODE)
+		if len(remotes) == 0:
+			return False
+		use_next = False
+		for remote in remotes:
+			if use_next:
+				nodeUrl = remote["url"]
+				use_next = False
+				break
+			if remote["url"] == str(nodeUrl):
+				use_next = True
+		if use_next or not nodeUrl:
+			nodeUrl = remotes[0]["url"] # first one!
+		config['node'] = nodeUrl
+		log.info("Cycled to node %s", nodeUrl)
+		return nodeUrl
+	
 	def perhaps_autoconnect(self, ignore_state=False):
 		if not(self.need_autoconnect(ignore_state)):
 			return False
-		self.connect_to_node()
+		self.connect_to_node(auto=True)
 		return True
 	
-	def _connect(self, ping_callback=None):
-		config =  self.iso.bts.config
-		nodeUrl = config.get('node', None)
-		
-		proxyUrl = self.iso.get_proxy_config()
-		
-		if not nodeUrl:
-			showerror("No public node selected")
-			self.open_settings()
-			return
-		
+	def _connect(self, nodeUrl, proxyUrl, request_handler=None):
 		nodeUrl = str(nodeUrl)
 		
 		self._connecting = True
-		#self.background_update.emit(0, "connecting", None)
-		#print("node url:", nodeUrl)
-		self.iso.connect(nodeUrl, proxy=proxyUrl, num_retries=3, ping_callback=self._connect_event)
+		self.iso.connect(nodeUrl, proxy=proxyUrl, num_retries=3, request_handler=request_handler)
 	
-	def _connect_event(self, rpc, desc, error=None):
-		self.background_update.emit(0, desc, (rpc, error))
+	def _connect_event(self, uid, ps, data):
+	#	if type(data) is int:
+	#		return
+	#	ws, desc, error = data
+	#	self.background_update.emit(0, desc, (ws, error))
+		self.refreshUi_wallet()
 	
 	def on_connector_update(self, id, tag, data_error):
 		if id != 0:
@@ -1062,13 +1117,26 @@ class MainWindow(QtGui.QMainWindow,
 			self._connecting = False
 		self.refreshUi_wallet()
 	
-	def connect_to_node(self):
+	def connect_to_node(self, auto=True):
 		self._connecting = True
+		self._user_intent = int(bool(not auto))
+		config  = self.iso.bts.config
+		nodeUrl = config.get('node', None)
+		proxyUrl = self.iso.get_proxy_config()
+		
+		if not nodeUrl:
+			showerror("No public node selected")
+			self.open_network_settings()
+			return
+		
+		#self.abort_everything(disconnect=True)
 		#self._connect()
 		self.connector.fetch(self._connect,
-			#ready_callback=self.connection_established,
+			nodeUrl, proxyUrl,
+			ready_callback=self.connection_established,
 			error_callback=self.connection_failed,
-			ping_callback=self.refreshUi_wallet,
+		#	ping_callback=self.refreshUi_wallet,
+			ping_callback=self._connect_event,
 			description="Connecting")
 		log.info("* Connecting...")
 	
@@ -1094,12 +1162,15 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def connection_failed(self, uid, error):
 		self._connecting = False
-		log.info("* Connection failed")
+		log.info("* Connection failed %s", str(error))
 		self.iso.offline = True
 		self.refreshUi_wallet()
 		self.abort_everything(disconnect=False, wait=True)
-		if not(self.perhaps_autoconnect(ignore_state=True)):
+		if self._user_intent:
+			self._user_intent -= 1
 			showerror("Connection failed", additional=error)
+		self.perhaps_cyclenode()
+		self.perhaps_autoconnect(ignore_state=True)
 	
 	def connection_lost(self, uid):
 		self._connecting = False
@@ -1112,15 +1183,19 @@ class MainWindow(QtGui.QMainWindow,
 	def disconnect_from_node(self):
 		log.info("* Disconnecting...")
 		self._connecting = False
-		self.refreshUi_wallet()
-		self.iso.disconnect()
-		self.abort_everything(disconnect=False)
+		#self.refreshUi_wallet()
+		#self.iso.disconnect()
+		self.abort_everything(disconnect=True)
 		self.refreshUi_wallet()
 	
 	def abort_everything(self, disconnect=True, wait=True):
 		app = QtGui.QApplication.instance()
-		log.debug("1. Emit abort everything")
+		log.debug("1. emit abort_everything")
 		app.abort_everything.emit()
+		#
+		if disconnect or wait:
+			log.debug("( cancel threads )")
+			Request.cancel_all()
 		#
 		if self.iso and disconnect:
 			log.debug("2. disconnect")
@@ -1311,8 +1386,9 @@ class MainWindow(QtGui.QMainWindow,
 		self.uiExpireSliderLink(tab.ui.sellExpireEdit, tab.ui.sellExpireSlider)
 		self.late_inject_account_box(tab.ui.buyAccount)
 		self.late_inject_account_box(tab.ui.sellAccount)
-		set_combo(tab.ui.buyAccount, self.activeAccount["name"])
-		set_combo(tab.ui.sellAccount, self.activeAccount["name"])
+		if self.activeAccount:
+			set_combo(tab.ui.buyAccount, self.activeAccount["name"])
+			set_combo(tab.ui.sellAccount, self.activeAccount["name"])
 		self.late_inject_asset_box(tab.ui.buyFeeAsset)
 		self.late_inject_asset_box(tab.ui.sellFeeAsset)
 		self.late_inject_advanced_controls(
@@ -1516,6 +1592,11 @@ class MainWindow(QtGui.QMainWindow,
 		self.ui.sellexpireEdit.setText(deltainterval(expire_seconds))
 		self.ui.fokCheckbox.setChecked(expire_fok)
 	
+	def updateUIfromConfig(self):
+		config =  self.iso.bts.config
+		adv_mode = bool( config.get('ui_advancedmode', False) )
+		self.setAdvancedMode(adv_mode)
+	
 	def _try_open_wallet(self, path, echo=False):
 		try:
 			ok = self.open_wallet(path, autounlock=False)
@@ -1563,7 +1644,8 @@ class MainWindow(QtGui.QMainWindow,
 		wallet = Wallet(
 			blockchain_instance=self.iso.bts,
 			rpc=self.iso.bts.rpc,
-			storage=store)
+			key_store=store.keyStorage,
+			blind_store=store.blindStorage)
 		
 		self.iso.setWallet(wallet)
 		self.iso.setStorage(store)
@@ -1619,14 +1701,14 @@ class MainWindow(QtGui.QMainWindow,
 		for task in bgtop:
 			j += 1
 			
-			(cancelled, desc, name) = task
+			(cancelled, desc, name, status) = task
 			#print(("C" if cancelled else " ") +
 			#	("%24s" % name) + " " + desc)
 			
 			table.insertRow(j)
-			table.setItem(j, 0, QTableWidgetItem( ("cancelled" if cancelled else " ") ))
-			table.setItem(j, 1, QTableWidgetItem( name ))
-			table.setItem(j, 2, QTableWidgetItem( desc ))
+			set_col(table, j, 0, ("cancelled" if cancelled else " ") )
+			set_col(table, j, 1, ( name ))
+			set_col(table, j, 2, ( desc + (" " + str(status) + "%" if status and status > 1 else "")))
 		#print("")
 	
 	def refreshUi_ping(self):
@@ -1671,7 +1753,7 @@ class MainWindow(QtGui.QMainWindow,
 			if self._connecting or (self.iso.bts.rpc and self.iso.bts.rpc.connecting):
 				self.ui.statusText.setText("Connecting...")
 				self.ui.statusNetwork.setToolTip("Connecting...")
-				self.ui.statusNetwork.setIcon(qicon(":/icons/images/old/yellow.png"))
+				self.ui.statusNetwork.setIcon(qicon(":/icons/images/yellow.png"))
 				connected = False
 			elif connected:
 				self.ui.statusText.setText("")
@@ -1696,7 +1778,7 @@ class MainWindow(QtGui.QMainWindow,
 			proxy_host = self.iso.bts.rpc.proxy_host
 			proxy_port = int(self.iso.bts.rpc.proxy_port)
 			if proxy_host:
-				base_desc = proxy_type.upper() + "proxy"
+				base_desc = proxy_type.upper() + " proxy"
 				if (proxy_type == "socks5h" or proxy_type == "socks5") and\
 					(proxy_host == "localhost" or proxy_host == "127.0.0.1") and\
 					(proxy_port==9150 or proxy_port==9050):
@@ -1723,7 +1805,7 @@ class MainWindow(QtGui.QMainWindow,
 			from .work import Request
 			bgtop = Request.top()
 			for task in bgtop:
-				(cancelled, desc, c) = task
+				(cancelled, desc, c, s) = task
 				if cancelled or not(desc):
 					continue
 				self.ui.statusText.setText("" + desc)
@@ -1736,7 +1818,9 @@ class MainWindow(QtGui.QMainWindow,
 		if not(self.iso):
 			return
 		
+		Request.cancel_all()
 		self.iso.disconnect()
+		Request.shutdown(timeout=10)
 		
 		self.iso.setWallet(None)
 		self.iso.setStorage(None)
@@ -1809,8 +1893,9 @@ class MainWindow(QtGui.QMainWindow,
 		self.contact_names = set()
 	
 	def add_account_name(self, name):
+		icon = qicon(":/icons/images/account.png")
 		for box in self.account_boxes:
-			box.addItem(name)
+			add_item(box, name, icon=icon)
 		self.account_names.add(name)
 	
 	def remove_account_name(self, name):
@@ -1823,9 +1908,13 @@ class MainWindow(QtGui.QMainWindow,
 				box.takeItem(box.row(item))
 		self.account_names.remove(name)
 	
-	def add_contact_name(self, name):
+	def add_contact_name(self, name, keys=0):
+		if keys:
+			icon = qicon(":/op/images/op/account_update_key.png")
+		else:
+			icon = qicon(":/icons/images/account.png")
 		for box in self.contact_boxes:
-			box.addItem(name)
+			box.addItem(icon, name)
 			set_combo(box, "")
 		self.contact_names.add(name)
 	
@@ -1841,8 +1930,9 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def late_inject_account_box(self, box):
 		box.clear()
+		icon = qicon(":/icons/images/account.png")
 		for name in self.account_names:
-			box.addItem(name)
+			add_item(box, name, icon=icon)
 		self.account_boxes.append(box)
 	
 	def late_inject_contact_box(self, box):
@@ -2125,3 +2215,19 @@ class MainWindow(QtGui.QMainWindow,
 		
 		self.tagToFront("^blind")
 		self.bt_page_to()
+	
+	def open_keys_window(self):
+		try:
+			with self.iso.unlockedWallet(
+				reason='View/Manage Private Keys'
+			) as w:
+				win = KeysWindow(isolator=self.iso)
+				win.exec_()
+				n = win._ret
+				if n > 0:
+					self.mergeAccounts()
+		except WalletLocked:
+			return
+		except Exception as exc:
+			showexc(exc)
+	

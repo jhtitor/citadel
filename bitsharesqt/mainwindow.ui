@@ -1328,11 +1328,22 @@ image: &quot;&quot;;
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="viewBlindCreate">
-                <property name="text">
-                 <string>Add Blind Account</string>
-                </property>
-               </widget>
+               <layout class="QHBoxLayout" name="horizontalLayout_22">
+                <item>
+                 <widget class="QPushButton" name="viewBlindCreate">
+                  <property name="text">
+                   <string>Add Blind Account</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="viewBlindContact">
+                  <property name="text">
+                   <string>Add Blind Contact</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </item>
@@ -1351,9 +1362,9 @@ image: &quot;&quot;;
                </size>
               </property>
               <property name="currentIndex">
-               <number>1</number>
+               <number>2</number>
               </property>
-              <widget class="QWidget" name="page_3">
+              <widget class="QWidget" name="pageBalances">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
                  <horstretch>0</horstretch>
@@ -1501,7 +1512,7 @@ image: &quot;&quot;;
                 </item>
                </layout>
               </widget>
-              <widget class="QWidget" name="page_4">
+              <widget class="QWidget" name="pageNewAccount">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
                  <horstretch>0</horstretch>
@@ -1528,7 +1539,7 @@ image: &quot;&quot;;
                  <number>0</number>
                 </property>
                 <property name="bottomMargin">
-                 <number>0</number>
+                 <number>10</number>
                 </property>
                 <item row="0" column="0">
                  <widget class="QLabel" name="label_43">
@@ -1554,6 +1565,9 @@ image: &quot;&quot;;
                     <width>0</width>
                     <height>20</height>
                    </size>
+                  </property>
+                  <property name="placeholderText">
+                   <string>Name for this account</string>
                   </property>
                  </widget>
                 </item>
@@ -1600,6 +1614,91 @@ image: &quot;&quot;;
                 </item>
                 <item row="0" column="1">
                  <widget class="QBrainKeyEdit" name="blindBrainkeyPlain"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="pageNewContact">
+               <layout class="QFormLayout" name="formLayout_11">
+                <property name="formAlignment">
+                 <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+                </property>
+                <property name="horizontalSpacing">
+                 <number>20</number>
+                </property>
+                <property name="verticalSpacing">
+                 <number>20</number>
+                </property>
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>10</number>
+                </property>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="label_25">
+                  <property name="text">
+                   <string>Public Key</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLineEdit" name="blindContactPubkey">
+                  <property name="placeholderText">
+                   <string>BTS78as9KlMQ87Z8KoPLMN</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_45">
+                  <property name="text">
+                   <string>Label</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QLineEdit" name="blindContactLabel">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                  <property name="placeholderText">
+                   <string>Name for this account</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QPushButton" name="blindContactCancel">
+                  <property name="text">
+                   <string>Cancel</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <widget class="QPushButton" name="blindContactCreate">
+                  <property name="text">
+                   <string>Add</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0" colspan="2">
+                 <widget class="QLabel" name="label_26">
+                  <property name="text">
+                   <string>Blind Accounts are identified by their Public Keys.
+
+So, this is a simple address book, and the Labels could be anything you want,</string>
+                  </property>
+                  <property name="wordWrap">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </widget>
@@ -3391,7 +3490,6 @@ image: &quot;&quot;;
   <tabstop>consoleEdit</tabstop>
   <tabstop>consoleList</tabstop>
   <tabstop>blindAccounts</tabstop>
-  <tabstop>viewBlindCreate</tabstop>
   <tabstop>blindBalances</tabstop>
   <tabstop>viewBlindTo</tabstop>
   <tabstop>viewBlindFrom</tabstop>

@@ -54,16 +54,34 @@ def any_value(widget):
 		return widget.value()
 	if isinstance(widget, QtGui.QDoubleSpinBox):
 		return widget.value()
+	if isinstance(widget, QtGui.QCheckBox):
+		return widget.checked()
 
-def any_change(widget, func):
+def any_change(widget, func, progress=None):
 	if isinstance(widget, QtGui.QComboBox):
 		return on_combo(widget, func)
 	if isinstance(widget, QtGui.QLineEdit):
-		return on_edit(widget, func)
+		return on_edit(widget, func, progress)
 	if isinstance(widget, QtGui.QSpinBox):
 		return on_spin(widget, func)
 	if isinstance(widget, QtGui.QDoubleSpinBox):
 		return on_spin(widget, func)
+	if isinstance(widget, QtGui.QCheckBox):
+		return on_state(widget, func)
+
+
+def set_value(widget, val):
+	if isinstance(widget, QtGui.QComboBox):
+		set_combo(widget, val)
+	if isinstance(widget, QtGui.QLineEdit):
+		widget.setText(str(val))
+	if isinstance(widget, QtGui.QSpinBox):
+		widget.setValue(val)
+	if isinstance(widget, QtGui.QDoubleSpinBox):
+		widget.setValue(val)
+	if isinstance(widget, QtGui.QCheckBox):
+		widget.setChecked(bool(val))
+
 
 import traceback
 def showexc(e, echo=False):
@@ -89,7 +107,7 @@ def showmb(message, title="Information", additional=None, details=None, min_widt
 		msg.setIcon( QtGui.QMessageBox.Warning )
 	elif icon:
 		msg.setIconPixmap(QtGui.QPixmap(icon))
-
+	
 	if additional:
 		msg.setInformativeText(str(additional))
 	
@@ -110,30 +128,6 @@ def showerror(message, title="Error", additional=None, details=None):
 
 def showdialog(message, title="Information", additional=None, details=None, min_width=None, icon=None):
 	return showmb(message, title, additional, details, min_width, icon)
-	msg = QtGui.QMessageBox()
-	msg.setIcon( QtGui.QMessageBox.Information )
-	
-	msg.setText(message)
-	msg.setWindowTitle(title)
-	msg.setWindowIcon(app().mainwin.windowIcon())
-	
-	if min_width:
-		msg.setStyleSheet("QLabel{min-width: "+str(min_width)+"px;}")
-		msg.setIcon(QtGui.QMessageBox.NoIcon)
-	
-	if icon:
-		msg.setIconPixmap(QtGui.QPixmap(icon))
-
-	if additional:
-		msg.setInformativeText(str(additional))
-	
-	if details:
-		msg.setDetailedText(details)
-	
-	msg.setStandardButtons( QtGui.QMessageBox.Ok )
-	
-	retval = msg.exec_()
-	return retval
 
 # Aliases:
 def showmessage(*args, **kwargs):
@@ -211,15 +205,18 @@ def sync_combo(combo, options):
 		combo.addItem(option)
 
 
-def set_combo(combo, text, force=False):
+def set_combo(combo, text, force=False, icon=None):
 	index = combo.findText(text, QtCore.Qt.MatchFixedString)
 	if index >= 0:
 		combo.setCurrentIndex(index)
+	elif force:
+		if icon:
+			combo.addItem(icon, text)
+		else:
+			combo.addItem(text)
+		set_combo(combo, text, False)
 	elif combo.lineEdit():
 		combo.lineEdit().setText(text)
-	elif force:
-		combo.addItem(text)
-		set_combo(combo, text, False)
 	else:
 		print("Unable to set", text, "on", combo)
 
@@ -228,9 +225,26 @@ def on_combo(combo, func):
 	combo.currentIndexChanged.connect(func)
 def on_spin(spin, func):
 	spin.valueChanged.connect(func)
-def on_edit(line, func):
-	line.textChanged.connect(func)
+def on_edit(line, func, progress=True):
+	if progress is True:
+		line.textChanged.connect(func)
+	if progress is False:
+		line.editingFinished.connect(func)
+def on_check(box, func):
+	box.stateChanged.connect(func)
 
+def add_item(widget, value, icon=None):
+	if isinstance(widget, QtGui.QListWidget):
+		item = QtGui.QListWidgetItem(str(value))
+		item.setIcon(icon)
+		widget.addItem(item)
+	elif isinstance(widget, QtGui.QComboBox):
+		if icon:
+			widget.addItem(icon, value)
+		else:
+			widget.addItem(value)
+	else:
+		print("Unable to add item", value, "on", widget)
 
 def set_itemflags(item, enabled=True, checked=False, checkable=False, selectable=True):
 	o = 0
@@ -255,8 +269,11 @@ def table_selrow(table):
 	j = indexes[0].row()
 	return j
 
+def table_coldata(table, row, col):
+	return table.item(row, col).data(99)
+
 from PyQt5.QtWidgets import QTableWidgetItem
-def set_col(table, row, col, val, fmt=None, color=None, align=None, editable=None, data=None):
+def set_col(table, row, col, val, fmt=None, color=None, align=None, editable=None, data=None, icon=None):
 	item = QTableWidgetItem(fmt % val if fmt else str(val))
 	if color:
 		item.setForeground(QtGui.QColor(color))
@@ -272,6 +289,8 @@ def set_col(table, row, col, val, fmt=None, color=None, align=None, editable=Non
 			item.setFlags(QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable)
 	if data:
 		item.setData(99, data)
+	if icon:
+		item.setIcon(icon)
 	
 	table.setItem(row, col, item)
 	return item

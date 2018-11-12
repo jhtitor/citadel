@@ -48,6 +48,8 @@ class TimeOut(Exception):
 class WalletLocked(Exception):
 	pass
 
+from .netloc import Cancelled
+
 class BitsharesIsolator(object):
 	enabled = False
 	@classmethod
@@ -69,7 +71,7 @@ class BitsharesIsolator(object):
 		self.conn_rpcpassword = kwargs.pop('rpcpassword', "")
 		
 		#self.bts = lambda: 0 #bitshares.BitShares(*args, offline=True, **kwargs)
-		self.bts = bitshares.BitShares(*args, offline=True, wallet=None, store=None, **kwargs)
+		self.bts = bitshares.BitShares(*args, offline=True, wallet=None, config_store=None, **kwargs)
 		self.bts.rpc = None
 		self.store = None
 		self.offline = True
@@ -85,28 +87,20 @@ class BitsharesIsolator(object):
 		#from bitsharesapi.bitsharesnoderpc import BitSharesNodeRPC
 	
 	def disconnect(self):
-		return self.close()
+		return self.close(force=True)
 		
 	def close(self, force=False):
 		if self.offline and not(force):
 			return True
-		
 		try:
 			if self.bts.rpc:
 				self.bts.rpc.close()
-		except:
-			pass
-		try:
-			self.bts.rpc.ws.close()
 		except:
 			pass
 		self.bts.rpc = None
 		self.offline = True
 		
 	def connect(self, *args, **kwargs):
-		if not self.offline:
-			return True
-		
 		self.close(force=True)
 		
 		#import bitshares
@@ -144,13 +138,21 @@ class BitsharesIsolator(object):
 	def get_proxy_config(self):
 		config = self.bts.config
 		proxyOn = config.get('proxy_enabled', False)
+		if not proxyOn:
+			return None
+		proxyAuth = config.get('proxy_auth_enabled', False)
 		proxyHost = config.get('proxy_host', None)
 		proxyPort = config.get('proxy_port', 9150)
 		proxyType = config.get('proxy_type', "socks5")
+		proxyUser = config.get('proxy_user', None)
+		proxyPass = config.get('proxy_pass', None)
+		authUrl = ""
+		if proxyAuth and (proxyUser or proxyPass):
+			authUrl = ((proxyUser if proxyUser else "") + ":" +
+				    (proxyPass if proxyPass else "")) + "@"
 		proxyUrl = None
-		if proxyOn and proxyHost:
-			proxyUrl = str(proxyType) + "://" + str(proxyHost) + ":" + str(proxyPort)
-		
+		if proxyHost:
+			proxyUrl = str(proxyType) + "://" + authUrl + str(proxyHost) + ":" + str(proxyPort)
 		return proxyUrl
 	
 	def setWallet(self, wallet):
@@ -187,16 +189,16 @@ class BitsharesIsolator(object):
 		#store.updateRawJSON(account_name, json.dumps(blnc))
 		store.update(account_name, 'balances_json', blnc)
 	
-	def injectBalance(self, account_id, asset_symbol, amount):
+	def injectBalance(self, account_id, asset_symbol, amount_int):
 		iso = self
 		store = self.store.accountStorage
 		account = self.getAccount(account_id, force_remote=False)
 		asset = self.getAsset(asset_symbol)
-		value = int(amount) / pow(10, asset["precision"])
+		value = int(amount_int) / pow(10, asset["precision"])
 		acc_blnc = iso.getBalances(account)
 		blnc = { }
 		for o in acc_blnc:
-			blnc[o.symbol] = o.amount
+			blnc[o.symbol] = str(o).split(" ")[0]
 		blnc[asset_symbol] = value
 		#print("Post-inject", blnc)
 		self.storeBalances(account["name"], blnc)
@@ -251,7 +253,7 @@ class BitsharesIsolator(object):
 		keyStorage = self.store.keyStorage
 		account = self.getAccount(account_id)
 		pubs = self.getLocalAccountKeys(account_id)
-		nkeys = keyStorage.countPrivateKeys(pubs)
+		nkeys = self.store.countPrivateKeys(pubs)
 		if update:
 			accountStorage.update(acc["name"], "keys", nkeys)
 		return nkeys
@@ -374,7 +376,7 @@ class BitsharesIsolator(object):
 		
 		return account
 	
-	def getAsset(self, asset_id, cache=True, force_remote=False):
+	def getAsset(self, asset_id, cache=True, force_remote=False, force_local=False):
 		from bitshares.asset import Asset
 		
 		if not(force_remote):
@@ -400,7 +402,7 @@ class BitsharesIsolator(object):
 			self.minicache_precision[stored_asset["symbol"]] = stored_asset["precision"]
 			return forged_asset
 		
-		if self.offline:
+		if self.offline or force_local: # Can't or Won't fetch remote asset
 			raise ResourceUnavailableOffline("Asset %s" % str(asset_id))
 		
 		from bitshares.exceptions import AssetDoesNotExistsException
@@ -419,7 +421,7 @@ class BitsharesIsolator(object):
 	def storeAccount(self, account, keys=2):
 		iso = self
 		accountStore = iso.accountStorage
-		jsond =  { }
+		jsond = { }
 		for key, val in account.items():
 			jsond[key] = val
 		
@@ -427,12 +429,13 @@ class BitsharesIsolator(object):
 			jsond.pop("balances")
 		
 		blnc = { }
-		for amount in self.getBalances(account['id'], force_local = True):#.balances:
-			blnc[str(amount.symbol)] = float(amount)
+		for amount in self.getBalances(account['id'], force_local=True):
+			blnc[str(amount.symbol)] = str(amount).split(" ")[0]
 		
 		try:
 			accountStore.add(account['name'], account['id'], keys=keys)
 		except ValueError: # already exists
+			#accountStore.update(account['name'], 'keys', keys)
 			pass # it's ok
 		accountStore.update(account['name'], 'graphene_json', jsond)
 		accountStore.update(account['name'], 'balances_json', blnc)
@@ -445,7 +448,43 @@ class BitsharesIsolator(object):
 		else:
 			store.add(asset['id'], asset['symbol'], asset)
 	
-	def getBalance(self, amount, asset_id):
+	class QAmount():
+		def __init__(self, asset, amount, precision=None, delim=","):
+			if type(amount) == int:
+				pass
+			if type(amount) == float and precision is None:
+				amount = str(amount)
+			if type(amount) == str:
+				if precision is None:
+					if "." in amount:
+						precision = len(amount) - amount.rindex(".") - 1
+					else:
+						precision = 0
+				amount = float(amount.replace(",", ""))
+			if precision is None:
+				raise ValueError("precision must be specified")
+			if type(amount) == float:
+				amount = int(amount * (10 ** precision))
+			self.symbol = asset
+			self.amount = amount # int!
+			self.precision = precision
+			self.delim = delim
+		def __float__(self):
+			return self.amount / pow(10, self.precision)
+		def __int__(self):
+			return int(self.amount)
+		def fmt(self, delim=None):
+			if delim is None: delim = self.delim
+			return ("{:"+delim+".{prec}f}").format(
+				float(self),
+				prec=self.precision
+			)
+		def __str__(self):
+			return self.fmt() + " " + self.symbol
+		def __repr__(self):
+			return "<QAmount " + str(self) + ">"
+
+	def getBalance(self, amount, asset_id, force_remote=False, force_local=False):
 		if asset_id.startswith('1.3.'):
 			store = self.assetStorage
 			if asset_id in store.ids_to_symbols:
@@ -455,19 +494,35 @@ class BitsharesIsolator(object):
 		else:
 			sym = asset_id
 		b = None
-		if not(sym in self.minicache_precision):
-			if sym: op = {"amount":amount, "asset": sym}
-			else: op = {"amount":amount, "asset_id": asset_id}
+		# local
+		if not(force_remote):
 			try:
-				b = self.getAmountOP(op)
+				prec = self.minicache_precision.get(sym, None)
+				if not prec or not sym:
+					if not sym: sym = asset_id
+					try:
+						a = self.getAsset(asset_id, force_local=force_local)
+						prec = int(a["precision"])
+						sym = a["symbol"]
+						asset_id = a["id"]
+					except:
+						prec = 0
+						if not sym.startswith("?"):
+							sym = "?" + sym
+				b = self.QAmount(sym, amount, prec, delim="")
+				return b
 			except:
+				if (force_local):
+					raise
 				import traceback
 				traceback.print_exc()
 				pass
-		if b is None:
-			b = lambda: None
-			b.symbol = sym
-			b.amount = amount
+		
+		# remote
+		if sym: op = {"amount":str(amount).replace(",",""), "asset": sym}
+		else: op = {"amount":amount, "asset_id": asset_id}
+		
+		b = self.getAmountOP(op, force_local=force_local)
 		return b
 	
 	def getBalanceOP(self, op_amount):
@@ -475,8 +530,8 @@ class BitsharesIsolator(object):
 			return self.getBalance(float(op_amount['amount']), op_amount['asset'])
 		return self.getBalance(int(op_amount['amount']), op_amount['asset_id'])
 	
-	def getAmount(self, asset_amount, asset_id):
-		asset = self.getAsset(asset_id)
+	def getAmount(self, asset_amount, asset_id, force_local=False):
+		asset = self.getAsset(asset_id, force_local=force_local)
 		
 		#if type(asset_amount) == str:
 		#	asset_amount = float(asset_amount)
@@ -489,12 +544,12 @@ class BitsharesIsolator(object):
 		from bitshares.amount import Amount
 		return Amount(asset_amount, asset, blockchain_instance=self.bts)
 	
-	def getAmountOP(self, op_amount):
+	def getAmountOP(self, op_amount, force_local=False):
 		#from pprint import pprint
 		#pprint(op_amount)
 		if 'asset' in op_amount:
-			return self.getAmount(float(op_amount['amount']), op_amount['asset'])
-		return self.getAmount(int(op_amount['amount']), op_amount['asset_id'])
+			return self.getAmount(float(op_amount['amount']), op_amount['asset'], force_local=force_local)
+		return self.getAmount(int(op_amount['amount']), op_amount['asset_id'], force_local=force_local)
 	
 	def getBalances(self, account_name_or_id, force_local=False, force_remote=False, cache=True):
 		if isinstance(account_name_or_id, str):
@@ -504,7 +559,7 @@ class BitsharesIsolator(object):
 		balances = [ ]
 		if hasattr(account, '_balances') and not(force_remote):
 			for sym, val in account._balances.items():
-				b = self.getBalance(val, sym)
+				b = self.getBalance(val, sym, force_local=force_local)
 				self.fave_coinnames.add(b.symbol)
 				balances.append(b)
 			return balances
@@ -522,7 +577,7 @@ class BitsharesIsolator(object):
 		if cache:
 			blnc = { }
 			for b in balances:
-				blnc[b.symbol] = b.amount
+				blnc[b.symbol] = str(b).split(" ")[0]
 			self.storeBalances(account["name"], blnc)
 		
 		return balances
@@ -629,9 +684,8 @@ class BitsharesIsolator(object):
 		return account_id
 	
 	def softAmountStr(self, asset_amount, asset_id, delim=""):
-		precision = 8
-		if asset_id in self.minicache_precision:
-			precision = self.minicache_precision[asset_id]
+		precision = self.minicache_precision.get(asset_id, 0)
+		return self.QAmount(asset_id, asset_amount, precision, delim).fmt()
 		#if not(type(asset_amount) == int):
 		#	t = str(asset_amount)
 		#	if not("e" in t):
@@ -838,8 +892,10 @@ class BitsharesIsolator(object):
 		return self.WalletGate( self.bts.wallet, reason )
 	
 	
-	def download_assets(self):
+	def download_assets(self, request_handler=None):
+		rh = request_handler
 		store = self.store.assetStorage
+		save = [ ]
 		rpc = self.bts.rpc
 		
 		lower_bound_symbol = ""
@@ -847,6 +903,8 @@ class BitsharesIsolator(object):
 		
 		done = False
 		while not done:
+			if rh and rh.cancelled:
+				raise Cancelled()
 			if self.offline:
 				raise ResourceUnavailableOffline("Asset batch")
 			batch = rpc.list_assets(lower_bound_symbol, limit)
@@ -873,23 +931,20 @@ class BitsharesIsolator(object):
 				batch[j]["dynamic_asset_data"] = reply
 			for asset in batch:
 				self.saveAsset(asset)
+				#save.append(asset)
 			if len(batch) < limit:
 				break
 			last = batch[-1]
 			lower_bound_symbol = last['symbol']
-	
+		return save
+
 	def download_asset(self, symbol):
 		rpc = self.bts.rpc
 		
-		try:
-			asset = rpc.get_asset(symbol)
-			if "bitasset_data_id" in asset and asset["bitasset_data_id"]:
-				asset["bitasset_data"] = rpc.get_object(asset["bitasset_data_id"])
-			asset["dynamic_asset_data"] = rpc.get_object(asset["dynamic_asset_data_id"])
-		except:
-			asset = None
-		if not asset:
-			return None
+		asset = rpc.get_asset(symbol)
+		if "bitasset_data_id" in asset and asset["bitasset_data_id"]:
+			asset["bitasset_data"] = rpc.get_object(asset["bitasset_data_id"])
+		asset["dynamic_asset_data"] = rpc.get_object(asset["dynamic_asset_data_id"])
 		
 		self.saveAsset(asset)
 		
@@ -916,11 +971,19 @@ class BitsharesIsolator(object):
 			self.fave_markets.remove(tag)
 		self.fave_markets.add(retag)
 	
-	def download_topmarkets(self):
+	def download_topmarkets(self, request_handler=None):
+		rh = request_handler
 		rpc = self.bts.rpc
+
+		total = 25
+		cnt = 0
+
 		mrs = rpc.get_top_markets(25)
 		markets = [ ]
 		for mr in mrs:
+			cnt += 1
+			if rh and rh.cancelled:
+				raise Cancelled()
 			name = mr['base']+":"+mr['quote']
 			ticker = { "percent_change": 0., "latest": 0. }
 			ticker = rpc.get_ticker(mr['base'], mr['quote'])
@@ -930,12 +993,14 @@ class BitsharesIsolator(object):
 				"quote_volume": mr['quote_volume']
 				 }
 			markets.append( (name, ticker, vol) )
+			prog = int(cnt / total * 100)
+			rh.ping(prog, None)
 #		ticker = rpc.get_ticker(a, b)
 		return markets
 
-	def download_markets(self, names):
+	def download_markets(self, names, request_handler=None):
 		if names is None:
-			return self.download_topmarkets()
+			return self.download_topmarkets(request_handler=request_handler)
 			names = self._marketMatrix()
 		rpc = self.bts.rpc
 		markets = [ ]
@@ -962,11 +1027,12 @@ class BitsharesIsolator(object):
 			timeout -= 1
 			time.sleep(1)
 	
-	def getWitnesses(self, only_active=False, lazy=False):
+	def getWitnesses(self, only_active=False, lazy=False, request_handler=None):
 		from bitshares.witness import Witnesses
 		return Witnesses(blockchain_instance=self.bts, lazy=lazy)
 	
-	def getCommittee(self, only_active=False, lazy=False):
+	def getCommittee(self, only_active=False, lazy=False, request_handler=None):
+		rh = request_handler
 		from bitshares.committee import Committee
 		rpc = self.bts.rpc
 		last_name = ""
@@ -974,6 +1040,8 @@ class BitsharesIsolator(object):
 		while True:
 			accs = rpc.lookup_committee_member_accounts(last_name, 100)
 			for name, identifier in accs:
+				if rh and rh.cancelled:
+					raise Cancelled()
 				member = Committee(identifier, lazy=True, blockchain_instance=self.bts)
 				member.refresh()
 				whole.append(member)
@@ -982,7 +1050,7 @@ class BitsharesIsolator(object):
 				break
 		return whole
 	
-	def getWorkers(self, only_active=False, lazy=False):
+	def getWorkers(self, only_active=False, lazy=False, request_handler=None):
 		from bitshares.worker import Workers
 		return Workers(blockchain_instance=self.bts, lazy=lazy)
 	

@@ -27,11 +27,16 @@ class VotingWindow(QtWidgets.QDialog):
 		stretch_table(self.ui.committeeTable, 2)
 		stretch_table(self.ui.workersTable, 2)
 		
+		qmenu(self.ui.witnessTable, self.show_vote_submenu)
+		qmenu(self.ui.committeeTable, self.show_vote_submenu)
+		qmenu(self.ui.workersTable, self.show_vote_submenu)
+		
 		self.updaterWS = RemoteFetch()
 		self.updaterCM = RemoteFetch()
 		self.updaterWR = RemoteFetch()
 		self.resync()
 		self.proxy_toggle()
+		self.refreshUi(1) # disable OK/Proxy buttons
 		
 		for account_name in self.accounts:
 			if account_name == self.activeAccount["name"]:
@@ -176,18 +181,6 @@ class VotingWindow(QtWidgets.QDialog):
 		if item.checkState():
 			rel_item.setCheckState(0)
 	
-	def collect_flags(self, elem):
-		d = { }
-		n = elem.count()
-		for i in range(0, n):
-			item = elem.item(i)
-			name = item.data(33)
-			if item.checkState():
-				d[name] = True
-			else:
-				d[name] = False
-		return d
-	
 	def collect_witness_votes(self, votes):
 		table = self.ui.witnessTable
 		cnt = 0
@@ -285,6 +278,11 @@ class VotingWindow(QtWidgets.QDialog):
 		if r:
 			self.accept()
 	
+	def close(self):
+		self.updaterWS.cancel()
+		self.updaterCM.cancel()
+		self.updaterWR.cancel()
+
 	def resync(self):
 		self.updaterWS.fetch(
 			self.mergeWitness_before, self.iso, True,
@@ -307,9 +305,9 @@ class VotingWindow(QtWidgets.QDialog):
 			ping_callback=self.ping_callback,
 			description="Updating workers")
 
-	def mergeWitness_before(self, iso, passive):
+	def mergeWitness_before(self, iso, passive, request_handler=None):
 		
-		witnesses = iso.getWitnesses(passive, lazy=False)
+		witnesses = iso.getWitnesses(passive, lazy=False, request_handler=request_handler)
 		for w in witnesses:
 			w._account = w.account
 		
@@ -349,11 +347,11 @@ class VotingWindow(QtWidgets.QDialog):
 		#self.refreshUi()
 	
 	def mergeWitness_abort(self, request_id, error):
-		print("Failed to get witnesses:", str(error), type(error))
+		log.error("Failed to get witnesses: %s", str(error))
 
-	def mergeCommittee_before(self, iso, passive):
+	def mergeCommittee_before(self, iso, passive, request_handler=None):
 		
-		members = iso.getCommittee(passive, lazy=False)
+		members = iso.getCommittee(passive, lazy=False, request_handler=request_handler)
 		for m in members:
 			m._account = m.account
 		
@@ -390,11 +388,11 @@ class VotingWindow(QtWidgets.QDialog):
 		#self.refreshUi()
 	
 	def mergeCommittee_abort(self, request_id, error):
-		print("Failed to get committee:", str(error), type(error))
+		log.error("Failed to get committee: %s", str(error))
 
-	def mergeWorkers_before(self, iso, passive):
+	def mergeWorkers_before(self, iso, passive, request_handler=None):
 		
-		workers = iso.getWorkers(passive, lazy=False)
+		workers = iso.getWorkers(passive, lazy=False, request_handler=request_handler)
 		for w in workers:
 			w._account = w.account
 		
@@ -442,7 +440,7 @@ class VotingWindow(QtWidgets.QDialog):
 		#self.refreshUi()
 	
 	def mergeWorkers_abort(self, request_id, error):
-		print("Failed to get workers:", str(error), type(error))
+		log.error("Failed to get workers: %s", str(error))
 	
 	def ping_callback(self, request_id, o):
 		# refreshUi is going to count active processes
@@ -450,9 +448,9 @@ class VotingWindow(QtWidgets.QDialog):
 		from .work import Request
 		mod = 0
 		if (o == Request.PT_FINISHED) or (o == Request.PT_CANCELLED):
-			mod = 1
+			mod = -1
 		# so we cheat add subtract 1 from busy count
-		self.refreshUi(mod)
+		self.refreshUi(0)#mod)
 	
 	def refreshUi(self, mod=0):
 		text = delim = ""
@@ -461,7 +459,7 @@ class VotingWindow(QtWidgets.QDialog):
 		from .work import Request
 		bgtop = Request.top()
 		for task in bgtop:
-			(cancelled, desc, c) = task
+			(cancelled, desc, c, p) = task
 			if cancelled or not(desc):
 				continue
 			if c in ['mergeWitness_before',
@@ -472,7 +470,7 @@ class VotingWindow(QtWidgets.QDialog):
 				continue
 			text = text + delim + desc
 			delim = " | "
-		#busy -= mod
+		busy += mod
 		if busy:
 			text = text + delim + " Please wait..."
 		else:
@@ -485,6 +483,43 @@ class VotingWindow(QtWidgets.QDialog):
 		self.ui.accountProxy.setEnabled(not(busy))
 		#if busy:
 		#	self.ui.updateButton.setEnabled(False)
-		#e#lse:
+		#else:
 		#	self.ui.updateButton.setEnabled(True)
 		
+	def _get_table(self):
+		page = self.ui.tabWidget.currentIndex()
+		table = None
+		if page == 1:
+			table = self.ui.witnessTable
+		if page == 2:
+			table = self.ui.committeeTable
+		if page == 3:
+			table = self.ui.workersTable
+		return table
+	
+	def show_vote_submenu(self, position):
+		menu = QtGui.QMenu()
+		qaction(self, menu, "Copy URL", self._copy_url)
+		qaction(self, menu, "Copy Name", self._copy_name)
+		table = self._get_table()
+		qmenu_exec(table, menu, position)
+		
+	
+	def _copy_url(self):
+		table = self._get_table()
+		j = table_selrow(table)
+		if j <= -1: return
+		url = table.item(j, 2).text()
+		if not len(url.strip()):
+			return
+		qclip(url)
+	
+	def _copy_name(self):
+		table = self._get_table()
+		j = table_selrow(table)
+		if j <= -1: return
+		name = table.item(j, 1).text()
+		if not len(name.strip()):
+			return
+		qclip(name)
+	

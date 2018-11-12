@@ -94,7 +94,8 @@ class WindowWithGateway(QtCore.QObject):
 		gb.blockSignals(True)
 		gb.clear()
 		gb.addItem("select...", None)
-		remotes = self.iso.store.remotesStorage.getRemotes(1)
+		store = self.iso.store.remotesStorage
+		remotes = store.getRemotes(store.RTYPE_BTS_GATEWAY)
 		for remote in remotes:
 			name = str(remote['label'])
 			gb.addItem(name, remote['id'])
@@ -499,7 +500,8 @@ class WindowWithGateway(QtCore.QObject):
 				self._set_combo(self.ui.outputCoinType, tr['inputCoinType'].upper())
 	
 	def _gw_remotes(self):
-		return self.iso.store.remotesStorage.getRemotes(1)
+		store = self.iso.store.remotesStorage
+		return store.getRemotes(store.RTYPE_BTS_GATEWAY)
 	def _gw_wrap_remote(self, remote):
 		return (str(remote['label']),
 			remote['url'], remote['refurl'],

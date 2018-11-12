@@ -9,7 +9,7 @@ import time
 import urllib
 import queue
 from itertools import cycle
-from grapheneapi.graphenewsrpc import GrapheneWebsocketRPC
+from grapheneapi.websocket import Websocket
 from bitsharesbase.chains import known_chains
 from bitsharesapi import exceptions
 import logging
@@ -28,8 +28,8 @@ class BitSharesNodeRPC(object):
         self.user = user
         self.password = password
 
-        if "ping_callback" in kwargs:
-            self._ping_callback = kwargs.pop("ping_callback", None)
+        self._rh = kwargs.pop("request_handler", None)
+
         self._preid = 0
 
         self.rate_limit = kwargs.pop("rate_limit", 0.005)
@@ -82,8 +82,10 @@ class BitSharesNodeRPC(object):
         self._subscription_id += 1
         return self._subscription_id
 
-    def _ping_callback(self, obj, note, error=None):
-        pass
+    def report(self, note, error=None):
+        if not self._rh:
+            return
+        self._rh.ping(0, (self, note, error))
 
     def disconnect(self):
         self.close()
@@ -92,15 +94,6 @@ class BitSharesNodeRPC(object):
         self.needed = False
         self.connecting = False
         self.connected = False
-        try:
-            if self.ws:
-                self.ws.close()
-        except:
-            pass
-        self.ws = None
-        self.connecting = False
-        self.connected = False
-        self.initialized = False
 
     def __forever(self):
         done_ev = "connected"
@@ -115,11 +108,13 @@ class BitSharesNodeRPC(object):
                     except:
                         pass
                     self.ws = None
-                self._ping_callback(self, doin_ev)
+                self.report(doin_ev)
                 doin_ev = "reconnecting"
                 time.sleep(0.1)
                 try:
                     self.wsconnect()
+                    if not self.needed:
+                        break
                     tm = self.ws.sock.gettimeout()
                     log.debug("now login")
                     self.login(self.user, self.password, api_id=1, plan_b=True)
@@ -131,16 +126,16 @@ class BitSharesNodeRPC(object):
                     self.initialized = True
 
                 except Exception as error:
-                    print(error)
-                    self._ping_callback(self, fail_ev, error)
-                    fail_ev = "lost"
+                    #log.error(str(error))#, type(error))
                     self.handshake = False
                     if not(self.keep_connecting):
+                        self.report(fail_ev, error)
+                        fail_ev = "lost"
                         break
                     continue
                 log.debug("now done")
                 self.connected = True
-                self._ping_callback(self, done_ev)
+                self.report(done_ev)
                 done_ev = "reconnected"
                 self._preid += 1
                 continue
@@ -156,10 +151,10 @@ class BitSharesNodeRPC(object):
             except queue.Empty:
                 pass
             except Exception as error:
-                import traceback
-                traceback.print_exc()
+                #import traceback
+                #traceback.print_exc()
                 self.connected = False
-                self._ping_callback(self, "disconnected", error)
+                self.report("disconnected", error)
                 continue
 
             if not(self.needed):
@@ -177,12 +172,12 @@ class BitSharesNodeRPC(object):
                     continue
                 except Exception as error:
                     self.connected = False
-                    self._ping_callback(self, "disconnected", error)
+                    self.report("disconnected", error)
                     continue
             # yes ^ v - same code
             except Exception as error:
                 self.connected = False
-                self._ping_callback(self, "disconnected", error)
+                self.report("disconnected", error)
                 continue
 
             #log.debug("REPLY: %s", reply)
@@ -214,7 +209,9 @@ class BitSharesNodeRPC(object):
                 pass
             self.ws = None
 
-        self._ping_callback(self, "done")
+        self.needed = False
+        self.connected = False
+        self.report("done")
 
     def flush_notes(self):
         notes = [ ]
@@ -234,17 +231,15 @@ class BitSharesNodeRPC(object):
     def prepare_proxy(self, options):
         proxy_url = options.pop("proxy", None)
         if proxy_url:
-            url = urllib.parse.urlparse(proxy_url)
-            self.proxy_host = url.hostname
-            self.proxy_port = url.port
-            self.proxy_type = url.scheme.lower()
-            self.proxy_user = url.username
-            self.proxy_pass = url.password
-            self.proxy_rdns = True
-            if not(url.scheme.endswith('h')):
-                self.proxy_rdns = False
-            #else:
-            #    self.proxy_type = self.proxy_type[0:len(self.proxy_type)-1]
+            try:
+                url = urllib.parse.urlparse(proxy_url)
+                self.proxy_host = url.hostname
+                self.proxy_port = url.port
+                self.proxy_type = url.scheme.lower()
+                self.proxy_user = url.username
+                self.proxy_pass = url.password
+            except Exception as e:
+                raise ValueError("Can not parse proxy URL %s -- %s" % (proxy_url, str(e)))
         else:
             # Defaults (tweakable)
             self.proxy_host = options.pop("proxy_host", None)
@@ -252,7 +247,13 @@ class BitSharesNodeRPC(object):
             self.proxy_type = options.pop("proxy_type", 'http')
             self.proxy_user = options.pop("proxy_user", None)
             self.proxy_pass = options.pop("proxy_pass", None)
+        self.proxy_rdns = True
+        if not(self.proxy_type.endswith('h')):
             self.proxy_rdns = False
+        #else:
+        #    self.proxy_type = self.proxy_type[0:len(self.proxy_type)-1]
+        if self.proxy_port is None:
+            self.proxy_port = 80
 
         log.info("Using proxy %s:%d %s" % (self.proxy_host, self.proxy_port, self.proxy_type))
 
@@ -345,24 +346,24 @@ class BitSharesNodeRPC(object):
 
         cnt = 1
         preid = None
+        error = None
         while True:
             if self.initialized and not(self.connected) and not(self.connecting):
                 raise TimedOut() #exceptions.NumRetriesReached
             #print("RPC-exec waiting for", call_id, payload['params'][1], payload['params'][2], "[", sleeptime, "]")
-            if (sleeptime <= 0) or not(self.needed):
-                raise TimedOut()
 
             try:
                 error = self.errors.get(block=False)
-                if error:
-                    raise error
             except KeyboardInterrupt:
                 raise
             except:
                 pass
 
-            #if self.connected and preid and self._preid != preid:
-            #    raise NumRetriesReached()
+            if (sleeptime <= 0) or not(self.needed):
+                self.connecting = False
+                if error:
+                    raise error
+                raise TimedOut()
 
             with self.replylock:
                 ret = self.replies.pop(call_id, None)
@@ -394,10 +395,10 @@ class BitSharesNodeRPC(object):
         self.connecting = True
         self.connected = False
         cnt = 0
-        while True:
+        while self.connecting:
             cnt += 1
             self.url = next(self.urls)
-            log.debug("Trying to connect to node %s" % self.url)
+            log.debug("Trying to connect to node %s", self.url)
             sslopt_ca_certs = None
 
             if self.url.startswith("wss://"):
@@ -409,26 +410,35 @@ class BitSharesNodeRPC(object):
                 self.ws.connect(self.url,
                     http_proxy_host = self.proxy_host,
                     http_proxy_port = self.proxy_port,
-                    proxy_type = self.proxy_type
+                    proxy_type = self.proxy_type,
+                    http_proxy_auth = (
+                        (self.proxy_user, self.proxy_pass)
+                        if (self.proxy_user or self.proxy_pass) else None
+                    )
                 )
                 break
             except KeyboardInterrupt:
                 self.connecting = False
                 raise
             except Exception as error:
-                self.errors.put( error )
                 if (self.num_retries >= 0 and cnt > self.num_retries):
                     self.connecting = False
-                    raise error#exceptions.NumRetriesReached()
+                    raise error #exceptions.NumRetriesReached()
+                else:
+                    self.errors.put( error )
 
-                sleeptime = (cnt - 1) * 2 if cnt < 10 else 10
-                if sleeptime:
+
+                sleeptime = min((cnt-1) * 2, 10)#*3
+                if sleeptime or True:
                     log.warning(
                         "Could not connect to node: %s (%d/%d) \n %s "
                         % (self.url, cnt, self.num_retries, str(error)) +
                         "Retrying in %d seconds" % sleeptime
                     )
                     time.sleep(sleeptime)
+
+        if not self.connecting:
+            self.ws.close()
 
         #self.connected = True
         self.connecting = False

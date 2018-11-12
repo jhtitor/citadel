@@ -25,7 +25,11 @@ ui:
 	pyuic5 $(UISRC)/market.ui -o uidef/market.py --from-imports
 	pyuic5 $(UISRC)/createasset.ui -o uidef/createasset.py --from-imports
 	pyuic5 $(UISRC)/voting.ui -o uidef/voting.py --from-imports
+	pyuic5 $(UISRC)/keyswindow.ui -o uidef/keyswindow.py --from-imports
 	pyrcc5 $(UISRC)/res.qrc -o uidef/res_rc.py
+
+sdist:
+	python3 setup.py sdist
 
 app: $(ICNS_FILE)
 	rm -f version.txt

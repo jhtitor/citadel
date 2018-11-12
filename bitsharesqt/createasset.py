@@ -2,9 +2,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.createasset import Ui_CreateAsset
 
 from .utils import *
+import json
 import logging
 log = logging.getLogger(__name__)
-import json
 
 from .transactionbuilder import QTransactionBuilder
 from bitsharesbase.asset_permissions import asset_permissions
@@ -84,7 +84,8 @@ class AssetWindow(QtWidgets.QDialog):
 		
 		self.ui.totalEdit.setMaximum(GRAPHENE_MAX_SHARE_SUPPLY)
 		
-		set_combo(self.ui.accountBox, self.activeAccount["name"])
+		if self.activeAccount:
+			set_combo(self.ui.accountBox, self.activeAccount["name"])
 		
 		if self.asset:
 			self.setupAsset(self.asset)

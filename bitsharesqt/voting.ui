@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>620</width>
-    <height>543</height>
+    <height>553</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -145,7 +145,7 @@ If you do, it will cast votes on your behalf. You can opt-out and restore your v
             </property>
             <property name="icon">
              <iconset resource="res.qrc">
-              <normaloff>:/icons/images/account_suit.png</normaloff>:/icons/images/account_suit.png</iconset>
+              <normaloff>:/op/images/op/account_update.png</normaloff>:/op/images/op/account_update.png</iconset>
             </property>
             <property name="flat">
              <bool>true</bool>
