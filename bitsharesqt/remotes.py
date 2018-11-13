@@ -26,12 +26,6 @@ class RemotesEditor(QtWidgets.QDialog):
 		
 		self.ui.closeButton.clicked.connect(self.accept)
 		
-		#self.ui.editnodesButton.clicked.connect(self.edit_nodes)
-		
-		#fb = self.ui.faucetBox
-		#for name, url, refurl, factory in KnownFaucets:
-		#	fb.addItem(name, (url, refurl))
-		
 		self.ui.addButton.clicked.connect(self.add_empty)
 		self.ui.delButton.clicked.connect(self.del_selected)
 		
@@ -95,24 +89,18 @@ class RemotesEditor(QtWidgets.QDialog):
 		
 		newid = store.add(self.rtype, "", "", "", "")
 		
+		table.blockSignals(True)
+		
 		j = table.rowCount()
 		table.insertRow(j)
 		
-		table.blockSignals(True)
-		
-		table.setItem(j, 0, QtGui.QTableWidgetItem("New node") )
-		table.setItem(j, 1, QtGui.QTableWidgetItem("wss://") )
+		set_col(table, j, 0, "New node", data=newid)
+		set_col(table, j, 1, "wss://"  , data=newid)
 		
 		if self.class_edit:
 			cb = self._gateway_class_cb()
 			on_combo(cb, self._edit_cb)
-			set_combo(cb, 'BlockTradesUS')
 			table.setCellWidget(j, 2, cb)
-		
-		c1 = table.item(j, 0)
-		c2 = table.item(j, 1)
-		c1.setData(99, newid)
-		c2.setData(99, newid)
 		
 		table.blockSignals(False)
 	
@@ -120,6 +108,8 @@ class RemotesEditor(QtWidgets.QDialog):
 		cb = QtWidgets.QComboBox()
 		for gw in gateway_apis:
 			set_combo(cb, str(gw), force=True)
+		if len(gateway_apis):
+			set_combo(cb, str(gateway_apis[0]))
 		return cb
 
 	def merge(self):
@@ -134,9 +124,6 @@ class RemotesEditor(QtWidgets.QDialog):
 			j = table.rowCount()
 			table.insertRow(j)
 			
-			#table.setItem(j, 0, QtGui.QTableWidgetItem( str(remote['label']) ))
-			#table.setItem(j, 1, QtGui.QTableWidgetItem( str(remote['url']) ))
-			
 			set_col(table, j, 0, str(remote['label']), data=remote['id'])
 			set_col(table, j, 1, str(remote['url']),   data=remote['id'])
 			
@@ -145,11 +132,6 @@ class RemotesEditor(QtWidgets.QDialog):
 				set_combo(cb, remote['ctype'])
 				on_combo(cb, self._edit_cb)
 				table.setCellWidget(j, 2, cb)
-			
-#			c1 = table.item(j, 0)
-#			c2 = table.item(j, 1)
-#			c1.setData(99, remote['id'])
-#			c2.setData(99, remote['id'])
 			
 		table.blockSignals(False)
 	
