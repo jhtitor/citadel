@@ -483,7 +483,10 @@ class WindowWithGateway(QtCore.QObject):
 			combo.setCurrentIndex(index)
 	
 	def swap_coin_types(self):
-		(name, _, _, _) = self._get_current_trader()
+		t = self._get_current_trader()
+		if not t:
+			return
+		(name, _, _, _) = t
 		
 		tr = self._collect_trade()
 		
