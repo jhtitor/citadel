@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from PyQt5.QtWidgets import QTableWidgetItem
-
 from .netloc import RemoteFetch
 from .utils import *
 import json
@@ -137,9 +135,8 @@ class HistoryTab(QtWidgets.QWidget):
 	
 	def history_memo(self):
 		j = table_selrow(self.ui.table)
-		if j < 0:
-			return
-		h = self.ui.table.item(j, 0).data(99)
+		if j <= -1: return
+		h = table_coldata(self.ui.table, j, 0)
 		#if h["memo"] == -1:
 		#	return False
 		info = json.loads(h['operation'])
@@ -177,9 +174,8 @@ class HistoryTab(QtWidgets.QWidget):
 	
 	def history_receipts(self):
 		j = table_selrow(self.ui.table)
-		if j < 0:
-			return
-		h = self.ui.table.item(j, 0).data(99)
+		if j <= -1: return
+		h = table_coldata(self.ui.table, j, 0)
 		#if h["memo"] == -1:
 		#	return False
 		info = json.loads(h['operation'])
@@ -199,9 +195,8 @@ class HistoryTab(QtWidgets.QWidget):
 	
 	def history_viewexplorer(self):
 		j = table_selrow(self.ui.table)
-		if j < 0:
-			return
-		h = self.ui.table.item(j, 0).data(99)
+		if j <= -1: return
+		h = table_coldata(self.ui.table, j, 0)
 		
 		url = "http://bitshares-explorer.io/#/blocks/${block}"
 		url = "http://cryptofresh.com/tx/${tx}"
@@ -212,17 +207,15 @@ class HistoryTab(QtWidgets.QWidget):
 	
 	def history_copy_blocknum(self):
 		j = table_selrow(self.ui.table)
-		if j < 0:
-			return
-		h = self.ui.table.item(j, 0).data(99)
+		if j <= -1: return
+		h = table_coldata(self.ui.table, j, 0)
 		
 		qclip(str(h['block_num']))
 	
 	def history_copy_trxid(self):
 		j = table_selrow(self.ui.table)
-		if j < 0:
-			return
-		h = self.ui.table.item(j, 0).data(99)
+		if j <= -1: return
+		h = table_coldata(self.ui.table, j, 0)
 		
 		if not h['trxid']:
 			showerror("Transaction has no ID :(")
@@ -232,12 +225,11 @@ class HistoryTab(QtWidgets.QWidget):
 	
 	def history_click(self):
 		j = table_selrow(self.ui.table)
-		if j < 0:
-			return
+		if j <= -1: return
 		self.history_superclick(j, 0)
 	
 	def history_superclick(self, row, column):
-		h = self.ui.table.item(row, 0).data(99)
+		h = table_coldata(self.ui.table, row, 0)
 		op_id = h['op_index']
 		#op_id = self.ui.table.item(row, 0).text()
 		iso = self._last_iso
@@ -299,12 +291,9 @@ class HistoryTab(QtWidgets.QWidget):
 			
 			table.insertRow(j)
 			
-			item = QTableWidgetItem( str(h["date"]) )
-			item.setData(99, h)
-			table.setItem(j, 0, item)
 			icon = qicon(h["_icon"])
-			item.setIcon(icon)
 			
+			set_col(table, j, 0, str(h["date"]), data=h, icon=icon)
 			set_col(table, j, 1, description)
 			set_col(table, j, 2, h["_details"]["plus"], color=COLOR_GREEN, align="right")
 			set_col(table, j, 3, h["_details"]["minus"], color=COLOR_RED, align="right")
