@@ -811,7 +811,7 @@ class MainWindow(QtGui.QMainWindow,
 		if not(self.iso.bts.wallet):
 			showerror("No wallet file open")
 			return False
-		win = SettingsWindow(isolator=self.iso)
+		win = SettingsWindow(isolator=self.iso, parent=self)
 		win.setPage(page)
 		win.exec_()
 		self.updateUIfromConfig()
@@ -827,6 +827,7 @@ class MainWindow(QtGui.QMainWindow,
 			accounts=self.account_names,
 			contacts=self.contact_names,
 			activeAccount=self.activeAccount,
+			parent=self
 		)
 		win.exec_()
 	
@@ -834,13 +835,14 @@ class MainWindow(QtGui.QMainWindow,
 		win = AssetWindow(isolator=self.iso, mode="create",
 			accounts=self.account_names,
 			account=self.activeAccount,
+			parent=self
 			)
 		win.exec_()
 	
 	def goto_market(self):
 		input, ok = QtGui.QInputDialog.getText(
-			None, 'Go to Market',
-			'Market name, like BTS:BTC')#, QtGui.QLineEdit.Password)
+			self, 'Go to Market',
+			'Market name, like BTS:BTC')
 		
 		if not ok:
 			return False
@@ -1858,7 +1860,7 @@ class MainWindow(QtGui.QMainWindow,
 			return True
 		
 		input, ok = QtGui.QInputDialog.getText(
-			None, 'Password',
+			self, 'Password',
 			(('To ' + reason + '\n\n') if reason else '') +
 			'Enter wallet master password:', QtGui.QLineEdit.Password)
 		
@@ -2009,7 +2011,10 @@ class MainWindow(QtGui.QMainWindow,
 	def _add_account(self):
 		wallet = self.iso.bts.wallet
 		
-		win = AccountWizard(isolator=self.iso, registrars=self.account_names, active=self.activeAccount)
+		win = AccountWizard(isolator=self.iso,
+			registrars=self.account_names,
+			active=self.activeAccount,
+			parent=self)
 		
 		if not win.exec_():
 			return
@@ -2035,7 +2040,8 @@ class MainWindow(QtGui.QMainWindow,
 		win = AccountWizard(
 			isolator=self.iso,
 			active=account,
-			sweepMode=True
+			sweepMode=True,
+			parent=self
 		)
 		
 		if not win.exec_():
@@ -2221,7 +2227,7 @@ class MainWindow(QtGui.QMainWindow,
 			with self.iso.unlockedWallet(
 				reason='View/Manage Private Keys'
 			) as w:
-				win = KeysWindow(isolator=self.iso)
+				win = KeysWindow(isolator=self.iso, parent=self)
 				win.exec_()
 				n = win._ret
 				if n > 0:

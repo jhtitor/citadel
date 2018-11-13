@@ -31,10 +31,6 @@
   <property name="windowTitle">
    <string>Account Wizard</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="res.qrc">
-    <normaloff>:/images/images/bitshares_logo.png</normaloff>:/images/images/bitshares_logo.png</iconset>
-  </property>
   <property name="modal">
    <bool>false</bool>
   </property>

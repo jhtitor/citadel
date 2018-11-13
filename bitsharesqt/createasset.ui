@@ -19,10 +19,6 @@
   <property name="windowTitle">
    <string>Asset</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="res.qrc">
-    <normaloff>:/images/images/bitshares_logo.png</normaloff>:/images/images/bitshares_logo.png</iconset>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
     <number>10</number>
