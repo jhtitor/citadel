@@ -2105,6 +2105,8 @@ class MainWindow(QtGui.QMainWindow,
 		
 		if account is True and self.activeAccount:
 			account = self.activeAccount["name"]
+		elif account is True:
+			return
 		elif account:
 			if not(isinstance(account, str)):
 				account = account["name"]
@@ -2174,6 +2176,8 @@ class MainWindow(QtGui.QMainWindow,
 		
 		if account is True and self.activeAccount:
 			account = self.activeAccount["name"]
+		elif account is True:
+			return
 		elif account:
 			if not(isinstance(account, str)):
 				account = account["name"]
