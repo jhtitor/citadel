@@ -85,8 +85,10 @@ class BitsharesQT(QtGui.QApplication):
 		#)
 	
 if  __name__ == "__main__":
+	import bitsharesqt.version as version
 	import argparse
 	parser = argparse.ArgumentParser()
+	parser.add_argument('--version', action='version', version=version.VERSION)
 	parser.add_argument("WALLET", nargs="?", help="wallet file to open")
 	args = parser.parse_args()
 	
