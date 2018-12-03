@@ -91,7 +91,7 @@ class OrderTab(QtWidgets.QWidget):
 				app().mainwin._txAppend(*v)
 			else:
 				QTransactionBuilder._QExec(self._iso, v)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		return True
@@ -233,7 +233,7 @@ class OrderTab(QtWidgets.QWidget):
 				app().mainwin._txAppend(*v)
 			else:
 				QTransactionBuilder._QExec(self._iso, v)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		return True

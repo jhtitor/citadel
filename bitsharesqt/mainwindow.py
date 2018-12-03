@@ -872,6 +872,7 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def show_transfer(self):
 		self.OTransfer()
+	
 	def show_sell(self):
 		self.OSell()
 	
@@ -1221,7 +1222,7 @@ class MainWindow(QtGui.QMainWindow,
 				account_name,
 				#fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 	
 	def make_limit_order(self):
@@ -1251,7 +1252,7 @@ class MainWindow(QtGui.QMainWindow,
 				self._txAppend(*v)
 			else:
 				QTransactionBuilder._QExec(self.iso, v)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		return True
@@ -1278,7 +1279,7 @@ class MainWindow(QtGui.QMainWindow,
 				self._txAppend(*v)
 			else:
 				QTransactionBuilder._QExec(self.iso, v)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		return True

@@ -463,7 +463,7 @@ class AssetWindow(QtWidgets.QDialog):
 				memo=memo_text,
 				fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		self.accept()
@@ -482,7 +482,7 @@ class AssetWindow(QtWidgets.QDialog):
 				account_from,
 				fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		
@@ -502,7 +502,7 @@ class AssetWindow(QtWidgets.QDialog):
 				account_from,
 				fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		

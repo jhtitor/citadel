@@ -271,7 +271,7 @@ class VotingWindow(QtWidgets.QDialog):
 				fee_asset=fee_asset,
 				isolator=self.iso
 			)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		

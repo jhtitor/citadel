@@ -283,7 +283,7 @@ class MarketTab(QtGui.QWidget):
 				order_id,
 				#fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 	
 	def desync(self):
