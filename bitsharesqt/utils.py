@@ -202,6 +202,10 @@ def qtimer(delay, cb):
 	timer.timeout.connect(cb)
 	return timer
 
+def picon(path):
+	ico = QtGui.QPixmap(path)
+	return ico
+
 def licon(path):
 	ico = QtGui.QPixmap(path)
 	img = QtGui.QLabel("")
@@ -212,9 +216,6 @@ def qicon(path):
 	ico = QtGui.QPixmap(path)
 	icon = QtGui.QIcon(ico)
 	return icon
-	img = QtGui.QLabel("")
-	img.setPixmap(ico)
-	return img
 
 
 def fill_combo(combo, options):
