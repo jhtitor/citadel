@@ -1428,7 +1428,10 @@ class MainWindow(QtGui.QMainWindow,
 			]
 		)
 		config = self.iso.bts.config
-		expire_seconds = config.get("order-expiration", 3600*24)
+		try:
+			expire_seconds = int( config.get("order-expiration", 3600*24) )
+		except:
+			expire_seconds = 3600*24
 		expire_fok = bool(config.get("order-fillorkill", False))
 		tab.ui.sellExpireEdit.setText(deltainterval(expire_seconds))
 		tab.ui.buyExpireEdit.setText(deltainterval(expire_seconds))
@@ -1487,7 +1490,10 @@ class MainWindow(QtGui.QMainWindow,
 			]
 		)
 		config = self.iso.bts.config
-		expire_seconds = config.get("order-expiration", 3600*24)
+		try:
+			expire_seconds = int(config.get("order-expiration", 3600*24))
+		except:
+			expire_seconds = 3600*24
 		expire_fok = bool(config.get("order-fillorkill", False))
 		tab.ui.sellexpireEdit.setText(deltainterval(expire_seconds))
 		tab.ui.fokCheckbox.setChecked(expire_fok)
@@ -1602,7 +1608,10 @@ class MainWindow(QtGui.QMainWindow,
 		config =  self.iso.bts.config
 		expand_users = bool( config.get('ui_showaccounts', False) )
 		adv_mode = bool( config.get('ui_advancedmode', False) )
-		expire_seconds = int( config.get('order-expiration', 3600*24) )
+		try:
+			expire_seconds = int( config.get('order-expiration', 3600*24) )
+		except:
+			expire_seconds = 3600*24
 		expire_fok = bool( config.get('order-fillorkill', False) )
 		
 		for key,qact in self.config_triggers.items():
