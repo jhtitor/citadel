@@ -909,7 +909,7 @@ class BlindAccounts(DataDir):
         """
         if key not in ['label', 'pub']:
             raise KeyError("'key' must be label or pub")
-        query = ("SELECT graphene_json, balances_json, label, pub from %s " % (self.__tablename__) +
+        query = ("SELECT graphene_json, balances_json, label, pub, keys from %s " % (self.__tablename__) +
                  "WHERE %s=?" % (key),
                  (some_id, ))
         row = self.sql_fetchone(query)
@@ -926,6 +926,7 @@ class BlindAccounts(DataDir):
         body['balances'] = json.loads(row[1]) if row[1] else { }
         body['label'] = row[2]
         body['pub'] = row[3]
+        body['keys'] = row[4]
         return body
 
     def getByPublicKey(self, pub):
