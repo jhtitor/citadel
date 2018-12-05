@@ -4,8 +4,6 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.exchange import Ui_ExchangeTab
 _translate = QtCore.QCoreApplication.translate
 
-from PyQt5.QtWidgets import QTableWidgetItem
-
 from .transactionbuilder import QTransactionBuilder
 
 from .netloc import RemoteFetch
@@ -225,11 +223,12 @@ class OrderTab(QtWidgets.QWidget):
 		order_id = table.item(row, 0).text()
 		#b = table.item(index, 1).text()
 		buffer = app().mainwin.buffering()
+		fee_asset = anyvalvis(self.ui.sellFeeAsset, "BTS")
 		try:
 			v = QTransactionBuilder.VCancelOrder(
 				self._account_name,
 				order_id,
-				#fee_asset=fee_asset,
+				fee_asset=fee_asset,
 				isolator=self._iso)
 			if buffer:
 				app().mainwin._txAppend(*v)

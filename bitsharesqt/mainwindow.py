@@ -734,11 +734,14 @@ class MainWindow(QtGui.QMainWindow,
 	
 	
 	def openMarket(self, asset_name_a, asset_name_b, to_front=True):
-		
 		if self.iso.offline:
 			raise ResourceUnavailableOffline("Market " + asset_name_a + ":" + asset_name_b)
+		if asset_name_a == asset_name_b:
+			raise Exception("Another asset is required for " + asset_name_a + " market")
 		asset_a = self.iso.getAsset(asset_name_a)
 		asset_b = self.iso.getAsset(asset_name_b)
+		if asset_a["symbol"] == asset_b["symbol"]:
+			raise Exception("Another asset is required for " + asset_name_a + " market")
 		
 		pair = (asset_a, asset_b)
 		tag = asset_a["symbol"] + ":" + asset_b["symbol"]
@@ -857,12 +860,7 @@ class MainWindow(QtGui.QMainWindow,
 			return False
 		
 		a, b = str.split(input, ":")
-		try:
-			self.openMarket(a, b)
-		except Exception as error:
-			showexc(error)
-			return False
-		return True
+		self.openMarket(a, b)
 	
 	def toggle_accountbar(self):
 		self.showAccountBar( self.ui.actionAccounts.isChecked() )
@@ -995,16 +993,6 @@ class MainWindow(QtGui.QMainWindow,
 			additional=account_name,
 			details=priv_txt, min_width=240)
 	
-	
-	def add_account(self):
-		try:
-			with self.iso.unlockedWallet() as w:
-				self._add_account()
-		except WalletLocked:
-			showerror("Can't add account to a locked wallet")
-		except Exception as error:
-			showexc(error)
-	
 	def _sweep_account_keys(self):
 		box = self.ui.accountsList
 		if not box.currentIndex().isValid():
@@ -1108,7 +1096,7 @@ class MainWindow(QtGui.QMainWindow,
 			return
 		(data, error) = data_error
 		log.info("<%s>", tag)
-		#print("OCU", id, tag, data)
+		
 		ws = data
 		desc = tag
 
@@ -1117,6 +1105,7 @@ class MainWindow(QtGui.QMainWindow,
 
 		if desc in ("connected", "reconnected"):
 			self._connecting = False
+
 		self.refreshUi_wallet()
 	
 	def connect_to_node(self, auto=True):
@@ -1877,11 +1866,6 @@ class MainWindow(QtGui.QMainWindow,
 			showexc(e)
 			return False
 		
-		#publickeys = wallet.getPublicKeys()
-		#for pub in publickeys:
-		#	priv = wallet.getPrivateKeyForPublicKey(pub)
-		#	print("Private for ", pub, "=", priv)
-		
 		self.refreshUi_wallet()
 		return True
 	
@@ -1940,8 +1924,9 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def late_inject_contact_box(self, box):
 		box.clear()
+		icon = qicon(":/icons/images/account.png")
 		for name in self.contact_names:
-			box.addItem(name)
+			add_item(box, name, icon=icon)
 		set_combo(box, "")
 		self.contact_boxes.append(box)
 	
@@ -2010,10 +1995,6 @@ class MainWindow(QtGui.QMainWindow,
 		if not win.exec_():
 			return
 		
-		#pprint(win.field('keys'))
-		#pprint(r)
-		#print(win.ui.privkeysEdit.toPlainText())
-		
 		pks = win.collect_pks(quiet=False)
 		
 		for pk in pks:
@@ -2037,10 +2018,6 @@ class MainWindow(QtGui.QMainWindow,
 		
 		if not win.exec_():
 			return 0
-		
-		#pprint(win.field('keys'))
-		#pprint(r)
-		#print(win.ui.privkeysEdit.toPlainText())
 		
 		pks = win.collect_pks(quiet=False)
 		
@@ -2114,8 +2091,8 @@ class MainWindow(QtGui.QMainWindow,
 		#		asset = asset["symbol"]
 		#	set_combo(self.ui.transferAsset, asset, force=True)
 		
-		#if amount:
-		#	pass
+		if isinstance(amount, str):
+			amount = float(amount)
 		
 		#if not(memo is None):
 		#	win.ui.transferMemo.setPlainText(memo)

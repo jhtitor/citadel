@@ -530,7 +530,7 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		options = asset['options']
 		options['description'] = description
 		options['flags'] = flags_int
-		options['description'] = market_fee_percent
+		options['market_fee_percent'] = market_fee_percent
 		if core_exchange_rate:
 			core_exchange_rate["quote"]["asset_id"] = asset["id"]
 			options["core_exchange_rate"] = core_exchange_rate
