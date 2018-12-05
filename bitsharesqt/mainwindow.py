@@ -125,6 +125,8 @@ class MainWindow(QtGui.QMainWindow,
 		ui.transferButton.clicked.connect(self.make_transfer)
 		ui.sellButton.clicked.connect(self.make_limit_order)
 		
+		self.dropped.connect(self.file_dropped)
+		
 		#ui.sellOpenMarketButton.clicked.connect(self.sell_open_market)
 		self.uiAssetsMarketLink(
 			self.ui.sellAssetCombo,
@@ -2239,3 +2241,36 @@ class MainWindow(QtGui.QMainWindow,
 		except Exception as exc:
 			showexc(exc)
 	
+
+	def dragEnterEvent(self, event):
+		if event.mimeData().hasUrls:
+			event.accept()
+		else:
+			event.ignore()
+
+	def dragMoveEvent(self, event):
+		if event.mimeData().hasUrls:
+			event.setDropAction(QtCore.Qt.CopyAction)
+			event.accept()
+		else:
+			event.ignore()
+
+	def dropEvent(self, event):
+		if event.mimeData().hasUrls:
+			event.setDropAction(QtCore.Qt.CopyAction)
+			event.accept()
+			links = [ ]
+			for url in event.mimeData().urls():
+				links.append(str(url.toLocalFile()))
+			self.dropped.emit(links)
+		else:
+			event.ignore()
+
+	dropped = QtCore.pyqtSignal(list)
+	def file_dropped(self, links):
+		tab = self.ui.tabWidget.currentWidget()
+		if hasattr(tab, 'file_dropped'):
+			tab.file_dropped(links)
+
+	def openURL(self, url):
+		pass
