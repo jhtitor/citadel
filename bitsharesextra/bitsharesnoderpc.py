@@ -30,7 +30,8 @@ class BitSharesNodeRPC(object):
 
         self._rh = kwargs.pop("request_handler", None)
 
-        self._preid = 0
+        self.connection_id = 0
+        self.last_reply = 0
 
         self.rate_limit = kwargs.pop("rate_limit", 0.005)
 
@@ -109,13 +110,14 @@ class BitSharesNodeRPC(object):
                         pass
                     self.ws = None
                 self.report(doin_ev)
-                doin_ev = "reconnecting"
                 time.sleep(0.1)
                 try:
                     self.wsconnect()
+                    #tm = self.ws.sock.gettimeout()
                     if not self.needed:
                         break
-                    tm = self.ws.sock.gettimeout()
+                    self.handshake = True
+#                    tm = self.ws.sock.gettimeout()
                     log.debug("now login")
                     self.login(self.user, self.password, api_id=1, plan_b=True)
                     log.debug("now reg api")
@@ -129,23 +131,24 @@ class BitSharesNodeRPC(object):
                     #log.error(str(error))#, type(error))
                     self.handshake = False
                     if not(self.keep_connecting):
-                        self.report(fail_ev, error)
-                        fail_ev = "lost"
+                        self.report("failed", error)
                         break
+                    self.report("attempt_failed", error)
                     continue
                 log.debug("now done")
                 self.connected = True
                 self.report(done_ev)
                 done_ev = "reconnected"
-                self._preid += 1
+                doin_ev = "reconnecting"
                 continue
 
             self.keep_connecting = self.needed
 
             try:
                 payload = self.requests.get(block=False)
-                self.ws.sock.settimeout(tm)
+                self.ws.sock.settimeout(None)
                 self.ws.send(json.dumps(payload, ensure_ascii=False).encode('utf8'))
+                payload['_connection_id'] = self.connection_id
             except KeyboardInterrupt:
                 raise
             except queue.Empty:
@@ -167,7 +170,7 @@ class BitSharesNodeRPC(object):
                 raise
             except websocket._exceptions.WebSocketTimeoutException:
                 try:
-                    self.ws.sock.settimeout(tm)
+                    self.ws.sock.settimeout(None)
                     self.ws.ping()
                     continue
                 except Exception as error:
@@ -295,6 +298,9 @@ class BitSharesNodeRPC(object):
         #log.debug(json.dumps(payload))
         log.debug("RPC-exec blocking %d for %s %s", payload['id'], payload['params'][1], payload['params'][2])
 
+        if not self.needed:
+            raise TimedOut()
+
         self.ws.send(json.dumps(payload, ensure_ascii=False).encode('utf8'))
         reply = self.ws.recv()
 
@@ -305,6 +311,8 @@ class BitSharesNodeRPC(object):
             raise ValueError("Client returned invalid format. Expected JSON!")
 
         #log.debug(json.dumps(reply))
+
+        self.last_reply += 1
 
         if 'error' in ret:
             if 'detail' in ret['error']:
@@ -341,23 +349,37 @@ class BitSharesNodeRPC(object):
         except:
             raise Exception("Unable to queue request")
 
-        sleeptime = (self.num_retries - 1) * 3# if cnt < 10 else 10
-        sleeptime *= 3 if self.proxy_type else 1
+        sleepbase = 120 * 3 if self.proxy_type else 1
+        sleeptime = sleepbase
 
-        cnt = 1
-        preid = None
+        preid = int(self.connection_id)
+        seen_reply = int(self.last_reply)
         error = None
+        attempts = 0
         while True:
             if self.initialized and not(self.connected) and not(self.connecting):
                 raise TimedOut() #exceptions.NumRetriesReached
-            #print("RPC-exec waiting for", call_id, payload['params'][1], payload['params'][2], "[", sleeptime, "]")
-
+            #print("RPC-exec waiting for", call_id, payload['params'][1], payload['params'][2], "[", "%.03f" % sleeptime, "]","/",attempts)
             try:
                 error = self.errors.get(block=False)
             except KeyboardInterrupt:
                 raise
             except:
                 pass
+
+            if "_connection_id" in payload: # request sent on differen conn?
+                if self.connection_id > payload["_connection_id"]:
+                    if error:               # reply will never come, then
+                        raise error
+                    raise TimedOut()
+
+            attempts = self.connection_id - preid
+            if ((self.num_retries >= 0 and attempts >= self.num_retries)
+                and not(self.connected)):
+                self.connecting = False
+                if error:
+                    raise error
+                raise exceptions.NumRetriesReached()
 
             if (sleeptime <= 0) or not(self.needed):
                 self.connecting = False
@@ -370,10 +392,18 @@ class BitSharesNodeRPC(object):
             #sleeptime = (cnt - 1) * 2 if cnt < 10 else 10
 
             if not ret:
+                # other requests are fine
+                new_reply = int(self.last_reply)
+                if new_reply != seen_reply:
+                    seen_reply = new_reply
+                    # let's sleep some more, then!
+                    sleeptime = sleepbase
+                    continue
                 sleeptime -= self.rate_limit*2
                 time.sleep(self.rate_limit*2)
                 continue
 
+            self.last_reply += 1
 
             if 'error' in ret:
                 from pprint import pprint
@@ -394,6 +424,10 @@ class BitSharesNodeRPC(object):
     def wsconnect(self):
         self.connecting = True
         self.connected = False
+
+        timeout = 30 # 30 seconds for regular connections
+        timeout *= 2 if self.proxy_type else 1 # 1 min for proxy/tor
+
         cnt = 0
         while self.connecting:
             cnt += 1
@@ -407,7 +441,9 @@ class BitSharesNodeRPC(object):
             self.ws = websocket.WebSocket(sslopt=sslopt_ca_certs)
 
             try:
+                self.connection_id += 1
                 self.ws.connect(self.url,
+                    timeout = timeout,
                     http_proxy_host = self.proxy_host,
                     http_proxy_port = self.proxy_port,
                     proxy_type = self.proxy_type,
@@ -427,6 +463,8 @@ class BitSharesNodeRPC(object):
                 else:
                     self.errors.put( error )
 
+                if not self.needed:
+                    break
 
                 sleeptime = min((cnt-1) * 2, 10)#*3
                 if sleeptime or True:

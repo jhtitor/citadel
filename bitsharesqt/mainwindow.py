@@ -1093,10 +1093,12 @@ class MainWindow(QtGui.QMainWindow,
 		self.iso.connect(nodeUrl, proxy=proxyUrl, num_retries=3, request_handler=request_handler)
 	
 	def _connect_event(self, uid, ps, data):
-	#	if type(data) is int:
-	#		return
-	#	ws, desc, error = data
-	#	self.background_update.emit(0, desc, (ws, error))
+		if ps == -2:
+			self._connecting = False
+		if type(data) is int:
+			return
+		ws, desc, error = data
+		self.background_update.emit(0, desc, (ws, error))
 		self.refreshUi_wallet()
 	
 	def on_connector_update(self, id, tag, data_error):
@@ -1107,17 +1109,11 @@ class MainWindow(QtGui.QMainWindow,
 		#print("OCU", id, tag, data)
 		ws = data
 		desc = tag
-		if ws.connected and (desc == "connected" or desc == "reconnected"):
+
+		if desc == "reconnected":
 			self.connection_established(0, None)
-		if desc == "failed":
-			self.iso.offline = True
-			#self.connection_failed(0, error)
-		if desc == "disconnected" or desc == "lost":
-			self.iso.offline = True
-			self.connection_lost(0)
-		if desc == "connecting" or desc == "reconnecting":
-			self._connecting = True
-		else:
+
+		if desc in ("connected", "reconnected"):
 			self._connecting = False
 		self.refreshUi_wallet()
 	
@@ -1755,12 +1751,12 @@ class MainWindow(QtGui.QMainWindow,
 		connected = not(self.iso.offline)
 		
 		if True:
-			if self._connecting or (self.iso.bts.rpc and self.iso.bts.rpc.connecting):
+			if self._connecting or self.iso.is_connecting():
 				self.ui.statusText.setText("Connecting...")
 				self.ui.statusNetwork.setToolTip("Connecting...")
 				self.ui.statusNetwork.setIcon(qicon(":/icons/images/yellow.png"))
 				connected = False
-			elif connected:
+			elif self.iso.is_connected():
 				self.ui.statusText.setText("")
 				self.ui.statusNetwork.setToolTip("Online")
 				self.ui.statusNetwork.setIcon(qicon(":/icons/images/green.png"))
