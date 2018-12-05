@@ -24,6 +24,7 @@ except AttributeError:
 class OrderTab(QtWidgets.QWidget):
 	
 	def __init__(self, *args, **kwargs):
+		self.iso = kwargs.pop("isolator", None)
 		self.ping_callback = kwargs.pop("ping_callback", None)
 		super(OrderTab, self).__init__(*args, **kwargs)
 		self.ui = Ui_ExchangeTab()
@@ -31,15 +32,16 @@ class OrderTab(QtWidgets.QWidget):
 		
 		self._index = 2
 		
-		self.updater = RemoteFetch()
+		mw = self.iso.mainwin
 		
-		self.sell_estimater = RemoteFetch()
+		self.updater = RemoteFetch(manager=mw.Requests)
+		
+		self.sell_estimater = RemoteFetch(manager=mw.Requests)
 		
 		stretch_table(self.ui.table)
 		
 		qmenu(self.ui.table, self.show_orders_submenu)
 		
-		mw = app().mainwin
 		mw.uiExpireSliderLink(self.ui.sellexpireEdit, self.ui.sellexpireSlider)
 		
 		#self.ui.sellerBox.currentIndexChanged.connect(self.mini_reacc)
@@ -210,7 +212,7 @@ class OrderTab(QtWidgets.QWidget):
 		asset_name_b = str.split(col_b, " ")[1]
 		
 		try:
-			app().mainwin.openMarket(asset_name_a, asset_name_b)
+			self.iso.mainwin.openMarket(asset_name_a, asset_name_b)
 		except Exception as error:
 			showexc(error)
 	

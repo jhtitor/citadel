@@ -31,9 +31,10 @@ class VotingWindow(QtWidgets.QDialog):
 		qmenu(self.ui.committeeTable, self.show_vote_submenu)
 		qmenu(self.ui.workersTable, self.show_vote_submenu)
 		
-		self.updaterWS = RemoteFetch()
-		self.updaterCM = RemoteFetch()
-		self.updaterWR = RemoteFetch()
+		mw = self.iso.mainwin
+		self.updaterWS = RemoteFetch(manager=mw.Requests)
+		self.updaterCM = RemoteFetch(manager=mw.Requests)
+		self.updaterWR = RemoteFetch(manager=mw.Requests)
 		self.resync()
 		self.proxy_toggle()
 		self.refreshUi(1) # disable OK/Proxy buttons
@@ -456,8 +457,7 @@ class VotingWindow(QtWidgets.QDialog):
 		text = delim = ""
 		busy = 0
 		# Inform about background tasks:
-		from .work import Request
-		bgtop = Request.top()
+		bgtop = self.iso.mainwin.Requests.top()
 		for task in bgtop:
 			(cancelled, desc, c, p) = task
 			if cancelled or not(desc):

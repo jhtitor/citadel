@@ -23,13 +23,15 @@ def num_args(method):
 	return num_args - num_kwargs
 
 class RemoteFetch(QtCore.QObject):
-	def __init__(self, parent=None):
+	def __init__(self, parent=None, manager=None):
 		super(RemoteFetch, self).__init__(parent)
 		self.uid = 0
 		self.request = None
 		self.cb_ready = None
 		self.cb_error = None
 		self.cb_ping = None
+		
+		self.manager = manager
 		
 		#global app#
 		app = QtGui.QApplication.instance()
@@ -93,7 +95,8 @@ class RemoteFetch(QtCore.QObject):
 				self.ready_callback,
 				self.error_callback,
 				self.ping_callback,
-				description or "")
+				description or "",
+				self.manager)
 	
 
 

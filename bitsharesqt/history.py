@@ -79,6 +79,7 @@ class HistoryTab(QtWidgets.QWidget):
 	
 	def __init__(self, *args, **kwargs):
 		self.ping_callback = kwargs.pop("ping_callback", None)
+		self.iso = kwargs.pop("isolator", None)
 		super(HistoryTab, self).__init__(*args, **kwargs)
 		self.ui = Ui_HistoryTab()
 		self.ui.setupUi(self)
@@ -86,7 +87,7 @@ class HistoryTab(QtWidgets.QWidget):
 		self._index = 1
 		
 		self.subscribed = False
-		self.updater = RemoteFetch()
+		self.updater = RemoteFetch(manager=self.iso.mainwin.Requests)
 		self.refreshing = False
 		
 		self.ui.table.cellDoubleClicked.connect(self.history_superclick)

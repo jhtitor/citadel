@@ -33,6 +33,14 @@ def generate_webwalletlike_password():
 def app():
 	return QtGui.QApplication.instance()
 
+def rootwin(widget):
+	n = widget
+	while n:
+		p = widget.parent()
+		if p: n = p
+		else: break
+	return n
+
 def qclip(text=None):
 	clipboard = QtGui.QApplication.clipboard()
 	if text is None: # get

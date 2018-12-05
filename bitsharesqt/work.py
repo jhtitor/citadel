@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt
 import logging
 log = logging.getLogger(__name__)
 
-def async(method, args, uid, readycb, errorcb=None, pingcb=None, description=""):
+def async(method, args, uid, readycb, errorcb=None, pingcb=None, description="", manager=None):
     """
     Asynchronously runs a task
 
@@ -25,7 +25,7 @@ def async(method, args, uid, readycb, errorcb=None, pingcb=None, description="")
 
     :returns: Request instance
     """
-    request = Request(method, args, uid, readycb, errorcb, pingcb, description)
+    request = Request(method, args, uid, readycb, errorcb, pingcb, description, manager)
     QtCore.QThreadPool.globalInstance().start(request)
     return request
 
@@ -39,6 +39,35 @@ def get_kwargs(method):
 
 def has_kwarg(method, kwarg_name):
     return kwarg_name in get_kwargs(method)
+
+class RequestManager(object):
+    def __init__(self):
+        self.INSTANCES = []
+        self.FINISHED = []
+
+    def shutdown(self, timeout=10):
+        self.cancel_all()
+        self.wait_join(timeout)
+
+    def cancel_all(self):
+        for inst in self.INSTANCES:
+            inst.cancelled = True
+
+    def wait_join(self, timeout=10):
+        while len(self.INSTANCES) > 0:
+            print("Waiting for", self.top())
+            time.sleep(1)
+            timeout -= 1
+            if timeout == 0:
+                return False
+        return True
+
+    def top(self):
+        r = [ ]
+        for inst in self.INSTANCES:
+            r.append( (inst.cancelled, inst.description, inst.method.__name__ if inst.method else "", inst.status) )
+        return r
+
 
 class Request(QtCore.QRunnable):
     """
@@ -66,9 +95,7 @@ class Request(QtCore.QRunnable):
     PT_CANCELLED = -2
     PT_FINISHED = 100
 
-    INSTANCES = []
-    FINISHED = []
-    def __init__(self, method, args, uid, readycb, errorcb=None, pingcb=None, description=""):
+    def __init__(self, method, args, uid, readycb, errorcb=None, pingcb=None, description="", manager=None):
         super(Request, self).__init__()
         self.setAutoDelete(True)
         self.cancelled = False
@@ -83,10 +110,11 @@ class Request(QtCore.QRunnable):
         self.description = description
         self.status = None
 
-        Request.INSTANCES.append(self)
+        self.manager = manager
+        manager.INSTANCES.append(self)
 
         # release all of the finished tasks
-        Request.FINISHED = []
+        manager.FINISHED = []
 
         self.grabber = None
 
@@ -167,6 +195,7 @@ class Request(QtCore.QRunnable):
         self.dataError = None
         self.dataPing = None
         self.description = None
+        self.status = None
 
         if grabber is not None:
             grabber.deleteLater()
@@ -176,47 +205,20 @@ class Request(QtCore.QRunnable):
 
     def remove(self):
         try:
-            Request.INSTANCES.remove(self)
+            self.manager.INSTANCES.remove(self)
 
             # when the next request is created, it will clean this one up
             # this will help us avoid this object being cleaned up
             # when it's still being used
-            Request.FINISHED.append(self)
+            self.manager.FINISHED.append(self)
         except ValueError:
             # there might be a race condition on shutdown, when shutdown()
             # is called while the thread is still running and the instance
             # has already been removed from the list
             return
+        finally:
+            self.manager = None
 
-    @staticmethod
-    def shutdown(timeout=10):
-        for inst in Request.INSTANCES:
-            inst.cancelled = True
-        #Request.INSTANCES = []
-        #Request.FINISHED = []
-        Request.wait_join(timeout)
-
-    @staticmethod
-    def cancel_all():
-        for inst in Request.INSTANCES:
-            inst.cancelled = True
-
-    @staticmethod
-    def wait_join(timeout=10):
-        while len(Request.INSTANCES) > 0:
-            print("Waiting for", Request.top())
-            time.sleep(1)
-            timeout -= 1
-            if timeout == 0:
-                return False
-        return True
-
-    @staticmethod
-    def top():
-        r = [ ]
-        for inst in Request.INSTANCES:
-            r.append( (inst.cancelled, inst.description, inst.method.__name__ if inst.method else "", inst.status) )
-        return r
 
 class Requester(QtCore.QObject):
     """

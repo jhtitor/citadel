@@ -26,7 +26,7 @@ class WindowWithContacts(QtCore.QObject):
 		
 		qmenu(self.ui.contactTable, self.show_contact_submenu)
 		
-		self.contact_grabber = RemoteFetch()
+		self.contact_grabber = RemoteFetch(manager=self.Requests)
 		
 		self.ui.contactAdd.clicked.connect(self.add_contact)
 	
@@ -99,7 +99,7 @@ class WindowWithContacts(QtCore.QObject):
 			self.ui.dashHolder.layout().removeWidget(old)
 			old.setParent(None)
 		
-		wid = DashboardTab(simplify=True)
+		wid = DashboardTab(simplify=True, isolator=self.iso)
 		wid._tags = [ account_name ]
 		self.ui.dashHolder.layout().addWidget(wid)
 		wid.openAccount(iso, account)

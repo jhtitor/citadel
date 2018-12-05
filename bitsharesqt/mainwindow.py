@@ -33,7 +33,7 @@ from .isolator import ResourceUnavailableOffline, WalletLocked
 from .isolator import safeunlock
 
 from .netloc import RemoteFetch
-from .work import Request
+from .work import Request, RequestManager
 from .utils import *
 import json
 import logging
@@ -57,9 +57,11 @@ class MainWindow(QtGui.QMainWindow,
 		self.iso = kwargs.pop('iso', None)
 		super(MainWindow, self).__init__(*args, **kwargs)
 		
-		
 		self.ui = ui = Ui_MainWindow()
 		self.ui.setupUi(self)
+		
+		self.Requests = RequestManager()
+		if self.iso: self.iso.setMainWindow(self)
 		
 		self.setupStatusBar()
 		
@@ -164,7 +166,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		self.init_contacts()
 		
-		self.connector = RemoteFetch()
+		self.connector = RemoteFetch(manager=self.Requests)
 		self.background_update.connect(self.on_connector_update)
 		self._connecting = False
 		self._user_intent = 0
@@ -552,7 +554,7 @@ class MainWindow(QtGui.QMainWindow,
 		on_combo(self.ui.sellAssetCombo, self.sell_alt_amount_changed)
 		on_combo(self.ui.buyAssetCombo, self.sell_main_amount_changed)
 		
-		self.sell_estimater = RemoteFetch()
+		self.sell_estimater = RemoteFetch(manager=self.Requests)
 		
 		#self.ui.ainAmt"].valueChanged.connect(self.main_amount_changed)
 		#form["mainAmt"].valueChanged.connect(self.main_amount_changed)
@@ -1195,7 +1197,7 @@ class MainWindow(QtGui.QMainWindow,
 		#
 		if disconnect or wait:
 			log.debug("( cancel threads )")
-			Request.cancel_all()
+			self.Requests.cancel_all()
 		#
 		if self.iso and disconnect:
 			log.debug("2. disconnect")
@@ -1203,7 +1205,7 @@ class MainWindow(QtGui.QMainWindow,
 		#
 		if wait:
 			log.debug("3. shutdown threads")
-			Request.shutdown(timeout=10)
+			self.Requests.shutdown(timeout=10)
 	
 	
 	def buffering(self):
@@ -1418,7 +1420,7 @@ class MainWindow(QtGui.QMainWindow,
 	def addHistoryTab(self, account, tag):
 		ui = self.ui
 		
-		tab = HistoryTab(ping_callback=self.refreshUi_ping)
+		tab = HistoryTab(ping_callback=self.refreshUi_ping, isolator=self.iso)
 		
 		tab._tags = [
 			account.name,
@@ -1437,7 +1439,7 @@ class MainWindow(QtGui.QMainWindow,
 	def addOrderTab(self, account, tag):
 		ui = self.ui
 		
-		tab = OrderTab(ping_callback=self.refreshUi_ping)
+		tab = OrderTab(ping_callback=self.refreshUi_ping, isolator=self.iso)
 		
 		tab._tags = [
 			account.name,
@@ -1475,7 +1477,7 @@ class MainWindow(QtGui.QMainWindow,
 	def addDashboardTab(self, account, tag):
 		ui = self.ui
 		
-		tab = DashboardTab(ping_callback=self.refreshUi_ping)
+		tab = DashboardTab(ping_callback=self.refreshUi_ping, isolator=self.iso)
 		
 		tab._tags = [
 			account.name,
@@ -1689,8 +1691,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.setWindowTitle(prefix + suffix)
 	
 	def refreshUi_console(self):
-		from .work import Request
-		bgtop = Request.top()
+		bgtop = self.Requests.top()
 		
 		#print("Background tasks: (%d)" % (len(bgtop)))
 		
@@ -1803,8 +1804,7 @@ class MainWindow(QtGui.QMainWindow,
 		# Inform about background tasks:
 		text = self.ui.statusText.text()
 		if text == "":
-			from .work import Request
-			bgtop = Request.top()
+			bgtop = self.Requests.top()
 			for task in bgtop:
 				(cancelled, desc, c, s) = task
 				if cancelled or not(desc):
@@ -1819,9 +1819,9 @@ class MainWindow(QtGui.QMainWindow,
 		if not(self.iso):
 			return
 		
-		Request.cancel_all()
+		self.Requests.cancel_all()
 		self.iso.disconnect()
-		Request.shutdown(timeout=10)
+		self.Requests.shutdown(timeout=10)
 		
 		self.iso.setWallet(None)
 		self.iso.setStorage(None)
@@ -2127,7 +2127,7 @@ class MainWindow(QtGui.QMainWindow,
 		elif not(isinstance(asset, str)):
 			asset = asset["symbol"]
 		
-		win.quick_transfer(asset, to, memo)
+		win.quick_transfer(asset, amount, to, memo)
 		
 		self.showTab(win)
 		#self.tagToFront("^transfer")

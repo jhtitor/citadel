@@ -82,7 +82,7 @@ class MarketTab(QtGui.QWidget):
 		stretch_table(self.ui.sellStack, False, hidehoriz=True)
 
 		self.subscribed = False
-		self.updater = RemoteFetch()
+		self.updater = RemoteFetch(manager=self.iso.mainwin.Requests)
 
 		self._frame_buy = {
 			"group": self.ui.buyGroup,
