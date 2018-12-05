@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.mainwindow import Ui_MainWindow
 _translate = QtCore.QCoreApplication.translate
 import uidef.res_rc
@@ -477,6 +477,8 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def uiAccountAssetLink_perform(self):
 		accCombo = self.sender()
+		if isinstance(accCombo, QtWidgets.QLineEdit):
+			accCombo = accCombo.parent()
 		symCombos = accCombo._linkedAssets
 		account_id = accCombo.currentText()
 		if not len(account_id):
@@ -498,22 +500,50 @@ class MainWindow(QtGui.QMainWindow,
 				symCombo.addItem(b.symbol)
 	
 	def uiAssetLink(self, amtSpin, symCombo):
-		
 		symCombo._linkedBox = amtSpin
+		symCombo._linkedFunc = self.uiAssetLink_perform
+		line = symCombo.lineEdit()
+		if line:
+			line._linkedBox = amtSpin
+			line.editingFinished.connect(self.uiAssetLink_perform)
 		symCombo.currentIndexChanged.connect(self.uiAssetLink_perform)
-		symCombo.editTextChanged.connect(self.uiAssetLink_perform)
+
+	def lookup_asset(self, token, elem, *args):
+		if not(hasattr(elem, 'lookuper')):
+			mw = self.iso.mainwin
+			elem.lookuper = RemoteFetch(manager=mw.Requests)
+		elem.lookuper.fetch(
+			self.lookup_asset_wrap, self.iso, token, elem, *args,
+			ready_callback = self.lookup_asset_after,
+			error_callback = self.lookup_asset_error,
+			ping_callback = self.lookup_asset_ping
+		)
+	def lookup_asset_wrap(self, iso, token, *args, request_handler=None):
+		rh = request_handler
+		asset = iso.getAsset(token, force_remote=True)
+		return (token, asset, *args)
+	def lookup_asset_after(self, uid, data):
+		(token, asset, symCombo, amtSpin) = data
+		if symCombo.currentText().upper() == token:
+			amtSpin.setDecimals( int(asset['precision']) )
+			amtSpin.setMaximum( float(asset['options']['max_supply']) )
+	def lookup_asset_error(self, uid, error):
+		log.error("Unable to figure out asset: %s", str(error))
+	def lookup_asset_ping(self, uid, ps, pd):
+		return
 	
 	def uiAssetLink_perform(self):
 		symCombo = self.sender()
+		if isinstance(symCombo, QtWidgets.QLineEdit):
+			symCombo = symCombo.parent()
 		amtSpin = symCombo._linkedBox
 		token = symCombo.currentText().upper()
 		if not token:
 			return
 		try:
-			asset = self.iso.getAsset(token)
+			asset = self.iso.getAsset(token, force_local=True)
 		except Exception as error:
-			log.error("Unable to figure out asset %s", token)
-			#showexc(error)
+			self.lookup_asset(token, symCombo, amtSpin)
 			return
 		
 		amtSpin.setDecimals( int(asset['precision']) )

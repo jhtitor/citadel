@@ -244,8 +244,11 @@ def set_combo(combo, text, force=False, icon=None):
 	else:
 		print("Unable to set", text, "on", combo)
 
-def on_combo(combo, func):
-	combo.editTextChanged.connect(func)
+def on_combo(combo, func, progress=True):
+	if combo.lineEdit():
+		on_edit(combo.lineEdit(), func, progress)
+	elif progress is True:
+		combo.editTextChanged.connect(func)
 	combo.currentIndexChanged.connect(func)
 def on_spin(spin, func):
 	spin.valueChanged.connect(func)

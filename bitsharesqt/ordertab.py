@@ -51,8 +51,8 @@ class OrderTab(QtWidgets.QWidget):
 		on_spin(self.ui.sellAmountSpin, self.sell_main_amount_changed)
 		on_spin(self.ui.buyAmountSpin, self.sell_alt_amount_changed)
 		# also, when asset type changes
-		on_combo(self.ui.sellAssetCombo, self.sell_alt_amount_changed)
-		on_combo(self.ui.buyAssetCombo, self.sell_main_amount_changed)
+		on_combo(self.ui.sellAssetCombo, self.sell_alt_amount_changed, progress=False)
+		on_combo(self.ui.buyAssetCombo, self.sell_main_amount_changed, progress=False)
 		
 		mw.uiAssetsMarketLink(
 			self.ui.sellAssetCombo,
@@ -136,6 +136,9 @@ class OrderTab(QtWidgets.QWidget):
 		if not(sell_asset) or not(buy_asset) or not(buy_amount):
 			return
 		
+		self.ui.bidPrice.setText("")
+		self.ui.askPrice.setText("")
+		
 		self.sell_estimater.fetch(
 			self.sell_estimate, sell_asset, None,
 					buy_asset, buy_amount,
@@ -186,8 +189,12 @@ class OrderTab(QtWidgets.QWidget):
 		elem.setValue( re )
 		elem.blockSignals(False)
 		
-		self.ui.bidPrice.setText("Bid: " + tick["highest_bid"])
-		self.ui.askPrice.setText("Ask: " + tick["lowest_ask"])
+		precision = self.ui.sellAmountSpin.decimals()
+		def fmt(p):
+			return ("%0."+str(precision)+"f") % float(p)
+
+		self.ui.bidPrice.setText("Highest: " + fmt(tick["highest_bid"]))
+		self.ui.askPrice.setText("Lowest: " + fmt(tick["lowest_ask"]))
 		self.ui.bidPrice.hide()
 		self.ui.askPrice.hide()
 

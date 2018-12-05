@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from .utils import *
 import logging
@@ -78,6 +78,8 @@ class WindowWithBlind(QtCore.QObject):
 	
 	def uiBlindAccountAssetLink_perform(self):
 		accCombo = self.sender()
+		if isinstance(accCombo, QtWidgets.QLineEdit):
+			accCombo = accCombo.parent()
 		symCombos = accCombo._linkedAssets
 		blind_label_or_key = accCombo.currentText().strip()
 		if not len(blind_label_or_key):
