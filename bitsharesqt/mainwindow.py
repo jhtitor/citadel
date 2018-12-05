@@ -553,11 +553,12 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def add_log_record(self, record):
 		msg = record.getMessage()
-		ce = self.ui.consoleEdit
-		tc = ce.textCursor()
-		tc.movePosition(QTextCursor.End)
-		tc.insertText(msg+"\n")
-		ce.setTextCursor(tc)
+		with ScrollKeeper(self.ui.consoleEdit, cursor=False) as k:
+			ce = self.ui.consoleEdit
+			tc = ce.textCursor()
+			tc.movePosition(QTextCursor.End)
+			tc.insertText(msg+"\n")
+			ce.setTextCursor(tc)
 	
 	def showAccountBar(self, on):
 		if on:

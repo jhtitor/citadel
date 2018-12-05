@@ -485,6 +485,34 @@ class StackLinker(QtCore.QObject):
 		self._index = self.stack.currentIndex()
 		self.highlightButtons()
 
+from PyQt5.QtGui import QTextCursor
+class ScrollKeeper():
+	def __init__(self, elem, cursor=False):
+		self.elem = elem
+		self.vs = elem.verticalScrollBar()
+		self.cursor = cursor
+		
+	def __enter__(self):
+		max_ = self.vs.maximum()
+		self.old_val = self.vs.value()
+		self.at_bottom = (self.old_val == max_)
+		if not(max_): self.at_bottom = True
+		if self.cursor:
+			tc = self.elem.textCursor()
+			tc.movePosition(QTextCursor.End)
+			self.old_tc = tc
+		return self
+		
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		if self.at_bottom:
+			val = self.vs.maximum()
+		else:
+			val = self.old_val
+		self.vs.setValue(val)
+		if self.cursor:
+			self.elem.setTextCursor(self.old_tc)
+
+
 from logging import Handler
 class ConsoleLogger(Handler):
 	def emit(self, record):
