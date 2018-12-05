@@ -30,6 +30,7 @@ from .tabwrangler import WindowWithTabWrangler
 from .trxbuffer import WindowWithTrxBuffer
 
 from .isolator import ResourceUnavailableOffline, WalletLocked
+from .isolator import safeunlock
 
 from .netloc import RemoteFetch
 from .work import Request
@@ -1643,6 +1644,7 @@ class MainWindow(QtGui.QMainWindow,
 		from bitshares.wallet import Wallet
 		store = BitsharesStorageExtra(path, create=False)
 		self.iso = BitsharesIsolator(storage=store)
+		self.iso.setMainWindow(self)
 		self.iso.ping_callback = self.refreshUi_ping
 		wallet = Wallet(
 			blockchain_instance=self.iso.bts,
@@ -1852,7 +1854,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.refreshUi_wallet()
 		return True
 	
-	def unlock_wallet(self, reason=None):
+	def unlock_wallet(self, reason=None, parent=None):
 		wallet = self.iso.bts.wallet
 		
 		if not wallet.locked():
@@ -1860,8 +1862,10 @@ class MainWindow(QtGui.QMainWindow,
 			self.refreshUi_wallet()
 			return True
 		
+		if not parent:
+			parent = self
 		input, ok = QtGui.QInputDialog.getText(
-			self, 'Password',
+			parent, 'Password',
 			(('To ' + reason + '\n\n') if reason else '') +
 			'Enter wallet master password:', QtGui.QLineEdit.Password)
 		
@@ -2000,18 +2004,8 @@ class MainWindow(QtGui.QMainWindow,
 				
 				self.add_account_name(name)
 		
-	def add_account(self):
-		try:
-			with self.iso.unlockedWallet() as w:
-				self._add_account()
-		except WalletLocked:
-			showerror("Can't add account to a locked wallet")
-		except Exception as error:
-			showexc(error)
-	
-	def _add_account(self):
-		wallet = self.iso.bts.wallet
-		
+	@safeunlock
+	def add_account(self, wallet):
 		win = AccountWizard(isolator=self.iso,
 			registrars=self.account_names,
 			active=self.activeAccount,

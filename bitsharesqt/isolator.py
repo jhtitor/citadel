@@ -64,6 +64,8 @@ class BitsharesIsolator(object):
 		import bitshares
 		kwargs.pop('offline', None) # overwrite
 		
+		self.mainwin = None
+		
 		self.ping_callback = kwargs.pop("ping_callback", None)
 		
 		self.conn_node = kwargs.pop('node', "")
@@ -86,6 +88,9 @@ class BitsharesIsolator(object):
 		
 		#from bitsharesapi.bitsharesnoderpc import BitSharesNodeRPC
 	
+	def setMainWindow(self, win):
+		self.mainwin = win
+
 	def disconnect(self):
 		return self.close(force=True)
 		
@@ -873,23 +878,24 @@ class BitsharesIsolator(object):
 		}
 	
 	class WalletGate(object):
-		def __init__(self, wallet, reason=None):
+		def __init__(self, wallet, mainwin, reason=None, parent=None):
 			self.wallet = wallet
 			self.reason = reason
+			self.parent = parent
 			self.relock = wallet.locked()
+			self.mainwin = mainwin
 		def __enter__(self):
-			from .utils import app
 			if self.relock:
-				unlocked = app().mainwin.unlock_wallet(reason=self.reason)
+				unlocked = self.mainwin.unlock_wallet(reason=self.reason, parent=self.parent)
 				if not unlocked:
 					raise WalletLocked()
 			return self.wallet
 		def __exit__(self, exc_type, exc_val, exc_tb):
 			from .utils import app
 			if self.relock:
-				app().mainwin.lock_wallet()
-	def unlockedWallet(self, reason=None):
-		return self.WalletGate( self.bts.wallet, reason )
+				self.mainwin.lock_wallet()
+	def unlockedWallet(self, parent=None, reason=None):
+		return self.WalletGate( self.bts.wallet, self.mainwin, reason, parent )
 	
 	
 	def download_assets(self, request_handler=None):
@@ -1089,3 +1095,21 @@ class BitsharesIsolator(object):
 			trades.append(t)
 		return trades
 	
+
+from .utils import showexc, num_args
+from .work import has_kwarg
+def safeunlock(func, reason=None):
+	def wrapper(obj, *args, **kwargs):
+		try:
+			args = list(args) #list(args[0:num_args(func)])
+			with obj.iso.unlockedWallet(obj, reason) as w:
+				if has_kwarg(func, "wallet"):
+					kwargs["wallet"] = w
+				else:
+					args[-1] = w
+				return func(obj, *args, **kwargs)
+		except WalletLocked:
+			pass
+		except Exception as e:
+			showexc(e)
+	return wrapper

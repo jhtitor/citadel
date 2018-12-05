@@ -40,6 +40,22 @@ def qclip(text=None):
 	else: # set
 		clipboard.setText(text)
 
+def num_args(method):
+	all_args = method.__code__.co_argcount
+	num_kwargs = len(method.__defaults__) if method.__defaults__ else 0
+	return all_args - num_kwargs
+
+def safeslot(func):
+	def wrapper(*args, **kwargs):
+		try:
+			args = args[0:num_args(func)]
+			return func(*args, **kwargs)
+		except Exception as e:
+			showexc(e)
+	return wrapper
+
+
+
 def anyvalvis(widget, default):
 	if widget.isVisible():
 		return any_value(widget)

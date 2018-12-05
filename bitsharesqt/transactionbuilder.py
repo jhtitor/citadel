@@ -142,7 +142,7 @@ class QTransactionBuilder(QtWidgets.QDialog):
 	def append_wifs(self):
 		tx = self.tx
 		miss = tx.get("missing_signatures", [ ])
-		with self.iso.unlockedWallet() as w:
+		with self.iso.unlockedWallet(self, "Sign Transaction") as w:
 			for sig in miss:
 				try:
 					tx.appendWif( w.getPrivateKeyForPublicKey(sig) )
