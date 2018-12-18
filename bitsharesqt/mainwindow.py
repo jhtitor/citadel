@@ -20,6 +20,7 @@ from .dashboard import DashboardTab
 from .history import HistoryTab
 from .ordertab import OrderTab
 from .market import MarketTab
+from .chatserver import ChatServerTab
 from .transactionbuilder import QTransactionBuilder
 from .contacts import WindowWithContacts
 from .assets import WindowWithAssets
@@ -118,6 +119,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		ui.actionSettings.triggered.connect(self.open_settings)
 		ui.actionGoto_market.triggered.connect(self.goto_market)
+		ui.actionOpen_chat.triggered.connect(self.goto_chat)
 		
 		ui.actionTransfer.triggered.connect(self.show_transfer)
 		ui.actionSell.triggered.connect(self.show_sell)
@@ -878,6 +880,52 @@ class MainWindow(QtGui.QMainWindow,
 			)
 		win.exec_()
 	
+	@safeunlock
+	def goto_chat(self, sender=False, from_label=None, to_label=None, server_url=None, wallet=None, to_room=None):
+		if from_label is None:
+			if self.activeAccount:
+				from_label = self.activeAccount["name"]
+			else:
+				from_label, ok = QtGui.QInputDialog.getText(
+					self, 'Chat As',
+					'Chat As (Public key, account name or blind contact label):')
+				if not ok:
+					return False
+		
+		if server_url is None:
+			# TODO: move to remotes storage
+			servers = [
+				"https://citadel.li/chat",
+				"http://citadel2miawoaqw.onion/chat",
+				"http://127.0.0.1:8066",
+				"ws://127.0.0.1:8065",
+			]
+			server_url, ok = QtGui.QInputDialog.getItem(self, "Open Chat",
+				"Chat Server", servers, 0, False)
+			if not ok:
+				return False
+		
+		#if to_label is None:
+		#	to_label, ok = QtGui.QInputDialog.getText(
+		#		self, 'Chat With',
+		#		'Public key, account name or blind contact label:')
+		#	if not ok:
+		#		return False
+		self.openChat(server_url, from_label, to_label, to_room)
+
+	@safeunlock
+	def openChat(self, server_url, from_label, to_label=None, to_room=None, wallet=None):
+		while server_url.endswith("/"):
+			server_url = server_url[0:len(server_url)-1]
+		args = (from_label, server_url)
+		tag = "CS:" + server_url
+		tab = self.restoreTab(ChatServerTab, self.addChatServerTab, args, tag, to_front=True)
+		if to_label:
+			tab.openChat(from_label, to_label)
+		if to_room:
+			tab.openRoom(from_label, to_room)
+
+	@safeslot
 	def goto_market(self):
 		input, ok = QtGui.QInputDialog.getText(
 			self, 'Go to Market',
@@ -1537,6 +1585,40 @@ class MainWindow(QtGui.QMainWindow,
 		return tab
 	
 	
+	def addChatServerTab(self, args, tag):
+		key_from, server_url = args
+		ui = self.ui
+		
+		tab = ChatServerTab(ping_callback=self.refreshUi_ping,
+				isolator=self.iso)
+		
+		tab._tags = [
+#			account.name,
+#			account.id,
+			"#chatserver",
+			"CS:" + server_url,
+		]
+		
+		tab._title = server_url #"BTS..." if key_to.startswith("BTS") else key_to
+		tab._icon = qicon(":/icons/images/messages.png")
+		
+		# Late comers!
+		self.late_inject_contact_box(tab.ui.contactAccount)
+
+		try:
+#			tab.setupConnection(key_from, server_url)
+			tab.initialize(key_from, server_url)
+#			tab.loadRooms()
+		except:
+			import traceback
+			traceback.print_exc()
+			tab.close() # cancel all threads within
+			raise
+		
+		return tab
+	
+
+
 	def quit_program(self):
 		#self.app.quit()
 		QtGui.QApplication.quit()
@@ -2284,3 +2366,44 @@ class MainWindow(QtGui.QMainWindow,
 
 	def openURL(self, url):
 		pass
+
+	def openBTSChatUrl(self, url):
+		o = parseUrl(url)
+		if o.scheme != "bs2chat" and o.scheme != "bs2chats":
+			showerror("Unsupported URL schema.")
+			return
+		rurl = (str(o.scheme).replace("bs2chat", "http") + "://" +
+			o.netloc + o.path + o.fragment)
+		room_name = None
+		if "room" in o.params:
+			room_name = o.params["room"]
+		
+		self.goto_chat(self, to_label=None, server_url=rurl, to_room=room_name)
+
+	def openBTSUrl(self, url):
+		o = parseBTSUrl(url)
+		if o['scheme'] != "bitshares":
+			showerror("Unsupported URL schema.")
+			return
+
+		if o['path'] == 'operation/transfer':
+			data = o['params']
+			for k in ['to','amount','asset','memo','from']:
+				if not k in data:
+					data[k] = None
+			if not data["from"]: data["from"] = True
+			self.FTransfer(account=data['from'],
+				to=data['to'], amount=data['amount'],
+				asset=data['asset'], memo=data['memo'])
+		
+		if len(o['action']) > 1 and o['action'][0] == 'blind_receipt':
+			wallet = self.iso.bts.wallet
+			receipt = o['action'][1]
+			comment1 = o['params'].get('comment', "")
+			comment2 = ""
+			from bitshares.blind import receive_blind_transfer
+			try:
+				ok, _, _ = receive_blind_transfer(wallet, receipt, comment1, comment2)
+			except Exception as error:
+				showexc(error)
+		

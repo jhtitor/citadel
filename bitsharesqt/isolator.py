@@ -375,6 +375,7 @@ class BitsharesIsolator(object):
 			if cache:
 				self.storeAccount(account)
 			
+			account["keys"] = "" # unknown
 			return account
 		
 		account = self._accountFromDict(account_id, accountInfo)

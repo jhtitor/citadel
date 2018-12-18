@@ -3120,6 +3120,7 @@ So, this is a simple address book, and the Labels could be anything you want,</s
      <addaction name="actionResync_history"/>
      <addaction name="actionWipeResync_history"/>
      <addaction name="actionResync_orders"/>
+     <addaction name="actionOpen_chat"/>
      <addaction name="actionClose_wallet"/>
     </widget>
     <addaction name="actionAdd_account"/>
@@ -3447,6 +3448,11 @@ image: &quot;&quot;;
    </property>
    <property name="text">
     <string>&amp;Contacts</string>
+   </property>
+  </action>
+  <action name="actionOpen_chat">
+   <property name="text">
+    <string>Open Chat</string>
    </property>
   </action>
  </widget>

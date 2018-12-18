@@ -1020,6 +1020,8 @@ class BitsharesStorageExtra():#CommonStorage):
 
         # Set latest db version
         #self.configStorage["db_version"] = "3"
+        from bitsharesextra.chatstorage import ChatRooms
+        self.chatroomStorage = ChatRooms(path=path, create=create)
 
     def wipeConfig(self):
         config = self.configStorage
