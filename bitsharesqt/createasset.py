@@ -421,9 +421,9 @@ class AssetWindow(QtWidgets.QDialog):
 			options.pop("precision")
 			options.pop("max_supply")
 			v1 = QTransactionBuilder.VUpdateAsset(
-				**options,
 				fee_asset=fee_asset,
-				isolator=self.iso
+				isolator=self.iso,
+				**options
 			)
 			vs.append( v1 )
 		
@@ -432,9 +432,9 @@ class AssetWindow(QtWidgets.QDialog):
 			prev_bitoptions = self.prev_bitoptions()
 			if not(dict_same(prev_bitoptions, bitoptions)):
 				v2 = QTransactionBuilder.VUpdateBitAsset(
-					**bitoptions,
 					fee_asset=fee_asset,
-					isolator=self.iso
+					isolator=self.iso,
+					**bitoptions
 				)
 				vs.append( v2 )
 		

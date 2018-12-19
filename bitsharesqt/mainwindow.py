@@ -527,7 +527,7 @@ class MainWindow(QtGui.QMainWindow,
 	def lookup_asset_wrap(self, iso, token, *args, request_handler=None):
 		rh = request_handler
 		asset = iso.getAsset(token, force_remote=True)
-		return (token, asset, *args)
+		return (token, asset, args[0])
 	def lookup_asset_after(self, uid, data):
 		(token, asset, symCombo, amtSpin) = data
 		if symCombo.currentText().upper() == token:
