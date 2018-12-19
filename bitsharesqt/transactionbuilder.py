@@ -347,7 +347,7 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		if not(votes is None):
 			params["new_options"] = {
 				"voting_account": dst_account["id"],
-				"memo_key": memo_key if memo_key else options["memo_key"],
+				"memo_key": memo_key if memo_key else src_account["options"]["memo_key"],
 				"votes": votes,
 				"num_witness": num_witness,
 				"num_committee": num_committee,
