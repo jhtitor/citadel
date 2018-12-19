@@ -125,7 +125,7 @@ class HistoryTab(QtWidgets.QWidget):
 					h['_details'] = json.loads(h['details']) if h['details'] else {
 						"plus": "", "minus": "",
 					}
-				s = "%s, %s, %s, %s\n" % (
+				s = "%s, \"%s\", \"%s\", \"%s\"\n" % (
 					str(h["date"]),
 					h["description"],
 					h["_details"]["plus"],
