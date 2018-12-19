@@ -310,6 +310,7 @@ class VotingWindow(QtWidgets.QDialog):
 		
 		witnesses = iso.getWitnesses(passive, lazy=False, request_handler=request_handler)
 		for w in witnesses:
+			if hasattr(w, '_account'): continue
 			w._account = w.account
 		
 		return (witnesses, passive, )
@@ -354,6 +355,7 @@ class VotingWindow(QtWidgets.QDialog):
 		
 		members = iso.getCommittee(passive, lazy=False, request_handler=request_handler)
 		for m in members:
+			if hasattr(m, '_account'): continue
 			m._account = m.account
 		
 		return (members, passive, )
@@ -395,6 +397,7 @@ class VotingWindow(QtWidgets.QDialog):
 		
 		workers = iso.getWorkers(passive, lazy=False, request_handler=request_handler)
 		for w in workers:
+			if hasattr(w, '_account'): continue
 			w._account = w.account
 		
 		return (workers, passive, )
