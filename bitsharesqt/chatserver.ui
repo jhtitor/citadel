@@ -113,6 +113,9 @@
             <string>Open Private Chat</string>
            </property>
            <layout class="QFormLayout" name="formLayout">
+            <property name="fieldGrowthPolicy">
+             <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+            </property>
             <property name="horizontalSpacing">
              <number>20</number>
             </property>
@@ -189,6 +192,9 @@
           <string>Server Info</string>
          </property>
          <layout class="QFormLayout" name="formLayout_3">
+          <property name="fieldGrowthPolicy">
+           <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+          </property>
           <property name="horizontalSpacing">
            <number>20</number>
           </property>
@@ -216,6 +222,12 @@
           <string>Join Chat Room</string>
          </property>
          <layout class="QFormLayout" name="formLayout_2">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetDefaultConstraint</enum>
+          </property>
+          <property name="fieldGrowthPolicy">
+           <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+          </property>
           <property name="horizontalSpacing">
            <number>20</number>
           </property>

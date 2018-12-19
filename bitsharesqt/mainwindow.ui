@@ -1622,6 +1622,9 @@ image: &quot;&quot;;
               </widget>
               <widget class="QWidget" name="pageNewContact">
                <layout class="QFormLayout" name="formLayout_11">
+                <property name="fieldGrowthPolicy">
+                 <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+                </property>
                 <property name="formAlignment">
                  <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
                 </property>
@@ -1766,6 +1769,9 @@ So, this is a simple address book, and the Labels could be anything you want,</s
               </property>
               <widget class="QWidget" name="blindPage1">
                <layout class="QFormLayout" name="formLayout_5">
+                <property name="fieldGrowthPolicy">
+                 <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+                </property>
                 <property name="horizontalSpacing">
                  <number>20</number>
                 </property>
@@ -2066,6 +2072,9 @@ So, this is a simple address book, and the Labels could be anything you want,</s
               </widget>
               <widget class="QWidget" name="blindPage3">
                <layout class="QFormLayout" name="formLayout_7">
+                <property name="fieldGrowthPolicy">
+                 <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+                </property>
                 <property name="horizontalSpacing">
                  <number>20</number>
                 </property>
