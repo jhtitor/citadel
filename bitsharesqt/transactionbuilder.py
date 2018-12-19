@@ -21,6 +21,7 @@ from bitsharesbase.operations import Limit_order_create, Limit_order_cancel
 from bitsharesbase.operations import Account_create, Account_upgrade, Account_update
 from bitsharesbase.operations import Asset_create, Asset_update, Asset_update_bitasset
 from bitsharesbase.operations import Asset_issue, Asset_reserve, Asset_fund_fee_pool
+from bitsharesbase.operations import Worker_create
 from bitsharesbase.operations import getOperationIdForClass
 from bitsharesbase.operations import getOperationClassForId
 from bitsharesbase.operations import getOperationNameForId
@@ -370,7 +371,59 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		
 		win = QTransactionBuilder(trxbuffer=tx, iso=isolator)
 		return win.exec_()
-	
+
+	@classmethod
+	def QCreateWorker(self,
+			worker_account,
+			name, url,
+			begin_date, end_date,
+			daily_pay, worker_type,
+			vesting_days=365,
+			fee_asset=None,
+			isolator=None
+		):
+		iso = isolator
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
+		src_account = iso.getAccount(worker_account)
+		if isinstance(daily_pay, float):
+			daily_pay = int(daily_pay * 100000)
+		if worker_type == "vesting" or worker_type == 1:
+			work_init = (1, { "pay_vesting_period_days": vesting_days })
+		elif worker_type == "burn" or worker_type == 2:
+			work_init = (2, None)
+		elif worker_type == "refund" or worker_type == 0:
+			work_init = (0, None)
+		else:
+			raise ValueError("Unknown worker_type")
+		params = {
+			"owner": src_account['id'],
+			"name": name,
+			"url": url,
+			"work_begin_date": begin_date.strftime("%Y-%m-%dT%H:%M:%S"),
+			"work_end_date": end_date.strftime("%Y-%m-%dT%H:%M:%S"),
+			"daily_pay": daily_pay,
+			"initializer": work_init
+		}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		from pprint import pprint
+		print("USE:")
+		pprint(params)
+		
+		tx.appendOps(Worker_create(**params))
+		
+		
+		if iso.bts.wallet.locked():
+			tx.addSigningInformation(src_account, "active", lazy=True)
+		else:
+			tx.appendSigner(src_account, "active", lazy=True)
+		
+		win = QTransactionBuilder(trxbuffer=tx, iso=isolator)
+		return win.exec_()
 
 	@classmethod
 	def QCreateAsset(self,

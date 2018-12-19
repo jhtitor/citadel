@@ -849,6 +849,9 @@ class BitsharesIsolator(object):
 			f_asset = iso.getAsset(op_action['asset_id'])
 			desc += " " + f_asset["symbol"]
 			short = "Published feed for " + f_asset["symbol"]
+		if (op_id == 34):
+			desc = "Create worker '%s'" % op_action['name']
+			short = "Created worker '%s'" % op_action['name']
 		if (op_id == 39):
 			desc = "Transfer to blind"
 			amt = iso.getAmountOP(op_action['amount'])
@@ -1034,6 +1037,27 @@ class BitsharesIsolator(object):
 			timeout -= 1
 			time.sleep(1)
 	
+	def voteInfo(self, object_id, ref="vote_for"):
+		if object_id.startswith("1.6."):
+			t = "witness"
+			ref = "vote_id"
+		elif object_id.startswith("1.5."):
+			t = "committee_member"
+			ref = "vote_id"
+		elif object_id.startswith("1.14."):
+			t = "worker"
+		else:
+			raise ValueError("Wrong object id in %s." % ref)
+		obj = self.bts.rpc.get_object(object_id)
+		if not obj:
+			raise ValueError("Object %s not found on the chain." % object_id)
+		return {
+			"type": t,
+			"object_id": object_id,
+			"vote_id": obj[ref]
+		}
+
+
 	def getWitnesses(self, only_active=False, lazy=False, request_handler=None):
 #		from bitshares.witness import Witnesses
 #		return Witnesses(blockchain_instance=self.bts, lazy=lazy)

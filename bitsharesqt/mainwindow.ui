@@ -3130,6 +3130,7 @@ So, this is a simple address book, and the Labels could be anything you want,</s
     <addaction name="menuSpecial"/>
     <addaction name="separator"/>
     <addaction name="actionCreate_Asset"/>
+    <addaction name="actionCreate_Worker"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
    </widget>
@@ -3453,6 +3454,11 @@ image: &quot;&quot;;
   <action name="actionOpen_chat">
    <property name="text">
     <string>Open Chat</string>
+   </property>
+  </action>
+  <action name="actionCreate_Worker">
+   <property name="text">
+    <string>Create Worker...</string>
    </property>
   </action>
  </widget>

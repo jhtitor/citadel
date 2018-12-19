@@ -8,6 +8,7 @@ log = logging.getLogger(__name__)
 import json
 
 from .transactionbuilder import QTransactionBuilder
+from .createworker import WorkerWindow
 
 class VotingWindow(QtWidgets.QDialog):
 	
@@ -422,9 +423,11 @@ class VotingWindow(QtWidgets.QDialog):
 			j += 1
 			table.insertRow(j)
 			set_col(table, j, 0, w["id"], data = w)
-			set_col(table, j, 1, w._account["name"])
+			set_col(table, j, 1, w["name"])#._account["name"])
 			set_col(table, j, 2, w["url"])
-			set_col(table, j, 3, w["work_end_date"].strftime("%Y-%m-%d"))
+			set_col(table, j, 3, w["work_begin_date"].strftime("%Y-%m-%d")
+			                   + " - "
+			                   + w["work_end_date"].strftime("%Y-%m-%d"))
 			ip = set_col(table, j, 4, int(w["total_votes_for"]), align="right")
 			ic = set_col(table, j, 5, int(w["total_votes_against"]), align="right")
 			#set_itemflags(item, checked=checked, checkable=True, selectable=True, core=table)
@@ -505,6 +508,9 @@ class VotingWindow(QtWidgets.QDialog):
 		qaction(self, menu, "Copy URL", self._copy_url)
 		qaction(self, menu, "Copy Name", self._copy_name)
 		table = self._get_table()
+		if table == self.ui.workersTable:
+			menu.addSeparator()
+			qaction(self, menu, "Details", self._worker_details)
 		qmenu_exec(table, menu, position)
 		
 	
@@ -526,3 +532,11 @@ class VotingWindow(QtWidgets.QDialog):
 			return
 		qclip(name)
 	
+	def _worker_details(self):
+		table = self._get_table()
+		j = table_selrow(table)
+		if j <= -1: return
+		worker = table_coldata(table, j, 0)
+		
+		win = WorkerWindow(worker=worker, mode="view", parent=self)
+		win.exec_()

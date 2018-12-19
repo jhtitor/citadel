@@ -14,6 +14,7 @@ from .accountwizard import AccountWizard
 from .walletwizard import WalletWizard, RecentWallets
 from .memowindow import MemoWindow
 from .createasset import AssetWindow
+from .createworker import WorkerWindow
 from .settings import SettingsWindow
 from .keyswindow import KeysWindow
 from .dashboard import DashboardTab
@@ -116,6 +117,7 @@ class MainWindow(QtGui.QMainWindow,
 		ui.actionTransaction_builder.triggered.connect(self.open_transactionbuffer)
 		
 		ui.actionCreate_Asset.triggered.connect(self.open_createassetwindow)
+		ui.actionCreate_Worker.triggered.connect(self.open_createworkerwindow)
 		
 		ui.actionSettings.triggered.connect(self.open_settings)
 		ui.actionGoto_market.triggered.connect(self.goto_market)
@@ -874,6 +876,14 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def open_createassetwindow(self):
 		win = AssetWindow(isolator=self.iso, mode="create",
+			accounts=self.account_names,
+			account=self.activeAccount,
+			parent=self
+			)
+		win.exec_()
+	
+	def open_createworkerwindow(self):
+		win = WorkerWindow(isolator=self.iso, mode="create",
 			accounts=self.account_names,
 			account=self.activeAccount,
 			parent=self
@@ -2407,3 +2417,29 @@ class MainWindow(QtGui.QMainWindow,
 			except Exception as error:
 				showexc(error)
 		
+		if (len(o['action']) > 1 and o['action'][0] == 'operation' and
+			o['action'][1] == 'account_update'):
+			account = self.activeAccount
+			num_witness = account["options"]["num_witness"]
+			num_committee = account["options"]["num_committee"]
+			votes = list(account["options"]["votes"])
+			added = 0
+			for k in [ 'vote_for', 'vote_against' ]:
+				if not(k in o['params']):
+					continue
+				vinfo = self.iso.voteInfo(o['params'][k], k)
+				if not(vinfo["vote_id"] in votes):
+					if vinfo['type'] == 'witness':
+						num_witness += 1
+					if vinfo['type'] == 'committee_member':
+						num_committee += 1
+					votes.append(vinfo["vote_id"])
+					added += 1
+			if not added: return
+			QTransactionBuilder.QUpdateAccount(
+				account["name"],
+				None, None, None,
+				account["options"]["voting_account"],
+				num_witness, num_committee, votes,
+				fee_asset=None, isolator=self.iso
+			)
