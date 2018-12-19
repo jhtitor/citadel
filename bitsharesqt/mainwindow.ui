@@ -1869,7 +1869,7 @@ So, this is a simple address book, and the Labels could be anything you want,</s
                   <property name="minimumSize">
                    <size>
                     <width>0</width>
-                    <height>20</height>
+                    <height>26</height>
                    </size>
                   </property>
                   <property name="baseSize">
@@ -1975,6 +1975,12 @@ So, this is a simple address book, and the Labels could be anything you want,</s
                 </item>
                 <item row="1" column="1">
                  <widget class="QComboBox" name="blindToAccount">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>26</height>
+                   </size>
+                  </property>
                   <property name="baseSize">
                    <size>
                     <width>0</width>
@@ -2151,6 +2157,12 @@ So, this is a simple address book, and the Labels could be anything you want,</s
                 </item>
                 <item row="0" column="1">
                  <widget class="QComboBox" name="blindSource">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>26</height>
+                   </size>
+                  </property>
                   <property name="baseSize">
                    <size>
                     <width>0</width>
@@ -2164,6 +2176,12 @@ So, this is a simple address book, and the Labels could be anything you want,</s
                 </item>
                 <item row="1" column="1">
                  <widget class="QComboBox" name="blindDestination">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>26</height>
+                   </size>
+                  </property>
                   <property name="baseSize">
                    <size>
                     <width>0</width>
@@ -2299,7 +2317,7 @@ So, this is a simple address book, and the Labels could be anything you want,</s
                <property name="minimumSize">
                 <size>
                  <width>0</width>
-                 <height>20</height>
+                 <height>26</height>
                 </size>
                </property>
                <property name="editable">
@@ -2411,7 +2429,7 @@ So, this is a simple address book, and the Labels could be anything you want,</s
                <property name="minimumSize">
                 <size>
                  <width>0</width>
-                 <height>20</height>
+                 <height>26</height>
                 </size>
                </property>
                <property name="editable">
@@ -2484,7 +2502,7 @@ So, this is a simple address book, and the Labels could be anything you want,</s
                <property name="minimumSize">
                 <size>
                  <width>0</width>
-                 <height>20</height>
+                 <height>26</height>
                 </size>
                </property>
                <property name="editable">

@@ -67,7 +67,7 @@
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>20</height>
+         <height>26</height>
         </size>
        </property>
        <property name="editable">
@@ -87,7 +87,7 @@
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>20</height>
+         <height>24</height>
         </size>
        </property>
        <property name="maxLength">
