@@ -3,6 +3,7 @@ from io import BytesIO
 
 try:
 	import magic
+#	from magic.api import MagicError
 	HAS_MAGIC = True
 except ImportError:
 	import mimetypes
@@ -20,6 +21,23 @@ except ImportError:
 		HAS_PIL = False
 		print("PIL or PILLOW not found")
 
+import sys
+def resource_path(relative_path):
+	""" Get absolute path to resource, works for dev and for PyInstaller """
+	try:
+		# PyInstaller creates a temp folder and stores path in _MEIPASS
+		base_path = sys._MEIPASS
+	except Exception:
+		base_path = os.path.abspath(".")
+	return os.path.join(base_path, relative_path)
+
+def is_bundled():
+	try:
+		str(sys._MEIPASS)
+		return True
+	except Exception:
+		return False
+
 
 # return best file info we can
 def fileinfo(path):
@@ -32,10 +50,17 @@ def fileinfo(path):
 		"content-length": stats.st_size,
 	}
 
+
+
 def guess_mime(path):
 	if HAS_MAGIC:
-		with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
+		paths = [ resource_path("magic.mgc") ] if is_bundled() else None
+#		try:
+		with magic.Magic(paths=paths, flags=magic.MAGIC_MIME_TYPE) as m:
 			content_type = m.id_filename(path)
+#		except MagicError:
+#			HAS_MAGIC = False
+#			return guess_mime(path)
 	else:
 		content_type = mimetypes.guess_type(path)[0]
 	return content_type
