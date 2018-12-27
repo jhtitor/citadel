@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION="0.2.4"
+VERSION="0.2.5"
 
 BUNDLE_NAME="BitShares-QT"
 UNIX_NAME="pybitshares-qt"
