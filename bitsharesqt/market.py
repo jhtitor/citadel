@@ -82,7 +82,7 @@ class MarketTab(QtGui.QWidget):
 		stretch_table(self.ui.sellStack, False, hidehoriz=True)
 
 		self.subscribed = False
-		self.updater = RemoteFetch()
+		self.updater = RemoteFetch(manager=self.iso.mainwin.Requests)
 
 		self._frame_buy = {
 			"group": self.ui.buyGroup,
@@ -283,7 +283,7 @@ class MarketTab(QtGui.QWidget):
 				order_id,
 				#fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 	
 	def desync(self):

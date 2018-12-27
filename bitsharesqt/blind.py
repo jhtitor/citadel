@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from .utils import *
 import logging
@@ -78,6 +78,8 @@ class WindowWithBlind(QtCore.QObject):
 	
 	def uiBlindAccountAssetLink_perform(self):
 		accCombo = self.sender()
+		if isinstance(accCombo, QtWidgets.QLineEdit):
+			accCombo = accCombo.parent()
 		symCombos = accCombo._linkedAssets
 		blind_label_or_key = accCombo.currentText().strip()
 		if not len(blind_label_or_key):
@@ -521,7 +523,7 @@ class WindowWithBlind(QtCore.QObject):
 				public_key,
 				fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return
 		
@@ -566,7 +568,7 @@ class WindowWithBlind(QtCore.QObject):
 				self.ui.blindToAmount.setValue(adjusted_value)
 			showexc(error)
 			return
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return
 		
@@ -620,7 +622,7 @@ class WindowWithBlind(QtCore.QObject):
 				self.ui.blindAmount.setValue(adjusted_value)
 			showexc(error)
 			return
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return
 		
@@ -642,7 +644,7 @@ class WindowWithBlind(QtCore.QObject):
 		from bitshares.blind import receive_blind_transfer
 		try:
 			ok, _, _ = receive_blind_transfer(wallet, receipt, comment1, comment2)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return
 		if not ok:

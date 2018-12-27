@@ -31,7 +31,7 @@ packages = [
 			"jhtitor/python-graphenelib",
 			"950a71bc3dbff48db1fe5030590cf012447f3154"
 			),
-		"copy": [ "graphenebase", "grapheneapi" ],
+		"copy": [ "graphenebase", "grapheneapi", "graphenestorage" ],
 	},
 	{
 		"name": "websocket",

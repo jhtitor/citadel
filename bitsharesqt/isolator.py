@@ -64,6 +64,8 @@ class BitsharesIsolator(object):
 		import bitshares
 		kwargs.pop('offline', None) # overwrite
 		
+		self.mainwin = None
+		
 		self.ping_callback = kwargs.pop("ping_callback", None)
 		
 		self.conn_node = kwargs.pop('node', "")
@@ -86,6 +88,9 @@ class BitsharesIsolator(object):
 		
 		#from bitsharesapi.bitsharesnoderpc import BitSharesNodeRPC
 	
+	def setMainWindow(self, win):
+		self.mainwin = win
+
 	def disconnect(self):
 		return self.close(force=True)
 		
@@ -370,6 +375,7 @@ class BitsharesIsolator(object):
 			if cache:
 				self.storeAccount(account)
 			
+			account["keys"] = "" # unknown
 			return account
 		
 		account = self._accountFromDict(account_id, accountInfo)
@@ -843,6 +849,9 @@ class BitsharesIsolator(object):
 			f_asset = iso.getAsset(op_action['asset_id'])
 			desc += " " + f_asset["symbol"]
 			short = "Published feed for " + f_asset["symbol"]
+		if (op_id == 34):
+			desc = "Create worker '%s'" % op_action['name']
+			short = "Created worker '%s'" % op_action['name']
 		if (op_id == 39):
 			desc = "Transfer to blind"
 			amt = iso.getAmountOP(op_action['amount'])
@@ -873,23 +882,24 @@ class BitsharesIsolator(object):
 		}
 	
 	class WalletGate(object):
-		def __init__(self, wallet, reason=None):
+		def __init__(self, wallet, mainwin, reason=None, parent=None):
 			self.wallet = wallet
 			self.reason = reason
+			self.parent = parent
 			self.relock = wallet.locked()
+			self.mainwin = mainwin
 		def __enter__(self):
-			from .utils import app
 			if self.relock:
-				unlocked = app().mainwin.unlock_wallet(reason=self.reason)
+				unlocked = self.mainwin.unlock_wallet(reason=self.reason, parent=self.parent)
 				if not unlocked:
 					raise WalletLocked()
 			return self.wallet
 		def __exit__(self, exc_type, exc_val, exc_tb):
 			from .utils import app
 			if self.relock:
-				app().mainwin.lock_wallet()
-	def unlockedWallet(self, reason=None):
-		return self.WalletGate( self.bts.wallet, reason )
+				self.mainwin.lock_wallet()
+	def unlockedWallet(self, parent=None, reason=None):
+		return self.WalletGate( self.bts.wallet, self.mainwin, reason, parent )
 	
 	
 	def download_assets(self, request_handler=None):
@@ -1027,32 +1037,150 @@ class BitsharesIsolator(object):
 			timeout -= 1
 			time.sleep(1)
 	
+	def voteInfo(self, object_id, ref="vote_for"):
+		if object_id.startswith("1.6."):
+			t = "witness"
+			ref = "vote_id"
+		elif object_id.startswith("1.5."):
+			t = "committee_member"
+			ref = "vote_id"
+		elif object_id.startswith("1.14."):
+			t = "worker"
+		else:
+			raise ValueError("Wrong object id in %s." % ref)
+		obj = self.bts.rpc.get_object(object_id)
+		if not obj:
+			raise ValueError("Object %s not found on the chain." % object_id)
+		return {
+			"type": t,
+			"object_id": object_id,
+			"vote_id": obj[ref]
+		}
+
+
 	def getWitnesses(self, only_active=False, lazy=False, request_handler=None):
-		from bitshares.witness import Witnesses
-		return Witnesses(blockchain_instance=self.bts, lazy=lazy)
+#		from bitshares.witness import Witnesses
+#		return Witnesses(blockchain_instance=self.bts, lazy=lazy)
+		rh = request_handler
+		from bitshares.account import Account
+		ids = self.bts.rpc.get_object(
+			"2.12.0").get("current_shuffled_witnesses", [])
+		witnesses = [ ]
+		seq, size = list(ids), 100
+		sub_lists = [seq[i:i+size] for i in range(0, len(seq), size)]
+		for ids in sub_lists:
+			if rh and rh.cancelled:
+				raise Cancelled()
+			data = self.bts.rpc.get_objects(ids)
+			for wit in data:
+				witnesses.append(wit)
+
+		from bitshares.witness import Witness
+		accs = set()
+		accmaps = { }
+		ret = [ ]
+		for w in witnesses:
+			if rh and rh.cancelled:
+				raise Cancelled()
+			wit = Witness(w, lazy=lazy, blockchain_instance=self.bts)
+			if not wit["witness_account"] in accs:
+				accs.add(wit["witness_account"])
+				accmaps[wit["witness_account"]] = [ ]
+			accmaps[wit["witness_account"]].append(wit)
+			ret.append(wit)
+		seq, size = list(accs), 100
+		sub_lists = [seq[i:i+size] for i in range(0, len(seq), size)]
+		for idlist in sub_lists:
+			if rh and rh.cancelled:
+				raise Cancelled()
+			data = self.bts.rpc.get_objects(idlist)
+			for acc in data:
+				for wit in accmaps[acc["id"]]:
+					wit._account = acc
+
+		if only_active:
+			account = Account(
+				"witness-account",
+				blockchain_instance=self.bts)
+			filter_by = [x[0] for x in account["active"]["account_auths"]]
+			ret = list(
+				filter(lambda x: x["witness_account"] in filter_by,
+				ret))
+
+		return ret
 	
 	def getCommittee(self, only_active=False, lazy=False, request_handler=None):
 		rh = request_handler
 		from bitshares.committee import Committee
 		rpc = self.bts.rpc
+		ids = [ ]
 		last_name = ""
-		whole = [ ]
 		while True:
-			accs = rpc.lookup_committee_member_accounts(last_name, 100)
-			for name, identifier in accs:
-				if rh and rh.cancelled:
-					raise Cancelled()
-				member = Committee(identifier, lazy=True, blockchain_instance=self.bts)
-				member.refresh()
-				whole.append(member)
-			last_name = accs[-1][0]
-			if len(accs) < 100:
+			if rh and rh.cancelled:
+				raise Cancelled()
+			refs = rpc.lookup_committee_member_accounts(last_name, 100)
+			last_name = refs[-1][0]
+			for name, identifier in refs:
+				ids.append(identifier)
+			if len(refs) < 100:
 				break
-		return whole
+
+		accs = set()
+		accmaps = { }
+		ret = [ ]
+
+		seq, size = list(ids), 100
+		sub_lists = [seq[i:i+size] for i in range(0, len(seq), size)]
+		for ids in sub_lists:
+			if rh and rh.cancelled:
+				raise Cancelled()
+			data = self.bts.rpc.get_objects(ids)
+			for cm in data:
+				mem = Committee(cm, lazy=lazy, blockchain_instance=self.bts)
+				if not mem["committee_member_account"] in accs:
+					accs.add(mem["committee_member_account"])
+					accmaps[mem["committee_member_account"]] = [ ]
+				accmaps[mem["committee_member_account"]].append(mem)
+				ret.append(mem)
+
+		seq, size = list(accs), 100
+		sub_lists = [seq[i:i+size] for i in range(0, len(seq), size)]
+		for idlist in sub_lists:
+			if rh and rh.cancelled:
+				raise Cancelled()
+			data = self.bts.rpc.get_objects(idlist)
+			for acc in data:
+				for mem in accmaps[acc["id"]]:
+					mem._account = acc
+
+		return ret
 	
 	def getWorkers(self, only_active=False, lazy=False, request_handler=None):
-		from bitshares.worker import Workers
-		return Workers(blockchain_instance=self.bts, lazy=lazy)
+		#from bitshares.worker import Workers
+		#return Workers(blockchain_instance=self.bts, lazy=lazy)
+		rh = request_handler
+		from bitshares.worker import Worker
+		workers = self.bts.rpc.get_all_workers()
+		accs = set()
+		accmaps = { }
+		ret = [ ]
+		for w in workers:
+			wrk = Worker(w, lazy=lazy, blockchain_instance=self.bts)
+			if not wrk["worker_account"] in accs:
+				accs.add(wrk["worker_account"])
+				accmaps[wrk["worker_account"]] = [ ]
+			accmaps[wrk["worker_account"]].append(wrk)
+			ret.append(wrk)
+		seq, size = list(accs), 100
+		sub_lists = [seq[i:i+size] for i in range(0, len(seq), size)]
+		for idlist in sub_lists:
+			if rh and rh.cancelled:
+				raise Cancelled()
+			data = self.bts.rpc.get_objects(idlist)
+			for acc in data:
+				for wrk in accmaps[acc["id"]]:
+					wrk._account = acc
+		return ret
 	
 	def getMarketBuckets(self, asset_a, asset_b, start=None, stop=None, raw=False):
 		from datetime import datetime, timedelta
@@ -1089,3 +1217,21 @@ class BitsharesIsolator(object):
 			trades.append(t)
 		return trades
 	
+
+from .utils import showexc, num_args
+from .work import has_kwarg
+def safeunlock(func, reason=None):
+	def wrapper(obj, *args, **kwargs):
+		try:
+			args = list(args) #list(args[0:num_args(func)])
+			with obj.iso.unlockedWallet(obj, reason) as w:
+				if has_kwarg(func, "wallet"):
+					kwargs["wallet"] = w
+				else:
+					args[-1] = w
+				return func(obj, *args, **kwargs)
+		except WalletLocked:
+			pass
+		except Exception as e:
+			showexc(e)
+	return wrapper

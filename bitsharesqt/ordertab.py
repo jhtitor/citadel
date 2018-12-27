@@ -4,8 +4,6 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.exchange import Ui_ExchangeTab
 _translate = QtCore.QCoreApplication.translate
 
-from PyQt5.QtWidgets import QTableWidgetItem
-
 from .transactionbuilder import QTransactionBuilder
 
 from .netloc import RemoteFetch
@@ -24,6 +22,7 @@ except AttributeError:
 class OrderTab(QtWidgets.QWidget):
 	
 	def __init__(self, *args, **kwargs):
+		self.iso = kwargs.pop("isolator", None)
 		self.ping_callback = kwargs.pop("ping_callback", None)
 		super(OrderTab, self).__init__(*args, **kwargs)
 		self.ui = Ui_ExchangeTab()
@@ -31,15 +30,16 @@ class OrderTab(QtWidgets.QWidget):
 		
 		self._index = 2
 		
-		self.updater = RemoteFetch()
+		mw = self.iso.mainwin
 		
-		self.sell_estimater = RemoteFetch()
+		self.updater = RemoteFetch(manager=mw.Requests)
+		
+		self.sell_estimater = RemoteFetch(manager=mw.Requests)
 		
 		stretch_table(self.ui.table)
 		
 		qmenu(self.ui.table, self.show_orders_submenu)
 		
-		mw = app().mainwin
 		mw.uiExpireSliderLink(self.ui.sellexpireEdit, self.ui.sellexpireSlider)
 		
 		#self.ui.sellerBox.currentIndexChanged.connect(self.mini_reacc)
@@ -51,8 +51,8 @@ class OrderTab(QtWidgets.QWidget):
 		on_spin(self.ui.sellAmountSpin, self.sell_main_amount_changed)
 		on_spin(self.ui.buyAmountSpin, self.sell_alt_amount_changed)
 		# also, when asset type changes
-		on_combo(self.ui.sellAssetCombo, self.sell_alt_amount_changed)
-		on_combo(self.ui.buyAssetCombo, self.sell_main_amount_changed)
+		on_combo(self.ui.sellAssetCombo, self.sell_alt_amount_changed, progress=False)
+		on_combo(self.ui.buyAssetCombo, self.sell_main_amount_changed, progress=False)
 		
 		mw.uiAssetsMarketLink(
 			self.ui.sellAssetCombo,
@@ -91,7 +91,7 @@ class OrderTab(QtWidgets.QWidget):
 				app().mainwin._txAppend(*v)
 			else:
 				QTransactionBuilder._QExec(self._iso, v)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		return True
@@ -135,6 +135,9 @@ class OrderTab(QtWidgets.QWidget):
 		
 		if not(sell_asset) or not(buy_asset) or not(buy_amount):
 			return
+		
+		self.ui.bidPrice.setText("")
+		self.ui.askPrice.setText("")
 		
 		self.sell_estimater.fetch(
 			self.sell_estimate, sell_asset, None,
@@ -186,8 +189,12 @@ class OrderTab(QtWidgets.QWidget):
 		elem.setValue( re )
 		elem.blockSignals(False)
 		
-		self.ui.bidPrice.setText("Bid: " + tick["highest_bid"])
-		self.ui.askPrice.setText("Ask: " + tick["lowest_ask"])
+		precision = self.ui.sellAmountSpin.decimals()
+		def fmt(p):
+			return ("%0."+str(precision)+"f") % float(p)
+
+		self.ui.bidPrice.setText("Highest: " + fmt(tick["highest_bid"]))
+		self.ui.askPrice.setText("Lowest: " + fmt(tick["lowest_ask"]))
 		self.ui.bidPrice.hide()
 		self.ui.askPrice.hide()
 
@@ -210,7 +217,7 @@ class OrderTab(QtWidgets.QWidget):
 		asset_name_b = str.split(col_b, " ")[1]
 		
 		try:
-			app().mainwin.openMarket(asset_name_a, asset_name_b)
+			self.iso.mainwin.openMarket(asset_name_a, asset_name_b)
 		except Exception as error:
 			showexc(error)
 	
@@ -223,17 +230,18 @@ class OrderTab(QtWidgets.QWidget):
 		order_id = table.item(row, 0).text()
 		#b = table.item(index, 1).text()
 		buffer = app().mainwin.buffering()
+		fee_asset = anyvalvis(self.ui.sellFeeAsset, "BTS")
 		try:
 			v = QTransactionBuilder.VCancelOrder(
 				self._account_name,
 				order_id,
-				#fee_asset=fee_asset,
+				fee_asset=fee_asset,
 				isolator=self._iso)
 			if buffer:
 				app().mainwin._txAppend(*v)
 			else:
 				QTransactionBuilder._QExec(self._iso, v)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		return True

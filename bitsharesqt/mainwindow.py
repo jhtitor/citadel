@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from uidef.mainwindow import Ui_MainWindow
 _translate = QtCore.QCoreApplication.translate
 import uidef.res_rc
@@ -14,12 +14,14 @@ from .accountwizard import AccountWizard
 from .walletwizard import WalletWizard, RecentWallets
 from .memowindow import MemoWindow
 from .createasset import AssetWindow
+from .createworker import WorkerWindow
 from .settings import SettingsWindow
 from .keyswindow import KeysWindow
 from .dashboard import DashboardTab
 from .history import HistoryTab
 from .ordertab import OrderTab
 from .market import MarketTab
+from .chatserver import ChatServerTab
 from .transactionbuilder import QTransactionBuilder
 from .contacts import WindowWithContacts
 from .assets import WindowWithAssets
@@ -30,9 +32,10 @@ from .tabwrangler import WindowWithTabWrangler
 from .trxbuffer import WindowWithTrxBuffer
 
 from .isolator import ResourceUnavailableOffline, WalletLocked
+from .isolator import safeunlock
 
 from .netloc import RemoteFetch
-from .work import Request
+from .work import Request, RequestManager
 from .utils import *
 import json
 import logging
@@ -56,9 +59,11 @@ class MainWindow(QtGui.QMainWindow,
 		self.iso = kwargs.pop('iso', None)
 		super(MainWindow, self).__init__(*args, **kwargs)
 		
-		
 		self.ui = ui = Ui_MainWindow()
 		self.ui.setupUi(self)
+		
+		self.Requests = RequestManager()
+		if self.iso: self.iso.setMainWindow(self)
 		
 		self.setupStatusBar()
 		
@@ -112,15 +117,19 @@ class MainWindow(QtGui.QMainWindow,
 		ui.actionTransaction_builder.triggered.connect(self.open_transactionbuffer)
 		
 		ui.actionCreate_Asset.triggered.connect(self.open_createassetwindow)
+		ui.actionCreate_Worker.triggered.connect(self.open_createworkerwindow)
 		
 		ui.actionSettings.triggered.connect(self.open_settings)
 		ui.actionGoto_market.triggered.connect(self.goto_market)
+		ui.actionOpen_chat.triggered.connect(self.goto_chat)
 		
 		ui.actionTransfer.triggered.connect(self.show_transfer)
 		ui.actionSell.triggered.connect(self.show_sell)
 		
 		ui.transferButton.clicked.connect(self.make_transfer)
 		ui.sellButton.clicked.connect(self.make_limit_order)
+		
+		self.dropped.connect(self.file_dropped)
 		
 		#ui.sellOpenMarketButton.clicked.connect(self.sell_open_market)
 		self.uiAssetsMarketLink(
@@ -163,7 +172,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		self.init_contacts()
 		
-		self.connector = RemoteFetch()
+		self.connector = RemoteFetch(manager=self.Requests)
 		self.background_update.connect(self.on_connector_update)
 		self._connecting = False
 		self._user_intent = 0
@@ -474,6 +483,8 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def uiAccountAssetLink_perform(self):
 		accCombo = self.sender()
+		if isinstance(accCombo, QtWidgets.QLineEdit):
+			accCombo = accCombo.parent()
 		symCombos = accCombo._linkedAssets
 		account_id = accCombo.currentText()
 		if not len(account_id):
@@ -495,22 +506,50 @@ class MainWindow(QtGui.QMainWindow,
 				symCombo.addItem(b.symbol)
 	
 	def uiAssetLink(self, amtSpin, symCombo):
-		
 		symCombo._linkedBox = amtSpin
+		symCombo._linkedFunc = self.uiAssetLink_perform
+		line = symCombo.lineEdit()
+		if line:
+			line._linkedBox = amtSpin
+			line.editingFinished.connect(self.uiAssetLink_perform)
 		symCombo.currentIndexChanged.connect(self.uiAssetLink_perform)
-		symCombo.editTextChanged.connect(self.uiAssetLink_perform)
+
+	def lookup_asset(self, token, elem, *args):
+		if not(hasattr(elem, 'lookuper')):
+			mw = self.iso.mainwin
+			elem.lookuper = RemoteFetch(manager=mw.Requests)
+		elem.lookuper.fetch(
+			self.lookup_asset_wrap, self.iso, token, elem, *args,
+			ready_callback = self.lookup_asset_after,
+			error_callback = self.lookup_asset_error,
+			ping_callback = self.lookup_asset_ping
+		)
+	def lookup_asset_wrap(self, iso, token, *args, request_handler=None):
+		rh = request_handler
+		asset = iso.getAsset(token, force_remote=True)
+		return (token, asset, args[0])
+	def lookup_asset_after(self, uid, data):
+		(token, asset, symCombo, amtSpin) = data
+		if symCombo.currentText().upper() == token:
+			amtSpin.setDecimals( int(asset['precision']) )
+			amtSpin.setMaximum( float(asset['options']['max_supply']) )
+	def lookup_asset_error(self, uid, error):
+		log.error("Unable to figure out asset: %s", str(error))
+	def lookup_asset_ping(self, uid, ps, pd):
+		return
 	
 	def uiAssetLink_perform(self):
 		symCombo = self.sender()
+		if isinstance(symCombo, QtWidgets.QLineEdit):
+			symCombo = symCombo.parent()
 		amtSpin = symCombo._linkedBox
 		token = symCombo.currentText().upper()
 		if not token:
 			return
 		try:
-			asset = self.iso.getAsset(token)
+			asset = self.iso.getAsset(token, force_local=True)
 		except Exception as error:
-			log.error("Unable to figure out asset %s", token)
-			#showexc(error)
+			self.lookup_asset(token, symCombo, amtSpin)
 			return
 		
 		amtSpin.setDecimals( int(asset['precision']) )
@@ -518,11 +557,12 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def add_log_record(self, record):
 		msg = record.getMessage()
-		ce = self.ui.consoleEdit
-		tc = ce.textCursor()
-		tc.movePosition(QTextCursor.End)
-		tc.insertText(msg+"\n")
-		ce.setTextCursor(tc)
+		with ScrollKeeper(self.ui.consoleEdit, cursor=False) as k:
+			ce = self.ui.consoleEdit
+			tc = ce.textCursor()
+			tc.movePosition(QTextCursor.End)
+			tc.insertText(msg+"\n")
+			ce.setTextCursor(tc)
 	
 	def showAccountBar(self, on):
 		if on:
@@ -551,7 +591,7 @@ class MainWindow(QtGui.QMainWindow,
 		on_combo(self.ui.sellAssetCombo, self.sell_alt_amount_changed)
 		on_combo(self.ui.buyAssetCombo, self.sell_main_amount_changed)
 		
-		self.sell_estimater = RemoteFetch()
+		self.sell_estimater = RemoteFetch(manager=self.Requests)
 		
 		#self.ui.ainAmt"].valueChanged.connect(self.main_amount_changed)
 		#form["mainAmt"].valueChanged.connect(self.main_amount_changed)
@@ -731,11 +771,14 @@ class MainWindow(QtGui.QMainWindow,
 	
 	
 	def openMarket(self, asset_name_a, asset_name_b, to_front=True):
-		
 		if self.iso.offline:
 			raise ResourceUnavailableOffline("Market " + asset_name_a + ":" + asset_name_b)
+		if asset_name_a == asset_name_b:
+			raise Exception("Another asset is required for " + asset_name_a + " market")
 		asset_a = self.iso.getAsset(asset_name_a)
 		asset_b = self.iso.getAsset(asset_name_b)
+		if asset_a["symbol"] == asset_b["symbol"]:
+			raise Exception("Another asset is required for " + asset_name_a + " market")
 		
 		pair = (asset_a, asset_b)
 		tag = asset_a["symbol"] + ":" + asset_b["symbol"]
@@ -811,7 +854,7 @@ class MainWindow(QtGui.QMainWindow,
 		if not(self.iso.bts.wallet):
 			showerror("No wallet file open")
 			return False
-		win = SettingsWindow(isolator=self.iso)
+		win = SettingsWindow(isolator=self.iso, parent=self)
 		win.setPage(page)
 		win.exec_()
 		self.updateUIfromConfig()
@@ -827,6 +870,7 @@ class MainWindow(QtGui.QMainWindow,
 			accounts=self.account_names,
 			contacts=self.contact_names,
 			activeAccount=self.activeAccount,
+			parent=self
 		)
 		win.exec_()
 	
@@ -834,13 +878,68 @@ class MainWindow(QtGui.QMainWindow,
 		win = AssetWindow(isolator=self.iso, mode="create",
 			accounts=self.account_names,
 			account=self.activeAccount,
+			parent=self
 			)
 		win.exec_()
 	
+	def open_createworkerwindow(self):
+		win = WorkerWindow(isolator=self.iso, mode="create",
+			accounts=self.account_names,
+			account=self.activeAccount,
+			parent=self
+			)
+		win.exec_()
+	
+	@safeunlock
+	def goto_chat(self, sender=False, from_label=None, to_label=None, server_url=None, wallet=None, to_room=None):
+		if from_label is None:
+			if self.activeAccount:
+				from_label = self.activeAccount["name"]
+			else:
+				from_label, ok = QtGui.QInputDialog.getText(
+					self, 'Chat As',
+					'Chat As (Public key, account name or blind contact label):')
+				if not ok:
+					return False
+		
+		if server_url is None:
+			# TODO: move to remotes storage
+			servers = [
+				"https://citadel.li/chat",
+				"http://citadel2miawoaqw.onion/chat",
+				"http://127.0.0.1:8066",
+				"ws://127.0.0.1:8065",
+			]
+			server_url, ok = QtGui.QInputDialog.getItem(self, "Open Chat",
+				"Chat Server", servers, 0, False)
+			if not ok:
+				return False
+		
+		#if to_label is None:
+		#	to_label, ok = QtGui.QInputDialog.getText(
+		#		self, 'Chat With',
+		#		'Public key, account name or blind contact label:')
+		#	if not ok:
+		#		return False
+		self.openChat(server_url, from_label, to_label, to_room)
+
+	@safeunlock
+	def openChat(self, server_url, from_label, to_label=None, to_room=None, wallet=None):
+		while server_url.endswith("/"):
+			server_url = server_url[0:len(server_url)-1]
+		args = (from_label, server_url)
+		tag = "CS:" + server_url
+		tab = self.restoreTab(ChatServerTab, self.addChatServerTab, args, tag, to_front=True)
+		if to_label:
+			tab.openChat(from_label, to_label)
+		if to_room:
+			tab.openRoom(from_label, to_room)
+
+	@safeslot
 	def goto_market(self):
 		input, ok = QtGui.QInputDialog.getText(
-			None, 'Go to Market',
-			'Market name, like BTS:BTC')#, QtGui.QLineEdit.Password)
+			self, 'Go to Market',
+			'Market name, like BTS:BTC')
 		
 		if not ok:
 			return False
@@ -852,12 +951,7 @@ class MainWindow(QtGui.QMainWindow,
 			return False
 		
 		a, b = str.split(input, ":")
-		try:
-			self.openMarket(a, b)
-		except Exception as error:
-			showexc(error)
-			return False
-		return True
+		self.openMarket(a, b)
 	
 	def toggle_accountbar(self):
 		self.showAccountBar( self.ui.actionAccounts.isChecked() )
@@ -870,6 +964,7 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def show_transfer(self):
 		self.OTransfer()
+	
 	def show_sell(self):
 		self.OSell()
 	
@@ -989,16 +1084,6 @@ class MainWindow(QtGui.QMainWindow,
 			additional=account_name,
 			details=priv_txt, min_width=240)
 	
-	
-	def add_account(self):
-		try:
-			with self.iso.unlockedWallet() as w:
-				self._add_account()
-		except WalletLocked:
-			showerror("Can't add account to a locked wallet")
-		except Exception as error:
-			showexc(error)
-	
 	def _sweep_account_keys(self):
 		box = self.ui.accountsList
 		if not box.currentIndex().isValid():
@@ -1089,10 +1174,12 @@ class MainWindow(QtGui.QMainWindow,
 		self.iso.connect(nodeUrl, proxy=proxyUrl, num_retries=3, request_handler=request_handler)
 	
 	def _connect_event(self, uid, ps, data):
-	#	if type(data) is int:
-	#		return
-	#	ws, desc, error = data
-	#	self.background_update.emit(0, desc, (ws, error))
+		if ps == -2:
+			self._connecting = False
+		if type(data) is int:
+			return
+		ws, desc, error = data
+		self.background_update.emit(0, desc, (ws, error))
 		self.refreshUi_wallet()
 	
 	def on_connector_update(self, id, tag, data_error):
@@ -1100,21 +1187,16 @@ class MainWindow(QtGui.QMainWindow,
 			return
 		(data, error) = data_error
 		log.info("<%s>", tag)
-		#print("OCU", id, tag, data)
+		
 		ws = data
 		desc = tag
-		if ws.connected and (desc == "connected" or desc == "reconnected"):
+
+		if desc == "reconnected":
 			self.connection_established(0, None)
-		if desc == "failed":
-			self.iso.offline = True
-			#self.connection_failed(0, error)
-		if desc == "disconnected" or desc == "lost":
-			self.iso.offline = True
-			self.connection_lost(0)
-		if desc == "connecting" or desc == "reconnecting":
-			self._connecting = True
-		else:
+
+		if desc in ("connected", "reconnected"):
 			self._connecting = False
+
 		self.refreshUi_wallet()
 	
 	def connect_to_node(self, auto=True):
@@ -1195,7 +1277,7 @@ class MainWindow(QtGui.QMainWindow,
 		#
 		if disconnect or wait:
 			log.debug("( cancel threads )")
-			Request.cancel_all()
+			self.Requests.cancel_all()
 		#
 		if self.iso and disconnect:
 			log.debug("2. disconnect")
@@ -1203,7 +1285,7 @@ class MainWindow(QtGui.QMainWindow,
 		#
 		if wait:
 			log.debug("3. shutdown threads")
-			Request.shutdown(timeout=10)
+			self.Requests.shutdown(timeout=10)
 	
 	
 	def buffering(self):
@@ -1219,7 +1301,7 @@ class MainWindow(QtGui.QMainWindow,
 				account_name,
 				#fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 	
 	def make_limit_order(self):
@@ -1249,7 +1331,7 @@ class MainWindow(QtGui.QMainWindow,
 				self._txAppend(*v)
 			else:
 				QTransactionBuilder._QExec(self.iso, v)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		return True
@@ -1276,7 +1358,7 @@ class MainWindow(QtGui.QMainWindow,
 				self._txAppend(*v)
 			else:
 				QTransactionBuilder._QExec(self.iso, v)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		return True
@@ -1404,7 +1486,10 @@ class MainWindow(QtGui.QMainWindow,
 			]
 		)
 		config = self.iso.bts.config
-		expire_seconds = config.get("order-expiration", 3600*24)
+		try:
+			expire_seconds = int( config.get("order-expiration", 3600*24) )
+		except:
+			expire_seconds = 3600*24
 		expire_fok = bool(config.get("order-fillorkill", False))
 		tab.ui.sellExpireEdit.setText(deltainterval(expire_seconds))
 		tab.ui.buyExpireEdit.setText(deltainterval(expire_seconds))
@@ -1418,7 +1503,7 @@ class MainWindow(QtGui.QMainWindow,
 	def addHistoryTab(self, account, tag):
 		ui = self.ui
 		
-		tab = HistoryTab(ping_callback=self.refreshUi_ping)
+		tab = HistoryTab(ping_callback=self.refreshUi_ping, isolator=self.iso)
 		
 		tab._tags = [
 			account.name,
@@ -1437,7 +1522,7 @@ class MainWindow(QtGui.QMainWindow,
 	def addOrderTab(self, account, tag):
 		ui = self.ui
 		
-		tab = OrderTab(ping_callback=self.refreshUi_ping)
+		tab = OrderTab(ping_callback=self.refreshUi_ping, isolator=self.iso)
 		
 		tab._tags = [
 			account.name,
@@ -1463,7 +1548,10 @@ class MainWindow(QtGui.QMainWindow,
 			]
 		)
 		config = self.iso.bts.config
-		expire_seconds = config.get("order-expiration", 3600*24)
+		try:
+			expire_seconds = int(config.get("order-expiration", 3600*24))
+		except:
+			expire_seconds = 3600*24
 		expire_fok = bool(config.get("order-fillorkill", False))
 		tab.ui.sellexpireEdit.setText(deltainterval(expire_seconds))
 		tab.ui.fokCheckbox.setChecked(expire_fok)
@@ -1475,7 +1563,7 @@ class MainWindow(QtGui.QMainWindow,
 	def addDashboardTab(self, account, tag):
 		ui = self.ui
 		
-		tab = DashboardTab(ping_callback=self.refreshUi_ping)
+		tab = DashboardTab(ping_callback=self.refreshUi_ping, isolator=self.iso)
 		
 		tab._tags = [
 			account.name,
@@ -1507,6 +1595,40 @@ class MainWindow(QtGui.QMainWindow,
 		return tab
 	
 	
+	def addChatServerTab(self, args, tag):
+		key_from, server_url = args
+		ui = self.ui
+		
+		tab = ChatServerTab(ping_callback=self.refreshUi_ping,
+				isolator=self.iso)
+		
+		tab._tags = [
+#			account.name,
+#			account.id,
+			"#chatserver",
+			"CS:" + server_url,
+		]
+		
+		tab._title = server_url #"BTS..." if key_to.startswith("BTS") else key_to
+		tab._icon = qicon(":/icons/images/messages.png")
+		
+		# Late comers!
+		self.late_inject_contact_box(tab.ui.contactAccount)
+
+		try:
+#			tab.setupConnection(key_from, server_url)
+			tab.initialize(key_from, server_url)
+#			tab.loadRooms()
+		except:
+			import traceback
+			traceback.print_exc()
+			tab.close() # cancel all threads within
+			raise
+		
+		return tab
+	
+
+
 	def quit_program(self):
 		#self.app.quit()
 		QtGui.QApplication.quit()
@@ -1578,7 +1700,10 @@ class MainWindow(QtGui.QMainWindow,
 		config =  self.iso.bts.config
 		expand_users = bool( config.get('ui_showaccounts', False) )
 		adv_mode = bool( config.get('ui_advancedmode', False) )
-		expire_seconds = int( config.get('order-expiration', 3600*24) )
+		try:
+			expire_seconds = int( config.get('order-expiration', 3600*24) )
+		except:
+			expire_seconds = 3600*24
 		expire_fok = bool( config.get('order-fillorkill', False) )
 		
 		for key,qact in self.config_triggers.items():
@@ -1640,6 +1765,7 @@ class MainWindow(QtGui.QMainWindow,
 		from bitshares.wallet import Wallet
 		store = BitsharesStorageExtra(path, create=False)
 		self.iso = BitsharesIsolator(storage=store)
+		self.iso.setMainWindow(self)
 		self.iso.ping_callback = self.refreshUi_ping
 		wallet = Wallet(
 			blockchain_instance=self.iso.bts,
@@ -1688,8 +1814,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.setWindowTitle(prefix + suffix)
 	
 	def refreshUi_console(self):
-		from .work import Request
-		bgtop = Request.top()
+		bgtop = self.Requests.top()
 		
 		#print("Background tasks: (%d)" % (len(bgtop)))
 		
@@ -1750,12 +1875,12 @@ class MainWindow(QtGui.QMainWindow,
 		connected = not(self.iso.offline)
 		
 		if True:
-			if self._connecting or (self.iso.bts.rpc and self.iso.bts.rpc.connecting):
+			if self._connecting or self.iso.is_connecting():
 				self.ui.statusText.setText("Connecting...")
 				self.ui.statusNetwork.setToolTip("Connecting...")
 				self.ui.statusNetwork.setIcon(qicon(":/icons/images/yellow.png"))
 				connected = False
-			elif connected:
+			elif self.iso.is_connected():
 				self.ui.statusText.setText("")
 				self.ui.statusNetwork.setToolTip("Online")
 				self.ui.statusNetwork.setIcon(qicon(":/icons/images/green.png"))
@@ -1802,8 +1927,7 @@ class MainWindow(QtGui.QMainWindow,
 		# Inform about background tasks:
 		text = self.ui.statusText.text()
 		if text == "":
-			from .work import Request
-			bgtop = Request.top()
+			bgtop = self.Requests.top()
 			for task in bgtop:
 				(cancelled, desc, c, s) = task
 				if cancelled or not(desc):
@@ -1818,9 +1942,9 @@ class MainWindow(QtGui.QMainWindow,
 		if not(self.iso):
 			return
 		
-		Request.cancel_all()
+		self.Requests.cancel_all()
 		self.iso.disconnect()
-		Request.shutdown(timeout=10)
+		self.Requests.shutdown(timeout=10)
 		
 		self.iso.setWallet(None)
 		self.iso.setStorage(None)
@@ -1849,7 +1973,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.refreshUi_wallet()
 		return True
 	
-	def unlock_wallet(self, reason=None):
+	def unlock_wallet(self, reason=None, parent=None):
 		wallet = self.iso.bts.wallet
 		
 		if not wallet.locked():
@@ -1857,8 +1981,10 @@ class MainWindow(QtGui.QMainWindow,
 			self.refreshUi_wallet()
 			return True
 		
+		if not parent:
+			parent = self
 		input, ok = QtGui.QInputDialog.getText(
-			None, 'Password',
+			parent, 'Password',
 			(('To ' + reason + '\n\n') if reason else '') +
 			'Enter wallet master password:', QtGui.QLineEdit.Password)
 		
@@ -1873,11 +1999,6 @@ class MainWindow(QtGui.QMainWindow,
 		except Exception as e:
 			showexc(e)
 			return False
-		
-		#publickeys = wallet.getPublicKeys()
-		#for pub in publickeys:
-		#	priv = wallet.getPrivateKeyForPublicKey(pub)
-		#	print("Private for ", pub, "=", priv)
 		
 		self.refreshUi_wallet()
 		return True
@@ -1937,8 +2058,9 @@ class MainWindow(QtGui.QMainWindow,
 	
 	def late_inject_contact_box(self, box):
 		box.clear()
+		icon = qicon(":/icons/images/account.png")
 		for name in self.contact_names:
-			box.addItem(name)
+			add_item(box, name, icon=icon)
 		set_combo(box, "")
 		self.contact_boxes.append(box)
 	
@@ -1997,26 +2119,15 @@ class MainWindow(QtGui.QMainWindow,
 				
 				self.add_account_name(name)
 		
-	def add_account(self):
-		try:
-			with self.iso.unlockedWallet() as w:
-				self._add_account()
-		except WalletLocked:
-			showerror("Can't add account to a locked wallet")
-		except Exception as error:
-			showexc(error)
-	
-	def _add_account(self):
-		wallet = self.iso.bts.wallet
-		
-		win = AccountWizard(isolator=self.iso, registrars=self.account_names, active=self.activeAccount)
+	@safeunlock
+	def add_account(self, wallet):
+		win = AccountWizard(isolator=self.iso,
+			registrars=self.account_names,
+			active=self.activeAccount,
+			parent=self)
 		
 		if not win.exec_():
 			return
-		
-		#pprint(win.field('keys'))
-		#pprint(r)
-		#print(win.ui.privkeysEdit.toPlainText())
 		
 		pks = win.collect_pks(quiet=False)
 		
@@ -2035,15 +2146,12 @@ class MainWindow(QtGui.QMainWindow,
 		win = AccountWizard(
 			isolator=self.iso,
 			active=account,
-			sweepMode=True
+			sweepMode=True,
+			parent=self
 		)
 		
 		if not win.exec_():
 			return 0
-		
-		#pprint(win.field('keys'))
-		#pprint(r)
-		#print(win.ui.privkeysEdit.toPlainText())
 		
 		pks = win.collect_pks(quiet=False)
 		
@@ -2099,6 +2207,8 @@ class MainWindow(QtGui.QMainWindow,
 		
 		if account is True and self.activeAccount:
 			account = self.activeAccount["name"]
+		elif account is True:
+			return
 		elif account:
 			if not(isinstance(account, str)):
 				account = account["name"]
@@ -2115,8 +2225,8 @@ class MainWindow(QtGui.QMainWindow,
 		#		asset = asset["symbol"]
 		#	set_combo(self.ui.transferAsset, asset, force=True)
 		
-		#if amount:
-		#	pass
+		if isinstance(amount, str):
+			amount = float(amount)
 		
 		#if not(memo is None):
 		#	win.ui.transferMemo.setPlainText(memo)
@@ -2128,7 +2238,7 @@ class MainWindow(QtGui.QMainWindow,
 		elif not(isinstance(asset, str)):
 			asset = asset["symbol"]
 		
-		win.quick_transfer(asset, to, memo)
+		win.quick_transfer(asset, amount, to, memo)
 		
 		self.showTab(win)
 		#self.tagToFront("^transfer")
@@ -2168,6 +2278,8 @@ class MainWindow(QtGui.QMainWindow,
 		
 		if account is True and self.activeAccount:
 			account = self.activeAccount["name"]
+		elif account is True:
+			return
 		elif account:
 			if not(isinstance(account, str)):
 				account = account["name"]
@@ -2221,7 +2333,7 @@ class MainWindow(QtGui.QMainWindow,
 			with self.iso.unlockedWallet(
 				reason='View/Manage Private Keys'
 			) as w:
-				win = KeysWindow(isolator=self.iso)
+				win = KeysWindow(isolator=self.iso, parent=self)
 				win.exec_()
 				n = win._ret
 				if n > 0:
@@ -2231,3 +2343,103 @@ class MainWindow(QtGui.QMainWindow,
 		except Exception as exc:
 			showexc(exc)
 	
+
+	def dragEnterEvent(self, event):
+		if event.mimeData().hasUrls:
+			event.accept()
+		else:
+			event.ignore()
+
+	def dragMoveEvent(self, event):
+		if event.mimeData().hasUrls:
+			event.setDropAction(QtCore.Qt.CopyAction)
+			event.accept()
+		else:
+			event.ignore()
+
+	def dropEvent(self, event):
+		if event.mimeData().hasUrls:
+			event.setDropAction(QtCore.Qt.CopyAction)
+			event.accept()
+			links = [ ]
+			for url in event.mimeData().urls():
+				links.append(str(url.toLocalFile()))
+			self.dropped.emit(links)
+		else:
+			event.ignore()
+
+	dropped = QtCore.pyqtSignal(list)
+	def file_dropped(self, links):
+		tab = self.ui.tabWidget.currentWidget()
+		if hasattr(tab, 'file_dropped'):
+			tab.file_dropped(links)
+
+	def openURL(self, url):
+		pass
+
+	def openBTSChatUrl(self, url):
+		o = parseUrl(url)
+		if o.scheme != "bs2chat" and o.scheme != "bs2chats":
+			showerror("Unsupported URL schema.")
+			return
+		rurl = (str(o.scheme).replace("bs2chat", "http") + "://" +
+			o.netloc + o.path + o.fragment)
+		room_name = None
+		if "room" in o.params:
+			room_name = o.params["room"]
+		
+		self.goto_chat(self, to_label=None, server_url=rurl, to_room=room_name)
+
+	def openBTSUrl(self, url):
+		o = parseBTSUrl(url)
+		if o['scheme'] != "bitshares":
+			showerror("Unsupported URL schema.")
+			return
+
+		if o['path'] == 'operation/transfer':
+			data = o['params']
+			for k in ['to','amount','asset','memo','from']:
+				if not k in data:
+					data[k] = None
+			if not data["from"]: data["from"] = True
+			self.FTransfer(account=data['from'],
+				to=data['to'], amount=data['amount'],
+				asset=data['asset'], memo=data['memo'])
+		
+		if len(o['action']) > 1 and o['action'][0] == 'blind_receipt':
+			wallet = self.iso.bts.wallet
+			receipt = o['action'][1]
+			comment1 = o['params'].get('comment', "")
+			comment2 = ""
+			from bitshares.blind import receive_blind_transfer
+			try:
+				ok, _, _ = receive_blind_transfer(wallet, receipt, comment1, comment2)
+			except Exception as error:
+				showexc(error)
+		
+		if (len(o['action']) > 1 and o['action'][0] == 'operation' and
+			o['action'][1] == 'account_update'):
+			account = self.activeAccount
+			num_witness = account["options"]["num_witness"]
+			num_committee = account["options"]["num_committee"]
+			votes = list(account["options"]["votes"])
+			added = 0
+			for k in [ 'vote_for', 'vote_against' ]:
+				if not(k in o['params']):
+					continue
+				vinfo = self.iso.voteInfo(o['params'][k], k)
+				if not(vinfo["vote_id"] in votes):
+					if vinfo['type'] == 'witness':
+						num_witness += 1
+					if vinfo['type'] == 'committee_member':
+						num_committee += 1
+					votes.append(vinfo["vote_id"])
+					added += 1
+			if not added: return
+			QTransactionBuilder.QUpdateAccount(
+				account["name"],
+				None, None, None,
+				account["options"]["voting_account"],
+				num_witness, num_committee, votes,
+				fee_asset=None, isolator=self.iso
+			)

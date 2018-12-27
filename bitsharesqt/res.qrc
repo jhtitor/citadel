@@ -34,6 +34,9 @@
     <file>../images/swap.png</file>
     <file>../images/limit_order.png</file>
     <file>../images/key.png</file>
+    <file>../images/paperclip.png</file>
+    <file>../images/download.png</file>
+    <file>../images/messages.png</file>
     <file>../images/tick.png</file>
     <file>../images/wait.png</file>
     <file>../images/crossout.png</file>
@@ -42,6 +45,7 @@
     <file>../images/yellow.png</file>
     <file>../images/unlock.png</file>
     <file>../images/lock.png</file>
+    <file>../images/house.png</file>
     <file>../images/red.png</file>
     <file>../images/green.png</file>
     <file>../images/onion.png</file>

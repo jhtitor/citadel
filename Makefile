@@ -22,8 +22,11 @@ ui:
 	pyuic5 $(UISRC)/remotes.ui -o uidef/remotes.py --from-imports
 	pyuic5 $(UISRC)/dashboard.ui -o uidef/dashboard.py --from-imports
 	pyuic5 $(UISRC)/exchange.ui -o uidef/exchange.py --from-imports
+	pyuic5 $(UISRC)/chattab.ui -o uidef/chattab.py --from-imports
+	pyuic5 $(UISRC)/chatserver.ui -o uidef/chatserver.py --from-imports
 	pyuic5 $(UISRC)/market.ui -o uidef/market.py --from-imports
 	pyuic5 $(UISRC)/createasset.ui -o uidef/createasset.py --from-imports
+	pyuic5 $(UISRC)/createworker.ui -o uidef/createworker.py --from-imports
 	pyuic5 $(UISRC)/voting.ui -o uidef/voting.py --from-imports
 	pyuic5 $(UISRC)/keyswindow.ui -o uidef/keyswindow.py --from-imports
 	pyrcc5 $(UISRC)/res.qrc -o uidef/res_rc.py

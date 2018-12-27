@@ -34,7 +34,7 @@ class BTSFaucet(object):
 			headers = self.headers,
 			json = data,
 		)
-		if response.text.startswith('<!DOCTYPE html>'):
+		if response.text.startswith('<!DOCTYPE'):
 			raise Exception("Response is not JSON, could be Cloudflare/CAPTCHA page or some other gateway error.")
 		
 		resp = response.json()

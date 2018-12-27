@@ -138,7 +138,7 @@ class AssetWindow(QtWidgets.QDialog):
 		self.ui.totalEdit.setEnabled(False)
 		self.ui.permList.setEnabled(False)
 		
-		self.ui.descriptionPlain.setPlainText(asset["options"]["description"])
+		self.ui.descriptionPlain.setPlainText(str(asset["options"]["description"]))
 		
 		self.ui.marketFee.setValue(int(asset["options"]["market_fee_percent"]))
 		cer = asset["options"]["core_exchange_rate"]
@@ -340,8 +340,8 @@ class AssetWindow(QtWidgets.QDialog):
 			cer["quote"]["amount"] = 1 * pow(10, precision)
 			cer["base"]["amount"] = 1/rate * pow(10, 5)
 		else:
-			cer["quote"]["amount"] = 1 * pow(10, 5)
-			cer["base"]["amount"] = rate * pow(10, precision)
+			cer["quote"]["amount"] = 1 * pow(10, precision)
+			cer["base"]["amount"] = rate * pow(10, 5)
 		return {
 		"symbol": symbol,
 		"issuer": issuer,
@@ -421,9 +421,9 @@ class AssetWindow(QtWidgets.QDialog):
 			options.pop("precision")
 			options.pop("max_supply")
 			v1 = QTransactionBuilder.VUpdateAsset(
-				*options,
 				fee_asset=fee_asset,
-				isolator=self.iso
+				isolator=self.iso,
+				**options
 			)
 			vs.append( v1 )
 		
@@ -432,8 +432,9 @@ class AssetWindow(QtWidgets.QDialog):
 			prev_bitoptions = self.prev_bitoptions()
 			if not(dict_same(prev_bitoptions, bitoptions)):
 				v2 = QTransactionBuilder.VUpdateBitAsset(
-					*bitoptions,
-					isolator=self.iso
+					fee_asset=fee_asset,
+					isolator=self.iso,
+					**bitoptions
 				)
 				vs.append( v2 )
 		
@@ -463,7 +464,7 @@ class AssetWindow(QtWidgets.QDialog):
 				memo=memo_text,
 				fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		self.accept()
@@ -482,7 +483,7 @@ class AssetWindow(QtWidgets.QDialog):
 				account_from,
 				fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		
@@ -502,7 +503,7 @@ class AssetWindow(QtWidgets.QDialog):
 				account_from,
 				fee_asset=fee_asset,
 				isolator=self.iso)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		

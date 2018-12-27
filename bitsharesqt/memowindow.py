@@ -74,7 +74,7 @@ class MemoWindow(QtWidgets.QDialog):
 			return
 		
 		try:
-			with self.iso.unlockedWallet() as w:
+			with self.iso.unlockedWallet(self, "Sign Memo") as w:
 				cipher = self.iso.getMemo(
 					source_name,
 					target_name,
@@ -96,7 +96,7 @@ class MemoWindow(QtWidgets.QDialog):
 		
 		try:
 			data = json.loads(cipher_message)
-			with self.iso.unlockedWallet() as w:
+			with self.iso.unlockedWallet(self, "Read Memo") as w:
 				clear = self.iso.getMemo(None, None, data=data)
 		
 				set_combo(self.ui.accountFrom, clear["from"])

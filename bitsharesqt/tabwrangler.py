@@ -66,6 +66,20 @@ class WindowWithTabWrangler(QtCore.QObject):
 		else:
 			return self.hideTab(tab)
 	
+	def setTabTitle(self, tab, title):
+		tab._title = title
+		i = self.ui.tabWidget.indexOf(tab)
+		if i >= 0:
+			self.ui.tabWidget.setTabText(i, title)
+	
+	def setTabIcon(self, tab, icon):
+		if isinstance(icon, str):
+			icon = qicon(icon)
+		tab._icon = icon
+		i = self.ui.tabWidget.indexOf(tab)
+		if i >= 0:
+			self.ui.tabWidget.setTabIcon(i, icon)
+	
 	def restoreTab(self, tab_class, tab_creator, ctorarg, tag, to_front=False):
 		tab = self.hasTab(tab_class, tag)
 		insert = False
@@ -83,6 +97,7 @@ class WindowWithTabWrangler(QtCore.QObject):
 		if to_front:
 			cur_index = self.ui.tabWidget.indexOf(tab)
 			self.ui.tabWidget.setCurrentIndex(cur_index)
+		return tab
 	
 	def _removeStashed(self, tab):
 		n = len(self.stash)

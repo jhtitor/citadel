@@ -19,10 +19,6 @@
   <property name="windowTitle">
    <string>Asset</string>
   </property>
-  <property name="windowIcon">
-   <iconset resource="res.qrc">
-    <normaloff>:/images/images/bitshares_logo.png</normaloff>:/images/images/bitshares_logo.png</iconset>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
     <number>10</number>
@@ -84,7 +80,7 @@
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>20</height>
+             <height>26</height>
             </size>
            </property>
            <property name="editable">
@@ -104,7 +100,7 @@
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>20</height>
+             <height>24</height>
             </size>
            </property>
            <property name="maxLength">

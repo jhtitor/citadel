@@ -25,10 +25,10 @@ class WindowWithGateway(QtCore.QObject):
 		self.cached_coins= { }
 		self.cached_wallets= { }
 		
-		self.rater = RemoteFetch()
-		self.depositer = RemoteFetch()
-		self.pairer = RemoteFetch()
-		self.gwupdater = RemoteFetch()
+		self.rater = RemoteFetch(manager=self.Requests)
+		self.depositer = RemoteFetch(manager=self.Requests)
+		self.pairer = RemoteFetch(manager=self.Requests)
+		self.gwupdater = RemoteFetch(manager=self.Requests)
 		
 		self.gateways_populated = False
 		#self.populate_gateways()
@@ -483,7 +483,10 @@ class WindowWithGateway(QtCore.QObject):
 			combo.setCurrentIndex(index)
 	
 	def swap_coin_types(self):
-		(name, _, _, _) = self._get_current_trader()
+		t = self._get_current_trader()
+		if not t:
+			return
+		(name, _, _, _) = t
 		
 		tr = self._collect_trade()
 		

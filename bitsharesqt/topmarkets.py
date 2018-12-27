@@ -29,8 +29,8 @@ class WindowWithMarkets(QtCore.QObject):
 		self.ui.marketFilter.returnPressed.connect(self.find_market)
 		self.ui.findMarketButton.clicked.connect(self.find_market)
 		
-		self.market_downloader = RemoteFetch()
-		self.markets_downloader = RemoteFetch()
+		self.market_downloader = RemoteFetch(manager=self.Requests)
+		self.markets_downloader = RemoteFetch(manager=self.Requests)
 		
 		self._markets = { }
 		self._intr = [ ]

@@ -311,7 +311,7 @@ class AccountWizard(QtWidgets.QWizard):
 						isolator=self.iso)
 					if not trx:
 						return False
-				except BaseException as error:
+				except Exception as error:
 					showexc(error)
 					return False
 			
@@ -340,7 +340,7 @@ class AccountWizard(QtWidgets.QWizard):
 					isolator=self.iso)
 				if not trx:
 					return False
-			except BaseException as error:
+			except Exception as error:
 				showexc(error)
 				return False
 			

@@ -32,8 +32,8 @@ class WindowWithAssets(QtCore.QObject):
 		self.ui.assetFilter.returnPressed.connect(self.find_asset)
 		self.ui.findMarketButton.clicked.connect(self.find_asset)
 		
-		self.asset_downloader = RemoteFetch()
-		self.assets_downloader = RemoteFetch()
+		self.asset_downloader = RemoteFetch(manager=self.Requests)
+		self.assets_downloader = RemoteFetch(manager=self.Requests)
 		
 	def display_asset(self, force_symbol=None, force_remote=False):
 		if force_symbol:

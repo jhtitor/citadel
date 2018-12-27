@@ -31,6 +31,7 @@ class DashboardTab(QtWidgets.QWidget):
 	
 	def __init__(self, *args, **kwargs):
 		self.ping_callback = kwargs.pop("ping_callback", None)
+		self.iso = kwargs.pop("isolator", None)
 		simplify = kwargs.pop("simplify", False)
 		super(DashboardTab, self).__init__(*args, **kwargs)
 		self.ui = Ui_DashboardTab()
@@ -38,7 +39,7 @@ class DashboardTab(QtWidgets.QWidget):
 		
 		stretch_table(self.ui.balanceTable)
 		
-		self.updater = RemoteFetch()
+		self.updater = RemoteFetch(manager=self.iso.mainwin.Requests)
 		
 		self.ui.transferGroup.setVisible(False)
 		
@@ -68,7 +69,7 @@ class DashboardTab(QtWidgets.QWidget):
 		symbol = self.ui.balanceTable.item(j, 1).text()
 		self.quick_transfer(symbol)
 	
-	def quick_transfer(self, symbol, to=None, memo=None):
+	def quick_transfer(self, symbol, amount=None, to=None, memo=None):
 		try:
 			asset = self.iso.getAsset(symbol, force_remote=False)
 		except Exception as error:
@@ -90,8 +91,10 @@ class DashboardTab(QtWidgets.QWidget):
 				to = to["name"]
 			set_combo(self.ui.transferToAccount, to)
 		
-		#if amount:
-		#	pass
+		if amount:
+			if isinstance(amount, int):
+				amount = amount / pow(10, asset["precision"])
+			self.ui.transferAmount.setValue(float(amount))
 		
 		if not(memo is None):
 			self.ui.transferMemo.setPlainText(memo)
@@ -275,7 +278,7 @@ class DashboardTab(QtWidgets.QWidget):
 			return False
 		try:
 			w = VotingWindow(
-				accounts=app().mainwin.account_names,
+				accounts=self.iso.mainwin.account_names,
 				account=self._account,
 				isolator=self.iso
 			)

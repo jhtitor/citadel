@@ -76,12 +76,22 @@ if sys.platform == "darwin":
 # For PyQt5 >= 5.11, and pyinstaller not yet patched, we add this:
 hidden_imports.append("PyQt5.sip")
 
+datas=[('version.txt', '.')]
+
+mgc_paths=['/opt/local/share/misc', # macports
+'/usr/lib/file', '/usr/share/file', '/usr/local/share/file']
+for path in mgc_paths:
+	p = os.path.join(path, "magic.mgc")
+	if os.path.isfile(p):
+		datas.append( (p, '.') )
+		break
+print("DATAS:", datas)
 block_cipher = None
 
 a = Analysis(['citadel'],
              pathex=[ ],
              binaries=binaries,
-             datas=[('version.txt', '.')],
+             datas=datas,#[('version.txt', '.')],
              hiddenimports=hidden_imports,
              hookspath=[],
              runtime_hooks=[],

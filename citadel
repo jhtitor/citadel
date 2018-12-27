@@ -85,8 +85,10 @@ class BitsharesQT(QtGui.QApplication):
 		#)
 	
 if  __name__ == "__main__":
+	import bitsharesqt.version as version
 	import argparse
 	parser = argparse.ArgumentParser()
+	parser.add_argument('--version', action='version', version=version.VERSION)
 	parser.add_argument("WALLET", nargs="?", help="wallet file to open")
 	args = parser.parse_args()
 	
@@ -126,5 +128,5 @@ if  __name__ == "__main__":
 	#except:
 	#	TODO: log error to file, if in bundled/debug mode
 	
-	Request.shutdown()
-	Request.wait_join(10)
+	app.mainwin.Requests.shutdown()
+	app.mainwin.Requests.wait_join(10)

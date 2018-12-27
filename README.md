@@ -40,15 +40,22 @@ python -m pip -r requirements.txt
 python vendor_package.py
 ```
 
-You can now run
+Run:
+```
+python citadel
+```
+
+Packaging:
+
+Install latest development version of pyinstaller using pip.
+Then, run:
 ```
 build.bat
 ```
 
 ## Windows 7+ 64-bit
 
-Note: building with python 3.6 is trickier (than, say, 3.5), but
-is possible.
+Install python 3.5 or python 3.6.
 
 PyQt5 from pip will work just fine.
 ```
@@ -61,6 +68,18 @@ https://indy.fulgan.com/SSL/openssl-1.0.2o-x64_86-win64.zip
 ```
 py -3.6 -m pip install -r requirements.txt
 py -3.6 venor_package.py
+```
+
+```
+py -3.6 citadel
+```
+
+Packaging:
+
+Install latest development version of pyinstaller using pip.
+Then, run:
+```
+build.bat
 ```
 
 # OSX
@@ -82,17 +101,13 @@ pip-3.5 install -r requirements.txt --user
 python3 vendor_package.py
 ```
 
-
-Bundle
 ```
-make app
+python3 citadel
 ```
 
-To create dmgs, get dmgbuild
+Packaging:
 ```
 pip-3.5 install pyinstaller dmgbuild --install-option="--prefix=/opt/local/bin" --user
-```
-
-```
+make app
 make dmg
 ```

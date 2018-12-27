@@ -8,6 +8,7 @@ log = logging.getLogger(__name__)
 import json
 
 from .transactionbuilder import QTransactionBuilder
+from .createworker import WorkerWindow
 
 class VotingWindow(QtWidgets.QDialog):
 	
@@ -31,9 +32,10 @@ class VotingWindow(QtWidgets.QDialog):
 		qmenu(self.ui.committeeTable, self.show_vote_submenu)
 		qmenu(self.ui.workersTable, self.show_vote_submenu)
 		
-		self.updaterWS = RemoteFetch()
-		self.updaterCM = RemoteFetch()
-		self.updaterWR = RemoteFetch()
+		mw = self.iso.mainwin
+		self.updaterWS = RemoteFetch(manager=mw.Requests)
+		self.updaterCM = RemoteFetch(manager=mw.Requests)
+		self.updaterWR = RemoteFetch(manager=mw.Requests)
 		self.resync()
 		self.proxy_toggle()
 		self.refreshUi(1) # disable OK/Proxy buttons
@@ -271,7 +273,7 @@ class VotingWindow(QtWidgets.QDialog):
 				fee_asset=fee_asset,
 				isolator=self.iso
 			)
-		except BaseException as error:
+		except Exception as error:
 			showexc(error)
 			return False
 		
@@ -309,6 +311,7 @@ class VotingWindow(QtWidgets.QDialog):
 		
 		witnesses = iso.getWitnesses(passive, lazy=False, request_handler=request_handler)
 		for w in witnesses:
+			if hasattr(w, '_account'): continue
 			w._account = w.account
 		
 		return (witnesses, passive, )
@@ -353,6 +356,7 @@ class VotingWindow(QtWidgets.QDialog):
 		
 		members = iso.getCommittee(passive, lazy=False, request_handler=request_handler)
 		for m in members:
+			if hasattr(m, '_account'): continue
 			m._account = m.account
 		
 		return (members, passive, )
@@ -394,6 +398,7 @@ class VotingWindow(QtWidgets.QDialog):
 		
 		workers = iso.getWorkers(passive, lazy=False, request_handler=request_handler)
 		for w in workers:
+			if hasattr(w, '_account'): continue
 			w._account = w.account
 		
 		return (workers, passive, )
@@ -418,9 +423,11 @@ class VotingWindow(QtWidgets.QDialog):
 			j += 1
 			table.insertRow(j)
 			set_col(table, j, 0, w["id"], data = w)
-			set_col(table, j, 1, w._account["name"])
+			set_col(table, j, 1, w["name"])#._account["name"])
 			set_col(table, j, 2, w["url"])
-			set_col(table, j, 3, w["work_end_date"].strftime("%Y-%m-%d"))
+			set_col(table, j, 3, w["work_begin_date"].strftime("%Y-%m-%d")
+			                   + " - "
+			                   + w["work_end_date"].strftime("%Y-%m-%d"))
 			ip = set_col(table, j, 4, int(w["total_votes_for"]), align="right")
 			ic = set_col(table, j, 5, int(w["total_votes_against"]), align="right")
 			#set_itemflags(item, checked=checked, checkable=True, selectable=True, core=table)
@@ -456,8 +463,7 @@ class VotingWindow(QtWidgets.QDialog):
 		text = delim = ""
 		busy = 0
 		# Inform about background tasks:
-		from .work import Request
-		bgtop = Request.top()
+		bgtop = self.iso.mainwin.Requests.top()
 		for task in bgtop:
 			(cancelled, desc, c, p) = task
 			if cancelled or not(desc):
@@ -502,6 +508,9 @@ class VotingWindow(QtWidgets.QDialog):
 		qaction(self, menu, "Copy URL", self._copy_url)
 		qaction(self, menu, "Copy Name", self._copy_name)
 		table = self._get_table()
+		if table == self.ui.workersTable:
+			menu.addSeparator()
+			qaction(self, menu, "Details", self._worker_details)
 		qmenu_exec(table, menu, position)
 		
 	
@@ -523,3 +532,11 @@ class VotingWindow(QtWidgets.QDialog):
 			return
 		qclip(name)
 	
+	def _worker_details(self):
+		table = self._get_table()
+		j = table_selrow(table)
+		if j <= -1: return
+		worker = table_coldata(table, j, 0)
+		
+		win = WorkerWindow(worker=worker, mode="view", parent=self)
+		win.exec_()
