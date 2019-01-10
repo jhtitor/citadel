@@ -1938,6 +1938,7 @@ class MainWindow(QtGui.QMainWindow,
 				self.ui.statusText.setText("" + desc)
 	
 	def close_wallet(self):
+		app().aboutToQuit.disconnect(self.abort_everything)
 		
 		for name in list(self.open_accounts):
 			self.closeAccount(name)
