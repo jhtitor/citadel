@@ -413,6 +413,9 @@ class MainWindow(QtGui.QMainWindow,
 		qact.triggered.connect(self.uiActionFront_perform)
 	
 	def uiActionFront_perform(self):
+		if not self.activeAccount:
+			showerror("Wallet has no active account")
+			return
 		account = self.activeAccount
 		qact = self.sender()
 		find_class = qact._linkedClass
