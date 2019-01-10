@@ -477,15 +477,17 @@ class WindowWithBlind(QtCore.QObject):
 		table = self.ui.blindBalances
 		table.setRowCount(0)
 		
+		icon = qicon(":/icons/images/token.png")
 		j = -1
 		for asset_id, amount in balances.items():
 			j += 1
 			table.insertRow(j)
 			
 			amount = self.iso.getAmount(amount, asset_id)
-			table.setItem(j, 0, QtGui.QTableWidgetItem(amount.formated))
-			table.setItem(j, 1, QtGui.QTableWidgetItem(amount.symbol))
-			table.item(j, 0).setIcon( qicon(":/icons/images/token.png") )
+			amt = str(amount).split(" ")[0]
+			
+			set_col(table, j, 0, amt, icon=icon)
+			set_col(table, j, 1, amount.symbol)
 			
 			self.blind_asset_add(amount.symbol)
 	
