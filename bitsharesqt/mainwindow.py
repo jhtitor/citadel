@@ -2124,7 +2124,7 @@ class MainWindow(QtGui.QMainWindow,
 				self.add_account_name(name)
 		
 	@safeunlock
-	def add_account(self, wallet):
+	def add_account(self, _act=False, wallet=None):
 		win = AccountWizard(isolator=self.iso,
 			registrars=self.account_names,
 			active=self.activeAccount,
