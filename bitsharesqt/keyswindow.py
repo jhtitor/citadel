@@ -41,11 +41,15 @@ class KeysWindow(QtWidgets.QDialog):
 	
 	def loadKeys(self):
 		k = self.iso.store.keyStorage
-		blind = self.iso.store.blindAccountStorage
+		blind = self.iso.store.blindStorage
+		blindacc = self.iso.store.blindAccountStorage
 		accstore = self.iso.store.accountStorage
 		table = self.ui.table
 		icon_a = qicon(":/icons/images/account.png")
 		icon_b = qicon(":/icons/images/account_suit.png")
+		icon_bt = qicon(":/op/images/op/blind_transfer.png")
+		icon_bt_spent = qicon(":/op/images/op/transfer_to_blind.png")
+		#icon_bt_un = qicon(":/op/images/op/transfer_from_blind.png")
 		j = -1
 		for pub in k:
 			j += 1
@@ -67,10 +71,23 @@ class KeysWindow(QtWidgets.QDialog):
 				pass
 			
 			if not(comment):
-				blacc = blind.getByPublicKey(pub)
+				blacc = blindacc.getByPublicKey(pub)
 				if blacc:
 					comment = blacc["label"]
 					icon = icon_b
+			
+			if not(comment):
+				ble = blind.getEntriesBy([("pub_to", pub),("pub_from", pub),("pub_child",pub)], False)
+				for e in ble:
+					icon = icon_bt
+					comment = "blind transfer"
+					if not(e["pub_to"]):
+						comment = "transfer from blind"
+						icon = icon_bt_spent
+					if e["used"]:
+						comment += ", spent"
+						icon = icon_bt_spent
+					break
 			
 			self._insert_row(priv, pub, comment, icon=icon)
 	
