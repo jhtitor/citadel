@@ -667,7 +667,7 @@ class QTransactionBuilder(QtWidgets.QDialog):
 			return False
 		for b in balances:
 			b["description"] = "from @" + src_account["name"]
-		win._receiveBlindTransfers(iso, balances, comment1="@"+src_account["name"])
+		win._receiveBlindTransfers(iso, balances, [ ], comment1="@"+src_account["name"])
 		return True
 	
 	@classmethod
@@ -715,7 +715,7 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		r = win.exec_()
 		if not r:
 			return False
-		win._receiveBlindTransfers(iso, confirm["balances"])
+		win._receiveBlindTransfers(iso, confirm["balances"], confirm["inputs"], to_temp=True)
 		return True
 	
 	@classmethod
@@ -763,17 +763,22 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		r = win.exec_()
 		if not r:
 			return False
-		win._receiveBlindTransfers(iso, confirm["balances"])
+		win._receiveBlindTransfers(iso, confirm["balances"], confirm["inputs"])
 		return True
 	
-	def _receiveBlindTransfers(self, iso, balances, comment1=""):
+	def _receiveBlindTransfers(self, iso, balances, inputs, comment1="", to_temp=False):
 		from bitshares.blind import receive_blind_transfer
-		for b in balances:
-#			try:
-#				receive_blind_transfer(iso.bts.wallet, b["receipt"], comment1, b["description"])
-#			except BaseException as e:
-#				print(str(e))
-			iso.bts.wallet.storeBlindBalance(b)
+		from bitshares.blind import refresh_blind_balances
+		for i, b in enumerate(balances):
+			is_temp = False
+			if to_temp and i == len(balances) - 1:
+				is_temp = True
+			try:
+				receive_blind_transfer(iso.bts.wallet, b["receipt"], comment1, b["description"], to_temp=is_temp)
+			except:
+				log.exception("Failed to store balance")
+				iso.bts.wallet.storeBlindBalance(b)
+		refresh_blind_balances(iso.bts.wallet, inputs, storeback=True)
 	
 	@classmethod
 	def QIssueAsset(self,
