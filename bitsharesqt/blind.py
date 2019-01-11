@@ -8,6 +8,7 @@ from pprint import pprint
 import json
 
 from .isolator import ResourceUnavailableOffline, WalletLocked
+from .isolator import safeunlock
 #from bitshares import BitShares
 #from bitshares.account import Account
 #from bitsharesbase.account import PasswordKey
@@ -477,15 +478,17 @@ class WindowWithBlind(QtCore.QObject):
 		table = self.ui.blindBalances
 		table.setRowCount(0)
 		
+		icon = qicon(":/icons/images/token.png")
 		j = -1
 		for asset_id, amount in balances.items():
 			j += 1
 			table.insertRow(j)
 			
 			amount = self.iso.getAmount(amount, asset_id)
-			table.setItem(j, 0, QtGui.QTableWidgetItem(amount.formated))
-			table.setItem(j, 1, QtGui.QTableWidgetItem(amount.symbol))
-			table.item(j, 0).setIcon( qicon(":/icons/images/token.png") )
+			amt = str(amount).split(" ")[0]
+			
+			set_col(table, j, 0, amt, icon=icon)
+			set_col(table, j, 1, amount.symbol)
 			
 			self.blind_asset_add(amount.symbol)
 	
@@ -498,7 +501,8 @@ class WindowWithBlind(QtCore.QObject):
 		for box in boxes:
 			sync_combo(box, [symbol])
 	
-	def transfer_to_blind(self):
+	@safeunlock
+	def transfer_to_blind(self, _=False, wallet=None):
 		account_from = self.ui.blindFromAccount.currentText()
 		blind_to = self.ui.blindFromDestination.currentText()
 		asset_name = self.ui.blindFromAsset.currentText()
@@ -534,7 +538,8 @@ class WindowWithBlind(QtCore.QObject):
 		set_combo(self.ui.blindFromDestination, "")
 		self.ui.blindFromAmount.setValue(0)
 	
-	def transfer_from_blind(self):
+	@safeunlock
+	def transfer_from_blind(self, _=False, wallet=None):
 		account_to = self.ui.blindToAccount.currentText()
 		blind_from = self.ui.blindToSource.currentText()
 		asset_name = self.ui.blindToAsset.currentText()
@@ -579,7 +584,8 @@ class WindowWithBlind(QtCore.QObject):
 		set_combo(self.ui.blindToAccount, "")
 		self.ui.blindToAmount.setValue(0)
 	
-	def transfer_blind_blind(self):
+	@safeunlock
+	def transfer_blind_blind(self, _=False, wallet=None):
 		blind_from = self.ui.blindSource.currentText()
 		blind_to = self.ui.blindDestination.currentText()
 		asset_name = self.ui.blindAsset.currentText()
@@ -633,12 +639,13 @@ class WindowWithBlind(QtCore.QObject):
 		set_combo(self.ui.blindDestination, "")
 		self.ui.blindAmount.setValue(0)
 	
-	def receive_blind_transfer(self):
+	@safeunlock
+	def receive_blind_transfer(self, _=False, wallet=None):
 		receipt = self.ui.blindReceipt.text().strip()
 		if not receipt:
 			self.ui.blindReceipt.setFocus()
 			return
-		wallet = self.iso.bts.wallet
+		#wallet = self.iso.bts.wallet
 		comment1 = comment2 = ""
 		
 		from bitshares.blind import receive_blind_transfer

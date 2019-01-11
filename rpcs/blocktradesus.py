@@ -209,6 +209,7 @@ class BlockTradesUS(object):
 				"outputAmount": str(inputAmount), # 1:1
 				"outputCoinType": outputCoinType.lower(),
 			}
+		return r
 		""" Response example:
 		{	'inputAmount': '1.00000000',
 			'inputCoinType': 'btc',

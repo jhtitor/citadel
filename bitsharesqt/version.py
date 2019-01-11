@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION="0.2.5"
+VERSION="0.2.6"
 
 BUNDLE_NAME="BitShares-QT"
 UNIX_NAME="pybitshares-qt"
@@ -34,14 +34,35 @@ def txt_version(on_error="Unknown"):
 # Return the git revision as a string (stolen from numpy)
 def git_version(on_error="Unknown"):
 	import os, subprocess
-	def _minimal_ext_cmd(cmd):
+	def _minimal_ext_cmd(cmd, retval=False):
 		env = { } # construct minimal environment
 		for k in ['SYSTEMROOT', 'PATH']:
 			v = os.environ.get(k)
 			if v is not None: env[k] = v
 		# LANGUAGE is used on win32
 		env['LANGUAGE'] = env['LANG'] = env['LC_ALL'] = 'C'
+		if retval:
+			return subprocess.call(cmd, env=env)
 		return subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0].strip().decode('ascii')
+	def safe_to_call_git():
+		# On OSX >= 10.10, /usr/bin/git always exists,
+		# `which git` returns it, and calling it might trigger
+		# 'download developer tools?' window appearing.
+		# We don't want this. To check if it's fine, we can do:
+		import platform
+		if platform.system() == 'Darwin':
+			osx = platform.mac_ver()[0]
+			if osx:
+				major, minor, _ = [ int(n) for n in osx.split(".") ]
+				if major >= 10 and minor >= 10: # >= 10.10
+					cli_tools = _minimal_ext_cmd(['xcode-select', '-p'], True)
+					if cli_tools == 2:
+						print("XCode command-line developer tools not installed, will not call `git`")
+						return False
+		return True
+		
+	if not safe_to_call_git():
+		return on_error # return default
 	try:
 		GIT_BRANCH = _minimal_ext_cmd(['git', 'rev-parse' ,'--abbrev-ref', 'HEAD'])
 		if not(GIT_BRANCH): return on_error

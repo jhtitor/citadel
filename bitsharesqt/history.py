@@ -182,11 +182,16 @@ class HistoryTab(QtWidgets.QWidget):
 		info = json.loads(h['operation'])
 		#print(info)
 		op_id, op = info["op"]
-		if not op or not(op_id == 39 or op_id == 40):
+		if not op or not(op_id == 39 or op_id == 40 or op_id == 41):
 			return
 		
+		if op_id == 41: # transfer from blind
+			commitments = op["inputs"]
+		else:
+			commitments = op["outputs"]
+		
 		iso = self._last_iso
-		(n, text, txt2) = iso.matchBlindOutputs(op["outputs"], h["description"])
+		(n, text, txt2) = iso.matchBlindOutputs(commitments, h["description"])
 		
 		if n == 0:
 			showerror("No receipts found")

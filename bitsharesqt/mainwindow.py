@@ -413,6 +413,9 @@ class MainWindow(QtGui.QMainWindow,
 		qact.triggered.connect(self.uiActionFront_perform)
 	
 	def uiActionFront_perform(self):
+		if not self.activeAccount:
+			showerror("Wallet has no active account")
+			return
 		account = self.activeAccount
 		qact = self.sender()
 		find_class = qact._linkedClass
@@ -443,7 +446,7 @@ class MainWindow(QtGui.QMainWindow,
 	expire_ranges = [
 		"1m", "5m", "10m",
 		"15m", "30m", "45m",
-		"1h", "1h30m", 
+		"1h", "1h30m",
 		"2h", "3h", "4h", "5h", "6h",
 		"7h", "8h", "9h", "10h", "11h",
 		"12h",
@@ -1935,6 +1938,7 @@ class MainWindow(QtGui.QMainWindow,
 				self.ui.statusText.setText("" + desc)
 	
 	def close_wallet(self):
+		app().aboutToQuit.disconnect(self.abort_everything)
 		
 		for name in list(self.open_accounts):
 			self.closeAccount(name)
@@ -2120,7 +2124,7 @@ class MainWindow(QtGui.QMainWindow,
 				self.add_account_name(name)
 		
 	@safeunlock
-	def add_account(self, wallet):
+	def add_account(self, _act=False, wallet=None):
 		win = AccountWizard(isolator=self.iso,
 			registrars=self.account_names,
 			active=self.activeAccount,

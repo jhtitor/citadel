@@ -253,6 +253,8 @@ class WindowWithGateway(QtCore.QObject):
 							if 'address' in wallet['extraData']['uri']:
 								template = wallet['extraData']['uri']['address']
 								url = template.replace('${address}', receipt['inputAddress'])
+								url = url.replace('${memo}', receipt['inputMemo'])
+								url = url.replace('${asset}', inputCoinType.upper())
 					if not url and coin['coinType'] == 'btc':
 						url = "bitcoin:${address}".replace('${address}', receipt['inputAddress'])
 			
@@ -267,16 +269,18 @@ class WindowWithGateway(QtCore.QObject):
 			self.ui.qrView.setPixmap( make_qrcode_image(url).pixmap() )
 			self.ui.qrView.show()
 			self.ui.externalpayButton.show()
-			self.ui.payButton.hide()
 		elif gph:
 			self.ui.qrView.setPixmap( QtGui.QPixmap(":/images/images/bitshares_logo.png" ) )
 			self.ui.qrView.show()
 			self.ui.externalpayButton.hide()
-			self.ui.payButton.show()
 		else:
 			self.ui.qrView.hide()
 			self.ui.payButton.hide()
 			self.ui.externalpayButton.hide()
+		if gph:
+			self.ui.payButton.show()
+		else:
+			self.ui.payButton.hide()
 		
 		self.ui.externalpayButton.hide() # TEMP
 		
