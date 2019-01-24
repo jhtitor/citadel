@@ -281,6 +281,14 @@ class BlockTradesUS(object):
 		]
 		"""
 
+	def get_last_address(self, outputCoinType, outputAddress):
+		params = {
+			"coin": outputCoinType.lower(),
+			"account": outputAddress
+		}
+		return self.post_request(['simple-api', 'get-last-address'], params)
+		""" Response example: { "address": "SOME-INPUT-ADDRESS" } """
+
 	def initiate_trade(self,
 		inputCoinType,
 		outputCoinType,
