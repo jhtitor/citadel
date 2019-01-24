@@ -815,9 +815,10 @@ class Assets(DataDir):
 
            :param dict graphene_json: New asset data
         """
-        query = ('UPDATE %s SET graphene_json = ? ' % self.__tablename__ +
+        query = (('UPDATE %s SET ' % self.__tablename__) +
+                 'graphene_json = ?, issuer_id = ? '
                  'WHERE asset_id = ?',
-                 (json.dumps(graphene_json), asset_id))
+                 (json.dumps(graphene_json), graphene_json["issuer"], asset_id))
         self.sql_execute(query)
         self.loaded_assets[asset_id] = graphene_json
 
