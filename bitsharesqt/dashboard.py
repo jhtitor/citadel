@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QTableWidgetItem
 from bitshares.amount import Amount
 from .transactionbuilder import QTransactionBuilder
 from .voting import VotingWindow
-from .createasset import AssetWindow
+from .assetwindow import AssetWindow
 
 from .netloc import RemoteFetch
 from .utils import *

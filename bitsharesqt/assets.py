@@ -3,7 +3,7 @@ from PyQt5 import QtCore, QtGui
 from bitshares.amount import Amount
 from bitshares.asset import Asset
 
-from .createasset import AssetWindow
+from .assetwindow import AssetWindow
 from .netloc import RemoteFetch
 
 from .utils import *

@@ -25,7 +25,7 @@ ui:
 	pyuic5 $(UISRC)/chattab.ui -o uidef/chattab.py --from-imports
 	pyuic5 $(UISRC)/chatserver.ui -o uidef/chatserver.py --from-imports
 	pyuic5 $(UISRC)/market.ui -o uidef/market.py --from-imports
-	pyuic5 $(UISRC)/createasset.ui -o uidef/createasset.py --from-imports
+	pyuic5 $(UISRC)/assetwindow.ui -o uidef/assetwindow.py --from-imports
 	pyuic5 $(UISRC)/createworker.ui -o uidef/createworker.py --from-imports
 	pyuic5 $(UISRC)/voting.ui -o uidef/voting.py --from-imports
 	pyuic5 $(UISRC)/keyswindow.ui -o uidef/keyswindow.py --from-imports

@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from uidef.createasset import Ui_AssetWindow
+from uidef.assetwindow import Ui_AssetWindow
 
 from .netloc import RemoteFetch
 from .utils import *

@@ -13,7 +13,7 @@ from .version import VERSION, UNIX_NAME, library_versions
 from .accountwizard import AccountWizard
 from .walletwizard import WalletWizard, RecentWallets
 from .memowindow import MemoWindow
-from .createasset import AssetWindow
+from .assetwindow import AssetWindow
 from .createworker import WorkerWindow
 from .settings import SettingsWindow
 from .keyswindow import KeysWindow
