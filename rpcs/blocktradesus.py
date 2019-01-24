@@ -61,8 +61,12 @@ class BlockTradesUS(object):
 			verify = self.verify,
 			json = data
 		)
+		if response.text == "Can not answer this request".strip():
+			raise BlockTradesUS_Exception(response.text.strip())
 		#print(response.text)
 		response = response.json()
+		if 'api_status' in response:
+			raise BlockTradesUS_Exception(response['api_message'], response['api_code'])
 		if 'error' in response:
 			error = response['error']
 			raise BlockTradesUS_Exception(error['message'], error['code'])
