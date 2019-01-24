@@ -65,7 +65,7 @@ class WindowWithAssets(QtCore.QObject):
 		self.ui.assetMaxSupply.setText( str(int(asset['options']['max_supply']) / pow(10, asset['precision'])) )
 		self.ui.assetCurrentSupply.setText( str(int(asset['dynamic_asset_data'][ "current_supply"]) / pow(10, asset['precision'])) )
 		self.ui.assetBlindSupply.setText( str(int(asset['dynamic_asset_data'][ "confidential_supply"]) / pow(10, asset['precision'])) )
-		self.ui.assetFeePool.setText( str(int(asset['dynamic_asset_data']['fee_pool']) / pow(10, asset['precision'])) )
+		self.ui.assetFeePool.setText( str(int(asset['dynamic_asset_data']['fee_pool']) / pow(10, 5)) )
 		self.ui.assetFeeRate.setText( str(int(asset['options']['core_exchange_rate']['base']['amount']) / pow(10, 5)) )
 		#self.ui.assetFeeSupply.setText( str(int(asset['dynamic_asset_data']["accumulated_fees"] / pow(10, asset['precision']))) )
 	
@@ -94,8 +94,9 @@ class WindowWithAssets(QtCore.QObject):
 		
 		table = self.ui.assetList
 		#table.setColumnCount(2)
-		table.setRowCount(0)
 		
+		icon = qicon(":/icons/images/token.png")
+		table.setRowCount(0)
 		j = -1
 		for graphene_json in entries:
 			j += 1
@@ -120,11 +121,9 @@ class WindowWithAssets(QtCore.QObject):
 				#traceback.print_exc()
 				pass
 			
-			set_col(table, j, 0, obj['symbol'])
+			set_col(table, j, 0, obj['symbol'], icon=icon)
 			set_col(table, j, 1, string)
 			
-			table.item(j, 0).setIcon( qicon(":/icons/images/token.png") )
-	
 	
 	def evilDownloadAssets(self):
 		if self.iso.offline:
