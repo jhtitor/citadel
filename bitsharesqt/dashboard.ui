@@ -533,6 +533,8 @@
   <tabstop>dashAccountName</tabstop>
   <tabstop>dashRegistrar</tabstop>
   <tabstop>dashReferrer</tabstop>
+  <tabstop>dashVotesAs</tabstop>
+  <tabstop>voteButton</tabstop>
   <tabstop>upgradeFeeAsset</tabstop>
   <tabstop>upgradeButton</tabstop>
   <tabstop>balanceTable</tabstop>
