@@ -300,7 +300,13 @@ burn: destroys the pay thus reducing share supply, equivalent to share buy-back 
  <tabstops>
   <tabstop>accountBox</tabstop>
   <tabstop>nameEdit</tabstop>
-  <tabstop>buttonBox</tabstop>
+  <tabstop>urlEdit</tabstop>
+  <tabstop>dailyPaySpin</tabstop>
+  <tabstop>startDate</tabstop>
+  <tabstop>endDate</tabstop>
+  <tabstop>typeCombo</tabstop>
+  <tabstop>daysSpin</tabstop>
+  <tabstop>feeAsset</tabstop>
  </tabstops>
  <resources>
   <include location="res.qrc"/>
