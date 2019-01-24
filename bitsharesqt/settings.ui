@@ -480,6 +480,27 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>editgatewaysButton</tabstop>
+  <tabstop>editfaucetsButton</tabstop>
+  <tabstop>sellExpireEdit</tabstop>
+  <tabstop>sellExpireSlider</tabstop>
+  <tabstop>sellFOK</tabstop>
+  <tabstop>advancedmodeEnabled</tabstop>
+  <tabstop>restoredefaultsButton</tabstop>
+  <tabstop>autoConnect</tabstop>
+  <tabstop>editnodesButton</tabstop>
+  <tabstop>cycleNodes</tabstop>
+  <tabstop>proxyEnabled</tabstop>
+  <tabstop>proxyType</tabstop>
+  <tabstop>proxyHost</tabstop>
+  <tabstop>proxyPort</tabstop>
+  <tabstop>proxyAuth</tabstop>
+  <tabstop>proxyUser</tabstop>
+  <tabstop>proxyPass</tabstop>
+  <tabstop>closeButton</tabstop>
+ </tabstops>
  <resources>
   <include location="res.qrc"/>
   <include location="res.qrc"/>
