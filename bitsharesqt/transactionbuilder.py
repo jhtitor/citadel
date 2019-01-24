@@ -20,7 +20,11 @@ from bitsharesbase.operations import Transfer_to_blind
 from bitsharesbase.operations import Limit_order_create, Limit_order_cancel
 from bitsharesbase.operations import Account_create, Account_upgrade, Account_update
 from bitsharesbase.operations import Asset_create, Asset_update, Asset_update_bitasset
-from bitsharesbase.operations import Asset_issue, Asset_reserve, Asset_fund_fee_pool
+from bitsharesbase.operations import Asset_update_issuer
+from bitsharesbase.operations import Asset_update_feed_producers, Asset_publish_feed
+from bitsharesbase.operations import Asset_issue, Asset_reserve, Override_transfer
+from bitsharesbase.operations import Asset_fund_fee_pool, Asset_claim_pool, Asset_claim_fees
+from bitsharesbase.operations import Asset_global_settle
 from bitsharesbase.operations import Worker_create
 from bitsharesbase.operations import getOperationIdForClass
 from bitsharesbase.operations import getOperationClassForId
@@ -496,9 +500,9 @@ class QTransactionBuilder(QtWidgets.QDialog):
 			"precision": precision,
 			"common_options": options,
 			"bitasset_opts": bitasset_options,
-			"is_prediction_market": False,
+			"is_prediction_market": is_prediction_market,
 		}
-		if bitasset_options:
+		if not bitasset_options:
 			params["is_prediction_market"] = False
 		if fee_asset:
 			params['fee'] = iso.getAmount(0, fee_asset).json()
@@ -520,6 +524,70 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		win = QTransactionBuilder(trxbuffer=tx, iso=isolator)
 		return win.exec_()
 	
+	@classmethod
+	def VUpdateFeedProducers(self,
+			symbol,
+			issuer,
+			feed_producer_ids,
+			fee_asset=None,
+			isolator=None
+		):
+		iso = isolator
+		blockchain_instance = iso.bts
+		src_account = iso.getAccount(issuer)
+		asset = iso.getAsset(symbol)
+		bitasset_options = asset['bitasset_data']
+		params = {
+			"issuer": src_account['id'],
+			"asset_to_update": asset['id'],
+			"new_feed_producers": feed_producer_ids,
+		}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		return (Asset_update_feed_producers(**params), [(src_account, "active")])
+	
+
+	@classmethod
+	def VPublishFeed(self,
+			symbol,
+			publisher,
+			settlement_price,
+			maintenance_collateral_ratio,
+			maximum_short_squeeze_ratio,
+			core_exchange_rate,
+			fee_asset=None,
+			isolator=None
+		):
+		iso = isolator
+		blockchain_instance = iso.bts
+		src_account = iso.getAccount(publisher)
+		asset = iso.getAsset(symbol)
+		bitasset_options = asset['bitasset_data']
+		params = {
+			"publisher": src_account['id'],
+			"asset_id": asset['id'],
+			"feed": {
+				"settlement_price": settlement_price,
+				"maintenance_collateral_ratio": maintenance_collateral_ratio,
+				"maximum_short_squeeze_ratio": maximum_short_squeeze_ratio,
+				"core_exchange_rate": core_exchange_rate
+			}
+		}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		return (Asset_publish_feed(**params), [(src_account, "active")])
+
+	@classmethod
+	def QPublishFeed(self, *args, **kwargs):
+		v = self.VPublishFeed(*args, **kwargs)
+		return self._QExec(kwargs.get("isolator"), v)
+
 	@classmethod
 	def VUpdateBitAsset(self,
 			symbol,
@@ -562,7 +630,6 @@ class QTransactionBuilder(QtWidgets.QDialog):
 	def VUpdateAsset(self,
 			symbol,
 			issuer,
-			new_issuer=None,
 			flags={ },
 			description="",
 			is_prediction_market=False,
@@ -575,9 +642,7 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		blockchain_instance = iso.bts
 		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(issuer)
-		new_account = iso.getAccount(new_issuer) if new_issuer else None
-		if new_account and new_account["id"] == src_account["id"]:
-			new_account = None
+		new_account = None
 		flags_int = toint(flags)
 		asset = iso.getAsset(symbol)
 		options = asset['options']
@@ -603,8 +668,6 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		}
 		if "is_prediction_market" in asset:
 			params["is_prediction_market"] = is_prediction_market
-		if new_account:
-			params["new_issuer"] =  new_account["id"]
 		if fee_asset:
 			params['fee'] = iso.getAmount(0, fee_asset).json()
 		else:
@@ -617,6 +680,68 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		v = self.VUpdateAsset(*args, **kwargs)
 		return self._QExec(kwargs.get("isolator"), v)
 	
+	@classmethod
+	def VUpdateAssetIssuer(self,
+			symbol,
+			issuer,
+			new_issuer,
+			fee_asset=None,
+			isolator=None
+		):
+		iso = isolator
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
+		src_account = iso.getAccount(issuer)
+		new_account = iso.getAccount(new_issuer)
+		#if new_account["id"] == src_account["id"]:
+		#	raise Exception
+		asset = iso.getAsset(symbol)
+		params = {
+			"issuer": src_account['id'],
+			"asset_to_update": asset['id'],
+			"new_issuer": new_account['id']
+		}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		return (Asset_update_issuer(**params), [(src_account, "owner")])
+	
+	@classmethod
+	def QUpdateAssetIssuer(self, *args, **kwargs):
+		v = self.VUpdateAssetIssuer(*args, **kwargs)
+		return self._QExec(kwargs.get("isolator"), v)
+	
+	@classmethod
+	def VGlobalSettle(self,
+			symbol,
+			issuer,
+			settle_price,
+			fee_asset=None,
+			isolator=None
+		):
+		iso = isolator
+		src_account = iso.getAccount(issuer)
+		asset = iso.getAsset(symbol)
+		params = {
+			"issuer": src_account['id'],
+			"asset_to_settle": asset['id'],
+			"settle_price": settle_price
+		}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		return (Asset_global_settle(**params), [(src_account, "active")])
+	
+	@classmethod
+	def QGlobalSettle(self, *args, **kwargs):
+		v = self.VGlobalSettle(*args, **kwargs)
+		return self._QExec(kwargs.get("isolator"), v)
+
+
 	@classmethod
 	def QTransferToBlind(self,
 			asset_id,
@@ -859,7 +984,7 @@ class QTransactionBuilder(QtWidgets.QDialog):
 	@classmethod
 	def QFundFeePool(self,
 			asset_id,
-			amount_num,
+			core_amount_num,
 			source_account,
 			fee_asset=None,
 			isolator=None
@@ -868,10 +993,11 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		blockchain_instance = iso.bts
 		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
 		src_account = iso.getAccount(source_account)
-		amount = iso.getAmount(amount_num, asset_id).json()
+		asset = iso.getAsset(asset_id)
+		amount = iso.getAmount(core_amount_num, "1.3.0").json()
 		params = {
 			"from_account": iso.getAccount(source_account)['id'],
-			"asset_id": amount["asset_id"],
+			"asset_id": asset["id"],
 			"amount": int(amount["amount"]),
 		}
 		if fee_asset:
@@ -891,6 +1017,109 @@ class QTransactionBuilder(QtWidgets.QDialog):
 		
 		win = QTransactionBuilder(trxbuffer=tx, iso=isolator)
 		return win.exec_()
+	
+	@classmethod
+	def VClaimFeePool(self,
+			asset_id,
+			core_amount_num,
+			source_account,
+			fee_asset=None,
+			isolator=None
+		):
+		iso = isolator
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
+		src_account = iso.getAccount(source_account)
+		asset = iso.getAsset(asset_id)
+		amount = iso.getAmount(core_amount_num, "1.3.0").json()
+		params = {
+			"issuer": iso.getAccount(source_account)['id'],
+			"asset_id": asset["id"],
+			"amount_to_claim": {
+				"asset_id": amount["asset_id"],
+				"amount": int(amount["amount"]),
+			}
+		}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		return (Asset_claim_pool(**params), [(src_account, "active")])
+	
+	@classmethod
+	def QClaimFeePool(self, *args, **kwargs):
+		v = self.VClaimFeePool(*args, **kwargs)
+		return self._QExec(kwargs.get("isolator"), v)
+	
+	
+	@classmethod
+	def VClaimMarketFees(self,
+			asset_id,
+			amount_num,
+			source_account,
+			fee_asset=None,
+			isolator=None
+		):
+		iso = isolator
+		blockchain_instance = iso.bts
+		tx = TransactionBuilder(blockchain_instance=blockchain_instance)
+		src_account = iso.getAccount(source_account)
+		amount = iso.getAmount(amount_num, asset_id).json()
+		params = {
+			"issuer": iso.getAccount(source_account)['id'],
+			"amount_to_claim": {
+				"asset_id": amount["asset_id"],
+				"amount": int(amount["amount"]),
+			}
+		}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		return (Asset_claim_fees(**params), [(src_account, "active")])
+	
+	@classmethod
+	def QClaimMarketFees(self, *args, **kwargs):
+		v = self.VClaimMarketFees(*args, **kwargs)
+		return self._QExec(kwargs.get("isolator"), v)
+	
+	
+	@classmethod
+	def VOverrideTransfer(self,
+			asset_id,
+			amount_num,
+			issuer_account,
+			source_account,
+			target_account,
+			memo=None,
+			fee_asset=None,
+			isolator=None
+		):
+		iso = isolator
+		tx = TransactionBuilder(blockchain_instance=iso.bts)
+		iss_account = iso.getAccount(issuer_account)
+		params = {
+			"amount": iso.getAmount(amount_num, asset_id).json(),
+			"issuer": iso.getAccount(issuer_account)['id'],
+			"from": iso.getAccount(source_account)['id'],
+			"to": iso.getAccount(target_account)['id'],
+		}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		if memo:
+			with iso.unlockedWallet() as w:
+				params['memo'] = iso.getMemo(issuer_account, target_account, memo)
+		
+		return (Override_transfer(**params), [(iss_account, "active")])
+	
+	@classmethod
+	def QOverrideTransfer(self, *args, **kwargs):
+		v = self.VOverrideTransfer(*args, **kwargs)
+		return self._QExec(kwargs.get("isolator"), v)
 	
 	
 	@classmethod

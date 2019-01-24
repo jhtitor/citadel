@@ -411,6 +411,14 @@ def dict_same(d1, d2):
 	#print("added", added, "removed:", removed, "modified:", modified)
 	return not(bool(len(added) + len(removed) + len(modified)))
 
+def set_same(s1, s2): # TODO: replace with smarter version
+	for k in s1:
+		if not(k in s2):
+			return False
+	for k in s2:
+		if not(k in s1):
+			return False
+	return True
 
 import qrcode
 class QQRPainter(qrcode.image.base.BaseImage):

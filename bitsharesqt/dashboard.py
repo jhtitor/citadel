@@ -208,7 +208,8 @@ class DashboardTab(QtWidgets.QWidget):
 		except Exception as error:
 			showexc(error)
 			return
-		win = AssetWindow(isolator=self.iso, mode="reserve",
+		win = AssetWindow(parent=self, isolator=self.iso,
+			mode="reserve",
 			asset=asset,
 			accounts=app().mainwin.account_names,
 			account=app().mainwin.activeAccount)

@@ -819,9 +819,16 @@ class BitsharesIsolator(object):
 				desc += " - " + reg_asset["symbol"]
 			except:
 				pass
+		if (op_id == 13):
+			desc = "Update feed producers"
+			try:
+				reg_asset = iso.getAsset(op_action['asset_to_update'])
+				desc += " - " + reg_asset["symbol"]
+			except:
+				pass
 		if (op_id == 14):
 			desc = "Issue"
-			is_asset = iso.getAsset(op_action['asset_to_issue']['asset_id'])
+#			is_asset = iso.getAsset(op_action['asset_to_issue']['asset_id'])
 			amt = iso.getAmountOP(op_action['asset_to_issue'])
 			desc += " by " + accname(op_action["issuer"])
 			desc += " to " + accname(op_action["issue_to_account"])
@@ -835,23 +842,70 @@ class BitsharesIsolator(object):
 				minus = str(amt)
 				icon = "transfer_to"
 		if (op_id == 15):
-			desc = "Reserved"
-			is_asset = iso.getAsset(op_action['amount_to_reserve']['asset_id'])
+			desc = "Reserve"
 			amt = iso.getAmountOP(op_action['amount_to_reserve'])
 			desc += " by " + accname(op_action["payer"])
 			desc += " - " + str(amt)
 			minus = str(amt)
-			if is_asset["issuer"] == op_action["payer"]:
-				plus = str(amt)
+			try:
+				is_asset = iso.getAsset(op_action['amount_to_reserve']['asset_id'])
+				if is_asset["issuer"] == op_action["payer"]:
+					plus = str(amt)
+			except:
+				pass
 			short = "Reserved by " + accname(op_action["payer"]) + " - " + str(amt)
+		if (op_id == 16):
+			desc = "Fund fee pool"
+			try:
+#				f_asset = iso.getAsset(op_action['asset_id'])
+#				amt = iso.QAmount(f_asset["symbol"], op_action['amount'], precision=f_asset["precision"])
+				f_asset = iso.getAsset(op_action['asset_id'])
+				amt = iso.QAmount("BTS", op_action['amount'], precision=5)
+				desc += " for " + f_asset["symbol"]
+				desc += " - " + str(amt)
+				short = "Funded fee pool for " + f_asset["symbol"]
+				minus = str(amt)
+			except:
+				pass
+
+		if (op_id == 18):
+			desc = "Global settle"
+			try:
+				from bitshares.price import Price
+				p = Price(op_action["settle_price"], blockchain_instance=iso.bts)
+				stl_asset = iso.getAsset(op_action['asset_to_settle'])
+				desc += " " + stl_asset["symbol"]
+				desc += " at " + str(p)
+			except:
+				pass
+
 		if (op_id == 19):
 			desc = "Publish feed for asset"
-			f_asset = iso.getAsset(op_action['asset_id'])
-			desc += " " + f_asset["symbol"]
-			short = "Published feed for " + f_asset["symbol"]
+			try:
+				f_asset = iso.getAsset(op_action['asset_id'])
+				desc += " " + f_asset["symbol"]
+				short = "Published feed for " + f_asset["symbol"]
+			except:
+				short = "Published feed for asset"
+
 		if (op_id == 34):
 			desc = "Create worker '%s'" % op_action['name']
 			short = "Created worker '%s'" % op_action['name']
+
+		if (op_id == 38):
+			desc = "Sieze"
+			amt = iso.getAmountOP(op_action['amount'])
+			desc += " from " + accname(op_action['from'])
+			desc += " to " + accname(op_action['to'])
+			desc += " - " + str(amt)
+			if account and account["id"] == op_action["from"]:
+				short = "Siezed to " + accname(op_action['to'])
+				minus = str(amt)
+				icon = "transfer_to"
+			if account and account["id"] == op_action["to"]:
+				short = "Siezed from " + accname(op_action['from'])
+				plus = str(amt)
+				icon = "transfer_from"
 		if (op_id == 39):
 			desc = "Transfer to blind"
 			amt = iso.getAmountOP(op_action['amount'])
@@ -872,6 +926,35 @@ class BitsharesIsolator(object):
 			short = "Transfered from blind"
 			#short += " to " + accname(op_action['to']) #reg_account['name']
 			plus = str(amt)
+		
+		if (op_id == 43):
+			desc = "Claim market fees"
+			amt = iso.getAmountOP(op_action['amount_to_claim'])
+			desc += " " + str(amt)
+			short = "Claimed market fees"
+			plus = str(amt)
+		if (op_id == 47):
+			desc = "Claim from fee pool"
+			amt = iso.getAmountOP(op_action['amount_to_claim'])
+			desc += " " + str(amt)
+			short = "Claimed from fee pool"
+			plus = str(amt)
+		if (op_id == 48):
+			desc = "Change ownership"
+			try:
+				up_asset = iso.getAsset(op_action['asset_to_update'])
+				desc += " for " + up_asset["symbol"]
+			except:
+				up_asset = None
+				pass
+			desc += " to " + accname(op_action['new_issuer'])
+			if account and account["id"] == op_action['new_issuer']:
+				short = "Obtained ownership"
+				if up_asset:
+					short += " over " + up_asset["symbol"]
+				short += " from " + accname(op_action['issuer'])
+			else:
+				short = desc.replace("Change ownership", "Changed ownership")
 		
 		return {
 			"long": desc,
