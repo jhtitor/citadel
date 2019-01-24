@@ -188,26 +188,49 @@ class WindowWithAssets(QtCore.QObject):
 		self.download_asset(symbol)
 	
 	def show_asset_submenu(self, position):
+		asset_name = self._submenu_asset()
+		if not asset_name:
+			return
+		hide_issuer_options = False
+		try:
+			if self.activeAccount:
+				asset = self.iso.getAsset(asset_name, force_local=True)
+				if asset["issuer"] != self.activeAccount["id"]:
+					hide_issuer_options = True
+		except:
+			pass
+		if self.is_advancedmode():
+			hide_issuer_options = False
 		send = self.sender()
 		menu = QtGui.QMenu()
 		menu._list = True if send == self.ui.assetList else False
+		a = qaction(self, menu, asset_name, self._nothing)
+		a.setEnabled(False)
 		qaction(self, menu, "Buy...", self._buy_asset)
 		qaction(self, menu, "Sell...", self._sell_asset)
 		qaction(self, menu, "Open Market", self._openmarket_asset)
 		menu.addSeparator()
-		qaction(self, menu, "Edit Asset...", self._edit_asset)
-		qaction(self, menu, "Issue Asset...", self._issue_asset)
-		#qaction(self, menu, "Reserve Asset...", self._reserve_asset)
-		qaction(self, menu, "Fund Fee Pool...", self._fundfee_asset)
+		if not hide_issuer_options:
+			qaction(self, menu, "Edit Asset...", self._edit_asset)
+			qaction(self, menu, "Issue Asset...", self._issue_asset)
+			qaction(self, menu, "Override Transfer...", self._overridetransfer_asset)
+			#qaction(self, menu, "Reserve Asset...", self._reserve_asset)
+			qaction(self, menu, "Fund Fee Pool...", self._fundfee_asset)
+			qaction(self, menu, "Drain Fee Pool...", self._drainfee_asset)
+			qaction(self, menu, "Claim Market Fees...", self._claimfees_asset)
+			qaction(self, menu, "Publish Feed...", self._pubfeed_asset)
+			qaction(self, menu, "Global Settle...", self._globalsettle_asset)
 		if not(menu._list):
 			menu.exec_(send.mapToGlobal(position))
 		else:
 			menu.exec_(send.viewport().mapToGlobal(position))
 	
+	def _nothing(self):
+		pass
+
 	def _submenu_asset(self):
 		top = self.sender().parent()
 		if isinstance(top, QtGui.QMenu):
-			print("Yes is asset!", self.ui.assetsymbolLine.text())
 			return self.ui.assetsymbolLine.text()
 		j = table_selrow(self.ui.assetList)
 		if j < 0:
@@ -243,59 +266,52 @@ class WindowWithAssets(QtCore.QObject):
 		except Exception as error:
 			showexc(error)
 	
-	def _edit_asset(self):
-		asset_name = self._submenu_asset()
+	def _open_asset_window(self, asset_name, mode, must_mia=False, must_uia=False):
+		if asset_name is None:
+			asset_name = self._submenu_asset()
 		if not asset_name:
 			return
 		asset = self.iso.getAsset(asset_name)
-		win = AssetWindow(isolator=self.iso, mode="edit",
-			asset=asset,
-			accounts=self.account_names,
-			account=self.activeAccount)
-		win.exec_()
-	
-	def _edit_bitasset(self):
-		asset_name = self._submenu_asset()
-		if not asset_name:
+		if must_mia and not asset.is_bitasset:
+			showwarn("Asset is not Market-Pegged")
 			return
-		asset = self.iso.getAsset(asset_name)
-		win = AssetWindow(isolator=self.iso, mode="bitasset",
-			asset=asset,
-			accounts=self.account_names,
-			account=self.activeAccount)
-		win.exec_()
-	
-	def _issue_asset(self):
-		asset_name = self._submenu_asset()
-		if not asset_name:
+		if must_uia and asset.is_bitasset:
+			showwarn("Asset is not Usser-Issued")
 			return
-		asset = self.iso.getAsset(asset_name)
-		win = AssetWindow(isolator=self.iso, mode="issue",
+		win = AssetWindow(parent=self, isolator=self.iso,
+			mode=mode,
 			asset=asset,
 			contacts=self.contact_names,
 			accounts=self.account_names,
 			account=self.activeAccount)
 		win.exec_()
+
+	def _edit_asset(self):
+		self._open_asset_window(None, "edit")
+	
+	def _edit_bitasset(self):
+		self._open_asset_window(None, "edit")
+	
+	def _issue_asset(self):
+		self._open_asset_window(None, "issue", must_uia=True)
 	
 	def _reserve_asset(self):
-		asset_name = self._submenu_asset()
-		if not asset_name:
-			return
-		asset = self.iso.getAsset(asset_name)
-		win = AssetWindow(isolator=self.iso, mode="reserve",
-			asset=asset,
-			accounts=self.account_names,
-			account=self.activeAccount)
-		win.exec_()
+		self._open_asset_window(None, "reserve")
 	
 	def _fundfee_asset(self):
-		asset_name = self._submenu_asset()
-		if not asset_name:
-			return
-		asset = self.iso.getAsset(asset_name)
-		win = AssetWindow(isolator=self.iso, mode="fund",
-			asset=asset,
-			accounts=self.account_names,
-			account=self.activeAccount)
-		win.exec_()
+		self._open_asset_window(None, "fund")
 	
+	def _drainfee_asset(self):
+		self._open_asset_window(None, "unfund")
+	
+	def _claimfees_asset(self):
+		self._open_asset_window(None, "claim")
+	
+	def _overridetransfer_asset(self):
+		self._open_asset_window(None, "override")
+	
+	def _pubfeed_asset(self):
+		self._open_asset_window(None, "publish", must_mia=True)
+	
+	def _globalsettle_asset(self):
+		self._open_asset_window(None, "settle")
