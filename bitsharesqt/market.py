@@ -168,6 +168,8 @@ class MarketTab(QtGui.QWidget):
 		if form["_commit_inv"]:
 			sell_asset_name = self.asset_b["symbol"]
 			buy_asset_name = self.asset_a["symbol"]
+			sell_asset_amount = form["altAmt"].value()
+			buy_asset_amount = form["mainAmt"].value()
 		
 		expire_seconds = deltasec(form["expireEdit"].text())
 		expire_fok = form["expireFOK"].isChecked()
