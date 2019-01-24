@@ -211,6 +211,8 @@ class OrderTab(QtWidgets.QWidget):
 	def open_market(self):
 		table = self.ui.table
 		row = table_selrow(table)
+		if row <= -1:
+			return
 		col_a = table.item(row, 1).text()
 		col_b = table.item(row, 2).text()
 		asset_name_a = str.split(col_a, " ")[1]
