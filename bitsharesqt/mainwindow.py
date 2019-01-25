@@ -81,6 +81,7 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.gatewayBuyAccount,
 			self.ui.transferFromAccount,
 			self.ui.sellerBox,
+			self.ui.settlerBox,
 			#self.ui.marketAccountBox,
 			self.ui.blindFromAccount,
 		]
@@ -128,6 +129,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		ui.transferButton.clicked.connect(self.make_transfer)
 		ui.sellButton.clicked.connect(self.make_limit_order)
+		ui.settleButton.clicked.connect(self.make_settlement)
 		
 		self.dropped.connect(self.file_dropped)
 		
@@ -137,6 +139,12 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.buyAssetCombo,
 			None, None,
 			self.ui.sellOpenMarketButton)
+		
+		self.uiAssetsMarketLink(
+			self.ui.settleAssetCombo,
+			self.ui.settleBackAssetCombo,
+			None, None,
+			self.ui.settleOpenMarketButton)
 		
 		ui.actionAccounts.triggered.connect(self.toggle_accountbar)
 		ui.actionAdvancedOptions.triggered.connect(self.toggle_advancedoptions)
@@ -192,10 +200,13 @@ class MainWindow(QtGui.QMainWindow,
 		self.uiAccountAssetLink(self.ui.sellerBox, self.ui.sellAssetCombo)
 		self.uiAccountAssetLink(self.ui.sellerBox, self.ui.buyAssetCombo)
 		self.uiAccountAssetLink(self.ui.sellerBox, self.ui.sellFeeAsset)
+		self.uiAccountAssetLink(self.ui.settlerBox, self.ui.settleAssetCombo)
+		self.uiAccountAssetLink(self.ui.settlerBox, self.ui.settleFeeAsset)
 		
 		self.uiAssetLink(self.ui.transferAmount, self.ui.transferAsset)
 		self.uiAssetLink(self.ui.sellAmountSpin, self.ui.sellAssetCombo)
 		self.uiAssetLink(self.ui.buyAmountSpin, self.ui.buyAssetCombo)
+		self.uiAssetLink(self.ui.settleAmount, self.ui.settleAssetCombo)
 		
 		self.init_trxbuffer()
 		
@@ -585,6 +596,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.ui.opStack, [
 			(self.ui.viewOpTransfer, self.ui.actionTransfer, "!transfer"),
 			(self.ui.viewOpSell, self.ui.actionSell, "!sell"),
+			(self.ui.viewOpSettle, self.ui.actionSettle, "!settle"),
 		], lambda: self.tagToFront("^ops"))
 		self.opstack.setPage(0)
 		
@@ -595,9 +607,10 @@ class MainWindow(QtGui.QMainWindow,
 		on_combo(self.ui.buyAssetCombo, self.sell_main_amount_changed)
 		
 		self.sell_estimater = RemoteFetch(manager=self.Requests)
+		self.settle_estimater = RemoteFetch(manager=self.Requests)
 		
-		#self.ui.ainAmt"].valueChanged.connect(self.main_amount_changed)
-		#form["mainAmt"].valueChanged.connect(self.main_amount_changed)
+		on_spin(self.ui.settleAmount,  self.settle_amount_changed)
+		on_combo(self.ui.settleAssetCombo, self.settle_amount_changed)
 	
 	def sell_main_amount_changed(self):
 		sell_asset = self.ui.sellAssetCombo.currentText()
@@ -673,8 +686,64 @@ class MainWindow(QtGui.QMainWindow,
 	def sell_estimation_failed(self, uid, error):
 		pass
 	
-	#def opToFront(self, tag):
-	#	self.opstack.setPageByTag(tag)
+
+	def settle_amount_changed(self):
+		settle_asset = self.ui.settleAssetCombo.currentText()
+		settle_amount = self.ui.settleAmount.value()
+		
+		if not(settle_asset) or not(settle_amount):
+			return
+		
+		self.settle_estimater.fetch(
+			self.settle_estimate, settle_asset, settle_amount,
+			ready_callback=self.settle_estimated,
+			error_callback=self.settle_estimation_failed,
+			ping_callback=self.refreshUi_ping,
+		)
+
+	def settle_estimate(self, settle_asset, settle_amount):
+		iso = self.iso
+		
+		asset = iso.getAsset(settle_asset)
+		bitasset = asset["bitasset_data"]
+		
+		backing_name = bitasset["options"]["short_backing_asset"]
+		back_asset = iso.getAsset(backing_name)
+		
+		from bitshares.price import Price
+		price = Price(bitasset["settlement_price"], blockchain_instance=iso.bts)
+#		settle_amount = iso.getAmount(settle_amount, settle_asset)
+#		print(settle_amount, type(settle_amount))
+		back_amount = settle_amount / float(price)
+		
+		price = str(price.invert()).split(" ")[0]
+		
+#		back_amount = str(iso.QAmount(
+#			backing_name, back_amount, back_asset["precision"]
+#		)).split(" ")[0]
+		
+		
+		return (price, back_asset, back_amount)
+	
+	def settle_estimated(self, uid, args):
+		(price, buy_asset, buy_amount) = args
+		
+		self.ui.settleFairAssetLabel.setText(buy_asset["symbol"])
+		self.ui.settleFairAmount.setText(str(price))
+		
+		self.ui.settleBackAmount.setDecimals(buy_asset["precision"])
+		self.ui.settleBackAmount.setMaximum(
+		int(buy_asset["options"]["max_supply"]) / pow(10, buy_asset["precision"]))
+		self.ui.settleBackAmount.setValue(buy_amount)
+		
+		set_combo(self.ui.settleBackAssetCombo, buy_asset["symbol"])
+	
+	def settle_estimation_failed(self, uid, error):
+		pass
+	
+	
+	def opToFront(self, tag):
+		self.opstack.setPageByTag(tag)
 	
 	
 	
@@ -684,6 +753,8 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.transferAsset,
 			self.ui.sellerBox,
 			self.ui.sellAssetCombo,
+			self.ui.settlerBox,
+			self.ui.settleAssetCombo,
 			self.ui.blindFromAsset,
 			self.ui.blindToAsset,
 			self.ui.blindAsset,
@@ -1306,6 +1377,32 @@ class MainWindow(QtGui.QMainWindow,
 				isolator=self.iso)
 		except Exception as error:
 			showexc(error)
+	
+	def make_settlement(self):
+		account_from = self.ui.settlerBox.currentText()
+		settle_asset_name = self.ui.settleAssetCombo.currentText()
+		settle_asset_amount = self.ui.settleAmount.value()
+		fee_asset = anyvalvis(self.ui.settleFeeAsset, None)
+		
+		buffer = self.ui.txFrame.isVisible()
+		
+		try:
+			v = QTransactionBuilder.VSettleAsset(
+				account_from,
+				settle_asset_name,
+				settle_asset_amount,
+				fee_asset=fee_asset,
+				isolator=self.iso)
+			if buffer:
+				self._txAppend(*v)
+			else:
+				QTransactionBuilder._QExec(self.iso, v)
+		except Exception as error:
+			showexc(error)
+			return False
+		return True
+	
+
 	
 	def make_limit_order(self):
 		account_from = self.ui.sellerBox.currentText()
@@ -2332,6 +2429,29 @@ class MainWindow(QtGui.QMainWindow,
 		self.tagToFront("^blind")
 		self.bt_page_to()
 	
+	def OSettle(self, account=None, asset=None, amount=None):
+		
+		if account is True and self.activeAccount:
+			set_combo(self.ui.settlerBox, self.activeAccount["name"])
+		elif account:
+			if not(isinstance(account, str)):
+				account = account["name"]
+			set_combo(self.ui.settlerBox, account)
+		else:
+			pass
+		
+		if asset:
+			if not(isinstance(asset, str)):
+				asset = asset["symbol"]
+			set_combo(self.ui.settleAssetCombo, asset)
+		
+		if amount:
+			self.ui.settleAmount.setValue(float(amount))
+		
+		self.tagToFront("^ops")
+		self.opToFront("!settle")
+		
+
 	def open_keys_window(self):
 		try:
 			with self.iso.unlockedWallet(

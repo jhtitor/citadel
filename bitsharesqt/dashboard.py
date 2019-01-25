@@ -115,6 +115,7 @@ class DashboardTab(QtWidgets.QWidget):
 		qaction(self, menu, "Open Market", self._dash_openmarket_asset)
 		qaction(self, menu, "Blind...", self._dash_blind_asset)
 		qaction(self, menu, "Burn...", self._dash_burn_asset)
+		qaction(self, menu, "Settle...", self._dash_settle_asset)
 		menu.addSeparator()
 		qaction(self, menu, "Details", self._asset_details)
 		qmenu_exec(self.ui.balanceTable, menu, position)
@@ -185,6 +186,18 @@ class DashboardTab(QtWidgets.QWidget):
 			app().mainwin.openMarket(symbol, market)
 		except Exception as error:
 			showexc(error)
+	
+	def _dash_settle_asset(self):
+		j = table_selrow(self.ui.balanceTable)
+		if j <= -1:
+			return
+		amount = float( self.ui.balanceTable.item(j, 0).text() )
+		symbol = self.ui.balanceTable.item(j, 1).text()
+		app().mainwin.OSettle(
+			account= self._account["name"],
+			asset  = symbol,
+			amount = amount,
+		)
 	
 	def _dash_blind_asset(self):
 		j = table_selrow(self.ui.balanceTable)

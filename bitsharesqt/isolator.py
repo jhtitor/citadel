@@ -867,7 +867,17 @@ class BitsharesIsolator(object):
 				minus = str(amt)
 			except:
 				pass
-
+		if (op_id == 17):
+			desc = "Settle"
+			amt = iso.getAmountOP(op_action['amount'])
+			desc += " " + str(amt)
+			short = "Settled"
+			minus = str(amt)
+			try:
+				get_amt = iso.getAmountOP(op_result)
+				plus = str(get_amt)
+			except:
+				pass
 		if (op_id == 18):
 			desc = "Global settle"
 			try:

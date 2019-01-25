@@ -18,6 +18,7 @@ from bitshares.transactionbuilder import TransactionBuilder
 from bitsharesbase.operations import Transfer
 from bitsharesbase.operations import Transfer_to_blind
 from bitsharesbase.operations import Limit_order_create, Limit_order_cancel
+from bitsharesbase.operations import Asset_settle
 from bitsharesbase.operations import Account_create, Account_upgrade, Account_update
 from bitsharesbase.operations import Asset_create, Asset_update, Asset_update_bitasset
 from bitsharesbase.operations import Asset_update_issuer
@@ -739,6 +740,34 @@ class QTransactionBuilder(QtWidgets.QDialog):
 	@classmethod
 	def QGlobalSettle(self, *args, **kwargs):
 		v = self.VGlobalSettle(*args, **kwargs)
+		return self._QExec(kwargs.get("isolator"), v)
+
+
+	@classmethod
+	def VSettleAsset(self,
+			from_account,
+			symbol,
+			amount_num,
+			fee_asset=None,
+			isolator=None
+		):
+		iso = isolator
+		src_account = iso.getAccount(from_account)
+		asset = iso.getAsset(symbol)
+		params = {
+			"account": src_account['id'],
+			"amount": iso.getAmount(amount_num, asset["id"]).json(),
+		}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		return (Asset_settle(**params), [(src_account, "active")])
+	
+	@classmethod
+	def QSettleAsset(self, *args, **kwargs):
+		v = self.VSettleAsset(*args, **kwargs)
 		return self._QExec(kwargs.get("isolator"), v)
 
 

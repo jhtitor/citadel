@@ -9,6 +9,7 @@
     <file>../images/op/blind_transfer.png</file>
     <file>../images/op/transfer_from_blind.png</file>
     <file>../images/op/transfer_to_blind.png</file>
+    <file>../images/op/asset_settle.png</file>
     <file>../images/op/fill_order.png</file>
     <file>../images/op/limit_order_cancel.png</file>
     <file>../images/op/limit_order_create.png</file>
