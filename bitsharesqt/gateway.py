@@ -299,22 +299,23 @@ class WindowWithGateway(QtCore.QObject):
 			table.insertRow(j)
 			
 			ico = QtGui.QPixmap(":/icons/images/wait.png")
-			if tran['transactionProcessingState'] == 'output_transaction_broadcast':
+			if tran['transactionProcessingState'] in [
+				'output_transaction_broadcast',
+				'output_transaction_fully_confirmed'
+			]:
 				ico = QtGui.QPixmap(":/icons/images/tick.png")
 			if tran['transactionProcessingState'] in [
-				'permanent_output_failure_never_confirmed', 'orphaned',
+				'orphaned',
 				'output_transaction_failed',
-			]:
+			] or tran['transactionProcessingState'].startswith('permanent_output_failure'):
 				ico = QtGui.QPixmap(":/icons/images/crossout.png")
 			
 			img = QtGui.QLabel("")
 			img.setPixmap(ico)
 			table.setCellWidget(j, 0, img)
-			item0 = QtGui.QTableWidgetItem( str( tran['inputAmount'] ) )
-			item0.setData(99, tran)
-			table.setItem(j, 1, item0)
-			#set_col(table, j, 1, tran['inputAmount'])
-			set_col(table, j, 2, tran['outputAmount'])
+			
+			set_col(table, j, 1, str(tran['inputAmount']), data=tran)
+			set_col(table, j, 2, str(tran['outputAmount']))
 		
 		#self.ui.bridgeDetails.setPlainText(pt)
 	
