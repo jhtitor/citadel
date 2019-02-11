@@ -2774,6 +2774,9 @@ So, this is a simple address book, and the Labels could be anything you want,</s
              <property name="sizeConstraint">
               <enum>QLayout::SetMaximumSize</enum>
              </property>
+             <property name="fieldGrowthPolicy">
+              <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+             </property>
              <property name="horizontalSpacing">
               <number>20</number>
              </property>
@@ -3012,6 +3015,9 @@ So, this is a simple address book, and the Labels could be anything you want,</s
             <layout class="QFormLayout" name="formLayout_12">
              <property name="sizeConstraint">
               <enum>QLayout::SetMaximumSize</enum>
+             </property>
+             <property name="fieldGrowthPolicy">
+              <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
              </property>
              <property name="horizontalSpacing">
               <number>20</number>
