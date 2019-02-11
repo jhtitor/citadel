@@ -113,7 +113,7 @@ class DashboardTab(QtWidgets.QWidget):
 		hide_mia_options = False
 		try:
 			asset = self.iso.getAsset(symbol, force_local=True)
-			if not("bitasset_data" in asset):
+			if not(asset.is_bitasset):
 				hide_mia_options = True
 		except:
 			pass

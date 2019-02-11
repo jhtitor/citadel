@@ -267,6 +267,11 @@ class AssetWindow(QtWidgets.QDialog):
 		if self.activeAccount:
 			set_combo(self.ui.fundAccount, self.activeAccount["name"])
 		
+		# (ensure dynamic asset data is present)
+		if not("dynamic_asset_data" in asset): # yikes
+			asset.full = True
+			asset.refresh()
+		
 		# Unfund (claim from fee pool)
 		set_combo(self.ui.unfundAsset, "BTS")
 		self.ui.unfundAmount.setDecimals(5)

@@ -711,8 +711,13 @@ class MainWindow(QtGui.QMainWindow,
 			borrow_asset = self.iso.getAsset(borrow_symbol)
 		except:
 			return
-		if not("bitasset_data" in borrow_asset):
+		if not(borrow_asset.is_bitasset):
 			return
+		
+		# (yuck)
+		if not("bitasset_data" in borrow_asset):
+			borrow_asset.full = True
+			borrow_asset.refresh()
 		
 		collateral_sym = borrow_asset["bitasset_data"]["options"]["short_backing_asset"]
 		try:
@@ -1428,7 +1433,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		try:
 			borrow_asset = self.iso.getAsset(borrow_asset_name)
-			if not("bitasset_data" in borrow_asset):
+			if not(borrow_asset.is_bitasset):
 				showwarn("{} is not a Market-Pegged asset".format(borrow_asset_name))
 				return
 		except:

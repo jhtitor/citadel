@@ -202,7 +202,7 @@ class WindowWithAssets(QtCore.QObject):
 			pass
 		try:
 			asset = self.iso.getAsset(asset_name, force_local=True)
-			if not("bitasset_data" in asset):
+			if not(asset.is_bitasset):
 				hide_mia_options = True
 		except:
 			pass
