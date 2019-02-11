@@ -2502,6 +2502,32 @@ class MainWindow(QtGui.QMainWindow,
 		self.tagToFront("^blind")
 		self.bt_page_to()
 	
+	def OBorrow(self, account=None, asset=None, amount=None, collateral=None):
+		
+		if account is True and self.activeAccount:
+			set_combo(self.ui.borrowerBox, self.activeAccount["name"])
+		elif account:
+			if not(isinstance(account, str)):
+				account = account["name"]
+			set_combo(self.ui.borrowerBox, account)
+		else:
+			pass
+		
+		if asset:
+			if not(isinstance(asset, str)):
+				asset = asset["symbol"]
+			set_combo(self.ui.borrowAssetCombo, asset)
+		
+		if amount:
+			self.ui.borrowAmount.setValue(float(amount))
+		
+		if collateral:
+			self.ui.borrowCollateralAmount.setValue(float(collateral))
+		
+		self.tagToFront("^ops")
+		self.opToFront("!borrow")
+		
+	
 	def OSettle(self, account=None, asset=None, amount=None):
 		
 		if account is True and self.activeAccount:

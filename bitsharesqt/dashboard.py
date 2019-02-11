@@ -106,7 +106,22 @@ class DashboardTab(QtWidgets.QWidget):
 		self.ui.transferAmount.setValue(float(t))
 	
 	def show_balances_submenu(self, position):
+		j = table_selrow(self.ui.balanceTable)
+		if j <= -1:
+			return
+		symbol = self.ui.balanceTable.item(j, 1).text()
+		hide_mia_options = False
+		try:
+			asset = self.iso.getAsset(symbol, force_local=True)
+			if not("bitasset_data" in asset):
+				hide_mia_options = True
+		except:
+			pass
+		
 		menu = QtGui.QMenu()
+		a = qaction(self, menu, symbol, self._nothing)
+		a.setEnabled(False)
+		
 		qaction(self, menu, "Quick Transfer", self.balance_click)
 		qaction(self, menu, "Copy Balance", self._dash_copy_balance)
 		#qaction(self, menu, "Transfer...", self._dash_transfer)
@@ -115,10 +130,15 @@ class DashboardTab(QtWidgets.QWidget):
 		qaction(self, menu, "Open Market", self._dash_openmarket_asset)
 		qaction(self, menu, "Blind...", self._dash_blind_asset)
 		qaction(self, menu, "Burn...", self._dash_burn_asset)
-		qaction(self, menu, "Settle...", self._dash_settle_asset)
+		if not(hide_mia_options):
+			qaction(self, menu, "Borrow...", self._dash_borrow_asset)
+			qaction(self, menu, "Settle...", self._dash_settle_asset)
 		menu.addSeparator()
 		qaction(self, menu, "Details", self._asset_details)
 		qmenu_exec(self.ui.balanceTable, menu, position)
+	
+	def _nothing(self):
+		pass
 	
 	def _dash_transfer(self):
 		j = table_selrow(self.ui.balanceTable)
@@ -186,6 +206,16 @@ class DashboardTab(QtWidgets.QWidget):
 			app().mainwin.openMarket(symbol, market)
 		except Exception as error:
 			showexc(error)
+	
+	def _dash_borrow_asset(self):
+		j = table_selrow(self.ui.balanceTable)
+		if j <= -1:
+			return
+		symbol = self.ui.balanceTable.item(j, 1).text()
+		app().mainwin.OBorrow(
+			account= self._account["name"],
+			asset  = symbol,
+		)
 	
 	def _dash_settle_asset(self):
 		j = table_selrow(self.ui.balanceTable)

@@ -191,6 +191,7 @@ class WindowWithAssets(QtCore.QObject):
 		asset_name = self._submenu_asset()
 		if not asset_name:
 			return
+		hide_mia_options = False
 		hide_issuer_options = False
 		try:
 			if self.activeAccount:
@@ -199,8 +200,15 @@ class WindowWithAssets(QtCore.QObject):
 					hide_issuer_options = True
 		except:
 			pass
+		try:
+			asset = self.iso.getAsset(asset_name, force_local=True)
+			if not("bitasset_data" in asset):
+				hide_mia_options = True
+		except:
+			pass
 		if self.is_advancedmode():
 			hide_issuer_options = False
+			hide_mia_options = False
 		send = self.sender()
 		menu = QtGui.QMenu()
 		menu._list = True if send == self.ui.assetList else False
@@ -208,6 +216,8 @@ class WindowWithAssets(QtCore.QObject):
 		a.setEnabled(False)
 		qaction(self, menu, "Buy...", self._buy_asset)
 		qaction(self, menu, "Sell...", self._sell_asset)
+		if not hide_mia_options:
+			qaction(self, menu, "Borrow...", self._borrow_asset)
 		qaction(self, menu, "Open Market", self._openmarket_asset)
 		menu.addSeparator()
 		if not hide_issuer_options:
@@ -229,12 +239,12 @@ class WindowWithAssets(QtCore.QObject):
 		pass
 
 	def _submenu_asset(self):
-		top = self.sender().parent()
-		if isinstance(top, QtGui.QMenu):
-			return self.ui.assetsymbolLine.text()
+#		top = self.sender().parent()
+#		if isinstance(top, QtGui.QMenu):
+#			return self.ui.assetsymbolLine.text()
 		j = table_selrow(self.ui.assetList)
 		if j < 0:
-			return None
+			return self.ui.assetsymbolLine.text()
 		asset_name = self.ui.assetList.item(j, 0).text()
 		return asset_name
 
@@ -249,6 +259,12 @@ class WindowWithAssets(QtCore.QObject):
 		if not asset_name:
 			return
 		self.FSell(account=True, sell_asset=asset_name)
+	
+	def _borrow_asset(self):
+		asset_name = self._submenu_asset()
+		if not asset_name:
+			return
+		self.OBorrow(account=True, asset=asset_name)
 	
 	def _openmarket_asset(self):
 		asset_name = self._submenu_asset()
