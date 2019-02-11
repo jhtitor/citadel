@@ -6,6 +6,7 @@
     <file>../images/web_keychain.png</file>
   </qresource>
   <qresource prefix="op">
+    <file>../images/op/call_order_update.png</file>
     <file>../images/op/blind_transfer.png</file>
     <file>../images/op/transfer_from_blind.png</file>
     <file>../images/op/transfer_to_blind.png</file>

@@ -760,6 +760,15 @@ class BitsharesIsolator(object):
 		if (op_id == 2):
 			desc = "Cancel order"
 			short = "Canceled order"
+		if (op_id == 3):
+			desc = "Borrow"
+			amt_a = iso.getAmountOP(op_action['delta_debt'])
+			amt_b = iso.getAmountOP(op_action['delta_collateral'])
+			desc += " - " + str(amt_a) + " for "
+			desc += str(amt_b)
+			short = "Borrowed"
+			plus = str(amt_b)
+			minus = str(amt_a)
 		if (op_id == 4):
 			desc = "Trade"
 			#who = Account(op_action['account_id'])

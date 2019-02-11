@@ -81,6 +81,7 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.gatewayBuyAccount,
 			self.ui.transferFromAccount,
 			self.ui.sellerBox,
+			self.ui.borrowerBox,
 			self.ui.settlerBox,
 			#self.ui.marketAccountBox,
 			self.ui.blindFromAccount,
@@ -129,6 +130,7 @@ class MainWindow(QtGui.QMainWindow,
 		
 		ui.transferButton.clicked.connect(self.make_transfer)
 		ui.sellButton.clicked.connect(self.make_limit_order)
+		ui.borrowButton.clicked.connect(self.make_call_order)
 		ui.settleButton.clicked.connect(self.make_settlement)
 		
 		self.dropped.connect(self.file_dropped)
@@ -139,6 +141,12 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.buyAssetCombo,
 			None, None,
 			self.ui.sellOpenMarketButton)
+		
+		self.uiAssetsMarketLink(
+			self.ui.borrowAssetCombo,
+			self.ui.borrowCollateralAssetCombo,
+			None, None,
+			self.ui.borrowOpenMarketButton)
 		
 		self.uiAssetsMarketLink(
 			self.ui.settleAssetCombo,
@@ -200,12 +208,16 @@ class MainWindow(QtGui.QMainWindow,
 		self.uiAccountAssetLink(self.ui.sellerBox, self.ui.sellAssetCombo)
 		self.uiAccountAssetLink(self.ui.sellerBox, self.ui.buyAssetCombo)
 		self.uiAccountAssetLink(self.ui.sellerBox, self.ui.sellFeeAsset)
+		self.uiAccountAssetLink(self.ui.borrowerBox, self.ui.borrowAssetCombo)
+		self.uiAccountAssetLink(self.ui.borrowerBox, self.ui.borrowFeeAsset)
 		self.uiAccountAssetLink(self.ui.settlerBox, self.ui.settleAssetCombo)
 		self.uiAccountAssetLink(self.ui.settlerBox, self.ui.settleFeeAsset)
 		
 		self.uiAssetLink(self.ui.transferAmount, self.ui.transferAsset)
 		self.uiAssetLink(self.ui.sellAmountSpin, self.ui.sellAssetCombo)
 		self.uiAssetLink(self.ui.buyAmountSpin, self.ui.buyAssetCombo)
+		self.uiAssetLink(self.ui.borrowAmount, self.ui.borrowAssetCombo)
+		self.uiAssetLink(self.ui.borrowCollateralAmount, self.ui.borrowCollateralAssetCombo)
 		self.uiAssetLink(self.ui.settleAmount, self.ui.settleAssetCombo)
 		
 		self.init_trxbuffer()
@@ -596,6 +608,7 @@ class MainWindow(QtGui.QMainWindow,
 		self.ui.opStack, [
 			(self.ui.viewOpTransfer, self.ui.actionTransfer, "!transfer"),
 			(self.ui.viewOpSell, self.ui.actionSell, "!sell"),
+			(self.ui.viewOpBorrow, self.ui.actionBorrow, "!borrow"),
 			(self.ui.viewOpSettle, self.ui.actionSettle, "!settle"),
 		], lambda: self.tagToFront("^ops"))
 		self.opstack.setPage(0)
@@ -611,6 +624,8 @@ class MainWindow(QtGui.QMainWindow,
 		
 		on_spin(self.ui.settleAmount,  self.settle_amount_changed)
 		on_combo(self.ui.settleAssetCombo, self.settle_amount_changed)
+		
+		on_combo(self.ui.borrowAssetCombo, self.borrow_asset_changed)
 	
 	def sell_main_amount_changed(self):
 		sell_asset = self.ui.sellAssetCombo.currentText()
@@ -687,6 +702,25 @@ class MainWindow(QtGui.QMainWindow,
 		pass
 	
 
+	def borrow_asset_changed(self):
+		borrow_symbol = self.ui.borrowAssetCombo.currentText()
+		if not(borrow_symbol):
+			return
+		
+		try:
+			borrow_asset = self.iso.getAsset(borrow_symbol)
+		except:
+			return
+		if not("bitasset_data" in borrow_asset):
+			return
+		
+		collateral_sym = borrow_asset["bitasset_data"]["options"]["short_backing_asset"]
+		try:
+			collateral = self.iso.getAsset(collateral_sym)
+			set_combo(self.ui.borrowCollateralAssetCombo, collateral["symbol"], force=True)
+		except:
+			pass
+
 	def settle_amount_changed(self):
 		settle_asset = self.ui.settleAssetCombo.currentText()
 		settle_amount = self.ui.settleAmount.value()
@@ -753,6 +787,7 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.transferAsset,
 			self.ui.sellerBox,
 			self.ui.sellAssetCombo,
+			self.ui.borrowerBox,
 			self.ui.settlerBox,
 			self.ui.settleAssetCombo,
 			self.ui.blindFromAsset,
@@ -764,6 +799,10 @@ class MainWindow(QtGui.QMainWindow,
 			self.ui.transferFeeLabel,
 			self.ui.sellFeeAsset,
 			self.ui.sellFeeLabel,
+			self.ui.borrowFeeAsset,
+			self.ui.borrowFeeLabel,
+			self.ui.settleFeeAsset,
+			self.ui.settleFeeLabel,
 			self.ui.bridgeDetails,
 			self.ui.blindFromFeeAssetLabel,
 			self.ui.blindFromFeeAsset,
@@ -1378,6 +1417,40 @@ class MainWindow(QtGui.QMainWindow,
 		except Exception as error:
 			showexc(error)
 	
+	def make_call_order(self):
+		account_from = self.ui.borrowerBox.currentText()
+		borrow_asset_name = self.ui.borrowAssetCombo.currentText()
+		borrow_asset_amount = self.ui.borrowAmount.value()
+		collateral_amount = self.ui.borrowCollateralAmount.value()
+		fee_asset = anyvalvis(self.ui.borrowFeeAsset, None)
+		
+		buffer = self.ui.txFrame.isVisible()
+		
+		try:
+			borrow_asset = self.iso.getAsset(borrow_asset_name)
+			if not("bitasset_data" in borrow_asset):
+				showwarn("{} is not a Market-Pegged asset".format(borrow_asset_name))
+				return
+		except:
+			pass
+		
+		try:
+			v = QTransactionBuilder.VBorrowAsset(
+				account_from,
+				borrow_asset_name,
+				borrow_asset_amount,
+				collateral_amount,
+				fee_asset=fee_asset,
+				isolator=self.iso)
+			if buffer:
+				self._txAppend(*v)
+			else:
+				QTransactionBuilder._QExec(self.iso, v)
+		except Exception as error:
+			showexc(error)
+			return False
+		return True
+
 	def make_settlement(self):
 		account_from = self.ui.settlerBox.currentText()
 		settle_asset_name = self.ui.settleAssetCombo.currentText()

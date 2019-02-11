@@ -18,7 +18,7 @@ from bitshares.transactionbuilder import TransactionBuilder
 from bitsharesbase.operations import Transfer
 from bitsharesbase.operations import Transfer_to_blind
 from bitsharesbase.operations import Limit_order_create, Limit_order_cancel
-from bitsharesbase.operations import Asset_settle
+from bitsharesbase.operations import Asset_settle, Call_order_update
 from bitsharesbase.operations import Account_create, Account_upgrade, Account_update
 from bitsharesbase.operations import Asset_create, Asset_update, Asset_update_bitasset
 from bitsharesbase.operations import Asset_update_issuer
@@ -712,6 +712,37 @@ class QTransactionBuilder(QtWidgets.QDialog):
 	@classmethod
 	def QUpdateAssetIssuer(self, *args, **kwargs):
 		v = self.VUpdateAssetIssuer(*args, **kwargs)
+		return self._QExec(kwargs.get("isolator"), v)
+	
+	@classmethod
+	def VBorrowAsset(self,
+			from_account,
+			symbol,
+			amount_num,
+			collateral_num,
+			fee_asset=None,
+			isolator=None
+		):
+		iso = isolator
+		src_account = iso.getAccount(from_account)
+		asset = iso.getAsset(symbol)
+		col_symbol = asset["bitasset_data"]["options"]["short_backing_asset"]
+		col_asset = iso.getAsset(col_symbol)
+		params = {
+			"funding_account": src_account['id'],
+			"delta_debt": iso.getAmount(amount_num, asset["id"]).json(),
+			"delta_collateral": iso.getAmount(collateral_num, col_asset["id"]).json(),
+		}
+		if fee_asset:
+			params['fee'] = iso.getAmount(0, fee_asset).json()
+		else:
+			params['fee'] = {"amount": 0, "asset_id": "1.3.0"}
+		
+		return (Call_order_update(**params), [(src_account, "active")])
+	
+	@classmethod
+	def QBorrowAsset(self, *args, **kwargs):
+		v = self.VBorrowAsset(*args, **kwargs)
 		return self._QExec(kwargs.get("isolator"), v)
 	
 	@classmethod
